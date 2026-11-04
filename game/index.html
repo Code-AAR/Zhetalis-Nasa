@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Junior Astronaut: Mars Outpost · Zhetalis</title>
+  <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <!-- Title screen -->
+  <section id="title" class="screen">
+    <div class="title-card">
+      <p class="kicker">ZHETALIS · NASA Space Apps 2026</p>
+      <h1>Junior Astronaut<span>Mars Outpost</span></h1>
+      <p class="story">The year is <b>2126</b>. You are a junior astronaut on humanity's next mission to Mars.
+        An outpost is waiting for you - but power is limited. Every choice you make about
+        <b>oxygen</b>, <b>radiation shielding</b> and <b>talking to Earth</b> has a cost. Can you keep your crew safe?</p>
+      <h2>1. Where are you going?</h2>
+      <div class="cards" id="destinations">
+        <button class="card selected" data-dest="mars"><b>Mars</b><small>Red, dusty and 3 to 22 light-minutes from home</small></button>
+        <button class="card" disabled><b>The Moon</b><small>Coming soon</small></button>
+      </div>
+      <h2>2. Pick your mission</h2>
+      <div class="cards" id="difficulties"></div>
+      <div class="actions">
+        <button id="start" class="primary">Launch!</button>
+        <button id="howto">How to play</button>
+        <button id="data-btn-title">Real NASA data used</button>
+      </div>
+      <p id="sun-line" class="sun-line">Checking what the Sun is doing right now…</p>
+    </div>
+  </section>
+
+  <!-- Launch overlay -->
+  <div id="countdown" class="hidden"></div>
+  <div id="fade" class="hidden"></div>
+
+  <!-- In-game HUD -->
+  <section id="hud" class="hidden">
+    <div class="meters">
+      <div class="meter" id="m-o2"><span class="icon">O₂</span><div><label>Oxygen</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-food"><span class="icon">🥕</span><div><label>Food</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-power"><span class="icon">⚡</span><div><label>Power today</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter danger" id="m-rad"><span class="icon">☢</span><div><label>Radiation badge</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-suit"><span class="icon">🧑‍🚀</span><div><label>Suit oxygen</label><div class="bar"><i></i></div><small></small></div></div>
+    </div>
+    <div class="status">
+      <div id="sol"></div>
+      <div id="credits"></div>
+      <div id="link"></div>
+      <div class="status-buttons">
+        <button id="power-btn">⚡ Power (P)</button>
+        <button id="speed-btn">Speed ×1</button>
+        <button id="data-btn">NASA data</button>
+      </div>
+    </div>
+    <div id="hint"></div>
+    <div id="alerts"></div>
+  </section>
+
+  <div id="modal" class="hidden"><div class="modal-box"></div></div>
+  <div id="toast"></div>
+  <div id="loading">Loading Mars…</div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

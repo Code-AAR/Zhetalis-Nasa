@@ -1,0 +1,27 @@
+{
+  "note": "Real values with sources. Values marked 'tuned' are game balance, not measurements, and the game says so.",
+  "facts": {
+    "gravity": { "value": 3.73, "unit": "m/s²", "earth": 9.81, "kid": "Mars gravity is about 38% of Earth's - you can jump almost 3 times higher!", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "sol": { "value": 24.6597, "unit": "hours", "kid": "A 'sol' is one day on Mars. It is 24 hours and 40 minutes long - a bit longer than an Earth day.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "sunlight": { "value": 586.2, "unit": "W/m²", "earth": 1361, "kid": "Mars is farther from the Sun, so solar panels get only about 43% of the sunlight they would on Earth.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "temperature": { "value": -59, "unit": "°C average", "range": [-89, -31], "kid": "The average temperature is about -59 °C. At the Viking 1 landing site it swung from -89 °C at night to -31 °C in the day.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "air": { "value": 6.36, "unit": "millibars", "earth": 1013, "co2": 95.1, "kid": "The air is 95% carbon dioxide and about 160 times thinner than Earth's. No breathing without a suit!", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "distance": { "min": 54.6, "max": 401.4, "unit": "million km", "kid": "Earth and Mars move around the Sun at different speeds, so the distance between them keeps changing.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "synodic": { "value": 779.9, "unit": "days", "kid": "Earth and Mars line up again about every 780 days (about 26 months).", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
+    "surfaceDose": { "value": 0.64, "unit": "mSv per day", "kid": "On the surface of Mars, astronauts would get about 0.64 millisieverts (mSv) of radiation each day. A millisievert measures how much radiation your body soaks up.", "source": "Curiosity RAD instrument - Hassler et al., Science, 2014", "url": "https://ntrs.nasa.gov/citations/20180007641" },
+    "cruiseDose": { "value": 1.84, "unit": "mSv per day", "kid": "Travelling between planets is worse: about 1.84 mSv per day, because there is no planet or air to block anything.", "source": "Curiosity RAD instrument (cruise to Mars)", "url": "https://space.com/23875-mars-radiation-life-manned-mission.html" },
+    "careerLimit": { "value": 600, "unit": "mSv", "kid": "NASA allows an astronaut at most 600 mSv of space radiation in their whole career.", "source": "NASA OCHMO Radiation Protection Technical Brief (NASA-STD-3001)", "url": "https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf" },
+    "roundTrip": { "value": 1.01, "unit": "Sv", "kid": "A full trip - 180 days there, 500 days on Mars, 180 days back - would add up to about 1,010 mSv. That is MORE than NASA's limit, which is why scientists work so hard on shielding.", "source": "Based on Curiosity RAD measurements (Hassler et al., 2014)", "url": "https://space.com/23875-mars-radiation-life-manned-mission.html" },
+    "oxygen": { "value": 0.82, "unit": "kg per astronaut per day", "kid": "Each astronaut breathes about 0.82 kg of oxygen every day.", "source": "NASA Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570/REV1, 2018)", "url": "https://ntrs.nasa.gov/citations/20180001338" },
+    "conjunction": { "value": 14, "unit": "days without contact", "kid": "About every 26 months the Sun gets exactly between Earth and Mars and scrambles radio signals. Missions stop sending commands for about two weeks.", "source": "NASA JPL - Mars solar conjunction", "url": "https://mars.nasa.gov/all-about-mars/night-sky/solar-conjunction/" },
+    "dustStorm": { "kid": "In 2018 a dust storm covered the whole planet. It blocked so much sunlight that the solar-powered rover Opportunity ran out of power and never woke up.", "source": "NASA - Opportunity rover mission comes to end (2019)", "url": "https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/" },
+    "perseverance": { "kid": "This is NASA's Perseverance rover. It landed in Jezero Crater on 18 February 2021 to look for signs of ancient life. In this story it is 105 years old!", "source": "NASA/JPL-Caltech 3D model", "url": "https://science.nasa.gov/resource/mars-perseverance-rover-3d-model/" },
+    "moxie": { "kid": "Perseverance carried MOXIE, a machine that made real oxygen out of Martian air. That proved astronauts could one day make their own oxygen on Mars.", "source": "NASA - MOXIE", "url": "https://mars.nasa.gov/mars2020/spacecraft/instruments/moxie/" }
+  },
+  "tuned": {
+    "note": "These are game balance numbers so a whole mission fits into minutes of play. They are NOT measurements.",
+    "solSeconds": "1 sol passes in 10 real seconds",
+    "solarStormDose": "Solar storm radiation is made stronger than reality so you can see shielding matter within one game",
+    "kWhPerPanel": "Each solar panel makes 5 kWh per clear sol in the game"
+  }
+}

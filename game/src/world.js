@@ -1,0 +1,328 @@
+// The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ---------- terrain shape (deterministic, so every player gets the same map) ----------
+function hash(x, z) { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); }
+function vnoise(x, z) {
+  const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  const a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, z * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
+
+export const WORLD_SIZE = 640;
+export function heightAt(x, z) {
+  const r = Math.hypot(x, z);
+  let h = (fbm(x * 0.011, z * 0.011) - 0.5) * 34 + (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 5;
+  h += Math.max(0, fbm(x * 0.005 + 20, z * 0.005, 4) - 0.52) * 220;        // distant mesas and crater rims
+  const edge = Math.max(0, r - WORLD_SIZE * 0.36) * 0.9;                      // hills ring the map so it feels endless
+  return (h + edge) * THREE.MathUtils.smoothstep(r, 26, 70);                  // flat landing pad around the outpost
+}
+
+function makeSky(scene) {
+  const c = document.createElement('canvas'); c.width = 2; c.height = 256;
+  const g = c.getContext('2d'); const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#b8774f'); grad.addColorStop(0.55, '#d9a27a'); grad.addColorStop(1, '#efc9a4');
+  g.fillStyle = grad; g.fillRect(0, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 24, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
+  scene.add(sky);
+  return sky;
+}
+
+function makeTerrain() {
+  const seg = 220;
+  const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position, colors = [];
+  const rust = new THREE.Color('#b8643a'), dusty = new THREE.Color('#d99467'), basalt = new THREE.Color('#5e3626'), pale = new THREE.Color('#e2ab7f');
+  const col = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i), y = heightAt(x, z);
+    pos.setY(i, y);
+    const slope = Math.abs(heightAt(x + 1.5, z) - y) + Math.abs(heightAt(x, z + 1.5) - y);
+    const n = fbm(x * 0.08, z * 0.08, 3);
+    col.copy(rust).lerp(dusty, n).lerp(pale, THREE.MathUtils.clamp((y - 25) / 60, 0, 0.6)).lerp(basalt, THREE.MathUtils.clamp(slope / 4 - 0.15, 0, 0.75));
+    colors.push(col.r, col.g, col.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// Flat slabs and boulders like the Perseverance photo of Jezero Crater.
+function makeRocks(rng) {
+  const count = 520;
+  const geo = new THREE.DodecahedronGeometry(1, 0);
+  const mat = new THREE.MeshLambertMaterial({ flatShading: true });
+  const rocks = new THREE.InstancedMesh(geo, mat, count);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
+  const tints = ['#8a4a2d', '#a85d39', '#6e3b28', '#c07a52'].map(c => new THREE.Color(c));
+  const colliders = [];
+  for (let i = 0; i < count; i++) {
+    let x, z; do { x = (rng() - 0.5) * WORLD_SIZE * 0.7; z = (rng() - 0.5) * WORLD_SIZE * 0.7; } while (Math.hypot(x, z) < 24);
+    const slab = rng() < 0.55, size = slab ? 1.5 + rng() * 4 : 0.4 + rng() * 2.2;
+    s.set(size * (0.8 + rng()), slab ? size * 0.18 : size * (0.6 + rng() * 0.5), size * (0.8 + rng()));
+    p.set(x, heightAt(x, z) + s.y * 0.35, z);
+    q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
+    rocks.setMatrixAt(i, m.compose(p, q, s));
+    rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
+    if (!slab && size > 1.3) colliders.push({ x, z, r: size * 0.9 });
+  }
+  rocks.castShadow = true; rocks.receiveShadow = true;
+  return { rocks, colliders };
+}
+
+function mat(color, extra = {}) { return new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra }); }
+// Three.js positions can't be replaced, only changed - this places a mesh and returns it.
+function at(mesh, x, y, z) { mesh.position.set(x, y, z); return mesh; }
+
+// The outpost that is "already there" when you land.
+function makeOutpost() {
+  const g = new THREE.Group();
+  const white = mat('#ece8e1'), stripe = mat('#d9683a'), dark = mat('#23262b'), glass = new THREE.MeshLambertMaterial({ color: '#9fd7c9', transparent: true, opacity: 0.45 });
+  const hab = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, 4.5, 16), white); hab.position.y = 2.25; g.add(hab);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), white); dome.position.y = 4.5; g.add(dome);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(6.45, 6.45, 0.5, 16), stripe); band.position.y = 3.6; g.add(band);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3, 0.6), dark); door.position.set(0, 1.5, 6.1); g.add(door);
+  const doorLight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.7), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); doorLight.position.set(0, 3.1, 6.15); g.add(doorLight);
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 10), white); tunnel.rotation.z = Math.PI / 2; tunnel.position.set(-8.5, 1.4, 1); g.add(tunnel);
+  // greenhouse
+  const gh = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), glass); gh.position.set(-14, 0, 1); g.add(gh);
+  for (let i = 0; i < 14; i++) {
+    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1 + (i % 3) * 0.3, 5), mat('#4caf50'));
+    plant.position.set(-14 + Math.cos(i) * 2.4 * ((i % 4) / 4 + 0.3), 0.6, 1 + Math.sin(i * 1.7) * 2.2 * ((i % 3) / 3 + 0.3)); g.add(plant);
+  }
+  // comms dish
+  const comms = new THREE.Group(); comms.position.set(9, 0, 9);
+  comms.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 5, 8), white), 0, 2.5, 0));
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 14, 6, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshLambertMaterial({ color: '#ece8e1', side: THREE.DoubleSide }));
+  dish.rotation.x = -Math.PI / 2.6; dish.position.y = 5.2; comms.add(dish);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); beacon.position.y = 6.4; comms.add(beacon);
+  g.add(comms);
+  // water-wall shielding ring, shown after the upgrade
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 18, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  wall.position.y = 1.3; wall.visible = false; g.add(wall);
+  // the lander you arrived in
+  const lander = new THREE.Group(); lander.position.set(-6, 0, -17);
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.2, 7, 12), white), 0, 4.5, 0));
+  lander.add(at(new THREE.Mesh(new THREE.ConeGeometry(1.6, 3, 12), white), 0, 9.5, 0));
+  for (let i = 0; i < 4; i++) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 0.25), dark);
+    leg.position.set(Math.cos(i * Math.PI / 2) * 2.3, 1.2, Math.sin(i * Math.PI / 2) * 2.3); leg.rotation.z = Math.cos(i * Math.PI / 2) * 0.35; leg.rotation.x = -Math.sin(i * Math.PI / 2) * 0.35; lander.add(leg);
+  }
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 12), stripe), 0, 6.5, 0));
+  g.add(lander);
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.6 }, { x: 9, z: 9, r: 0.6 }] };
+}
+
+function makeSolarField() {
+  const g = new THREE.Group(); g.position.set(16, 0, -8);
+  const panelMat = new THREE.MeshLambertMaterial({ color: '#1d3a6e', flatShading: true });
+  const frame = mat('#bfbab2');
+  const panels = [];
+  for (let i = 0; i < 12; i++) {
+    const p = new THREE.Group();
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 2), panelMat); board.rotation.x = -0.45; board.position.y = 1.3; p.add(board);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 6), frame); post.position.y = 0.65; p.add(post);
+    p.position.set((i % 4) * 3.8, 0, Math.floor(i / 4) * 3.2);
+    p.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    p.visible = false; g.add(p); panels.push(p);
+  }
+  return { group: g, panels };
+}
+
+// Glowing pickups with a tall beam, like the beacon in No Man's Sky, so kids can find them.
+function makePickup(kind) {
+  const g = new THREE.Group();
+  const looks = {
+    ice:   { geo: new THREE.IcosahedronGeometry(0.7, 0), color: '#9fe7ff', beam: '#9fe7ff' },
+    metal: { geo: new THREE.OctahedronGeometry(0.6, 0),  color: '#c9ced6', beam: '#ffd27a' },
+    pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 10), color: '#f2f2f2', beam: '#ff7a3d' },
+  }[kind];
+  const body = new THREE.Mesh(looks.geo, new THREE.MeshLambertMaterial({ color: looks.color, emissive: looks.color, emissiveIntensity: 0.35, flatShading: true }));
+  body.castShadow = true; body.position.y = 0.9; g.add(body);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 40, 6, 1, true), new THREE.MeshBasicMaterial({ color: looks.beam, transparent: true, opacity: 0.35, depthWrite: false }));
+  beam.position.y = 20; g.add(beam);
+  g.userData.body = body;
+  return g;
+}
+
+function makeAstronaut() {
+  const g = new THREE.Group();
+  const suit = mat('#f3f1ec'), orange = mat('#e2622f'), visor = new THREE.MeshPhongMaterial({ color: '#1b2a3a', shininess: 90, specular: '#ffcf9a' });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.75, 4, 10), suit); body.position.y = 0.95; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), suit); head.position.y = 1.78; g.add(head);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, -Math.PI / 2.4, Math.PI / 1.2, Math.PI / 4, Math.PI / 2.4), visor); face.position.set(0, 1.8, 0.1); g.add(face);
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), suit); pack.position.set(0, 1.05, -0.42); g.add(pack);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.12, 0.86), orange); band.position.y = 1.3; g.add(band);
+  const legs = [-0.18, 0.18].map(x => { const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.4, 3, 6), suit); l.position.set(x, 0.32, 0); g.add(l); return l; });
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.userData.legs = legs;
+  return g;
+}
+
+export class World {
+  constructor(renderer, facts, onLoaded) {
+    this.facts = facts;
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1800);
+    this.scene.fog = new THREE.Fog('#d9a27a', 70, 460);
+    this.sky = makeSky(this.scene);
+    this.hemi = new THREE.HemisphereLight('#ffe2c4', '#6b3a22', 1.15); this.scene.add(this.hemi);
+    this.sun = new THREE.DirectionalLight('#fff1dc', 1.9);
+    this.sun.castShadow = true; this.sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(this.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
+    this.scene.add(this.sun, this.sun.target);
+    this.scene.add(makeTerrain());
+
+    let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const { rocks, colliders } = makeRocks(rng); this.scene.add(rocks);
+    this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
+    this.solar = makeSolarField(); this.scene.add(this.solar.group);
+    this.colliders = [...colliders, ...this.outpost.colliders];
+    this.door = new THREE.Vector3(0, 0, 8.2);
+
+    this.pickups = [];
+    for (let i = 0; i < 34; i++) {
+      const kind = rng() < 0.55 ? 'ice' : 'metal';
+      let x, z; do { const a = rng() * Math.PI * 2, d = 35 + rng() * 170; x = Math.cos(a) * d; z = Math.sin(a) * d; } while (heightAt(x, z) > 40);
+      this.addPickup(kind, x, z);
+    }
+
+    // NASA's real Perseverance model (NASA/JPL-Caltech) as the old rover to salvage.
+    this.rover = { x: 95, z: -110, salvaged: false, group: new THREE.Group() };
+    this.rover.group.position.set(this.rover.x, heightAt(this.rover.x, this.rover.z), this.rover.z);
+    this.scene.add(this.rover.group);
+    const roverBeam = makePickup('metal').children[1]; roverBeam.material = roverBeam.material.clone(); roverBeam.material.color.set('#ffd27a');
+    this.rover.group.add(roverBeam);
+    this.colliders.push({ x: this.rover.x, z: this.rover.z, r: 2.2 });
+    new GLTFLoader().load('assets/perseverance.glb', gltf => {
+      const model = gltf.scene, box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
+      const scale = 3 / Math.max(size.x, size.z);  // the real rover is about 3 m long
+      model.scale.setScalar(scale);
+      const b2 = new THREE.Box3().setFromObject(model); model.position.y -= b2.min.y;
+      model.rotation.y = 0.7;
+      model.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material?.color) o.material.color.lerp(new THREE.Color('#c58a62'), 0.35); } }); // 105 years of Mars dust
+      this.rover.group.add(model);
+      onLoaded?.();
+    }, undefined, err => { console.warn('Perseverance model failed to load', err); onLoaded?.(); });
+
+    this.player = makeAstronaut();
+    this.player.position.set(0, 0, 14);
+    this.scene.add(this.player);
+
+    // Team models: drop a .glb with one of these names into game/assets/ and it replaces the
+    // placeholder shape automatically (scaled to the same height). No code changes needed.
+    this.swapModel('astronaut.glb', this.player, 1.85);
+    this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
+    this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
+    this.vel = new THREE.Vector3(); this.onGround = true; this.yaw = Math.PI; this.pitch = 0.25;
+    this.keys = {}; this.time = 0;
+  }
+
+  swapModel(file, target, height, onlyChildren) {
+    if (!target) return;
+    new GLTFLoader().load('assets/' + file, gltf => {
+      const model = gltf.scene;
+      const old = onlyChildren ? onlyChildren.map(i => target.children[i]).filter(Boolean) : [...target.children];
+      const ref = new THREE.Box3(); old.forEach(o => ref.expandByObject(o));
+      const want = height ?? ref.getSize(new THREE.Vector3()).y;
+      const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+      if (size.y > 0) model.scale.setScalar(want / size.y);
+      const box = new THREE.Box3().setFromObject(model); model.position.y -= box.min.y;
+      model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      old.forEach(o => (o.visible = false));
+      target.add(model);
+      console.info('Using team model', file);
+    }, undefined, () => { /* no team model yet - keep the placeholder */ });
+  }
+
+  addPickup(kind, x, z) {
+    const g = makePickup(kind); g.position.set(x, heightAt(x, z), z);
+    this.scene.add(g); this.pickups.push({ kind, group: g, x, z });
+    return g;
+  }
+  removePickup(p) { this.scene.remove(p.group); this.pickups.splice(this.pickups.indexOf(p), 1); }
+
+  dropSupplyPod() {
+    const a = Math.random() * Math.PI * 2, d = 25 + Math.random() * 25;
+    return this.addPickup('pod', Math.cos(a) * d, Math.sin(a) * d);
+  }
+
+  setPanels(n) { this.solar.panels.forEach((p, i) => (p.visible = i < n)); }
+  setWall(level) { this.outpost.wall.visible = level > 0; }
+  setLink(up) { this.outpost.beacon.material.color.set(up ? '#7dffb2' : '#ff4b3a'); this.linkUp = up; }
+  setDust(on) {
+    this.scene.fog.near = on ? 18 : 70; this.scene.fog.far = on ? 140 : 460;
+    this.scene.fog.color.set(on ? '#b06a43' : '#d9a27a');
+    this.sun.intensity = on ? 0.7 : 1.9;
+  }
+
+  // Simple circle collisions so you can't walk through the base or big boulders.
+  collide(pos) {
+    for (const c of this.colliders) {
+      const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
+      if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
+    }
+    const lim = WORLD_SIZE * 0.42, r = Math.hypot(pos.x, pos.z);
+    if (r > lim) { pos.x *= lim / r; pos.z *= lim / r; }
+  }
+
+  update(dt, controlsActive) {
+    this.time += dt;
+    const p = this.player.position, g = this.facts.gravity.value;
+    if (controlsActive) {
+      const k = this.keys, speed = (k.ShiftLeft || k.ShiftRight ? 9 : 5);
+      const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
+      const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+      const dir = new THREE.Vector3(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
+      if (dir.lengthSq() > 0) {
+        dir.normalize();
+        p.x += dir.x * speed * dt; p.z += dir.z * speed * dt;
+        this.player.rotation.y = Math.atan2(dir.x, dir.z);
+        const swing = Math.sin(this.time * speed * 1.6) * 0.5;
+        this.player.userData.legs[0].rotation.x = swing; this.player.userData.legs[1].rotation.x = -swing;
+      }
+      if (k.Space && this.onGround) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
+    }
+    this.vel.y -= g * dt;                                                           // ...but real Mars gravity pulls back slower
+    p.y += this.vel.y * dt;
+    this.collide(p);
+    const ground = heightAt(p.x, p.z);
+    if (p.y <= ground) { p.y = ground; this.vel.y = 0; this.onGround = true; }
+
+    // third-person camera
+    const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
+    for (const c of this.colliders) {                      // keep the camera out of buildings and boulders
+      if (c.r < 2) continue;
+      const dx = eye.x - c.x, dz = eye.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.8;
+      if (d < min) { const k = d > 0.001 ? min / d : 1; eye.x = c.x + dx * k; eye.z = c.z + (d > 0.001 ? dz * k : min); }
+    }
+    eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
+    this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
+    this.camera.lookAt(p.x, p.y + 1.6, p.z);
+    this.sun.position.set(p.x + 60, p.y + 90, p.z + 30); this.sun.target.position.copy(p);
+    this.sky.position.copy(this.camera.position);
+
+    for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+    if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+  }
+
+  // What the player is close enough to use with E.
+  nearest() {
+    const p = this.player.position, list = [];
+    list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
+    if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
+    for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });
+    list.sort((a, b) => a.d - b.d);
+    return list[0] && list[0].d < 3.2 ? list[0] : null;
+  }
+
+  resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
+}
