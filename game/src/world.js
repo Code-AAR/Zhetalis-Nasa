@@ -223,6 +223,7 @@ export class World {
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
     this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
     this.vel = new THREE.Vector3(); this.onGround = true; this.yaw = Math.PI; this.pitch = 0.25;
+    this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
     this.keys = {}; this.time = 0;
   }
 
@@ -297,6 +298,19 @@ export class World {
     const ground = heightAt(p.x, p.z);
     if (p.y <= ground) { p.y = ground; this.vel.y = 0; this.onGround = true; }
 
+    if (this.firstPerson) {
+      // first person: eyes inside the helmet, body hidden so it doesn't block the view
+      this.player.visible = false;
+      const eyeFP = new THREE.Vector3(p.x, p.y + 1.7, p.z);
+      this.camera.position.copy(eyeFP);
+      this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
+      this.sun.position.set(p.x + 60, p.y + 90, p.z + 30); this.sun.target.position.copy(p);
+      this.sky.position.copy(this.camera.position);
+      for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+      if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+      return;
+    }
+    this.player.visible = true;
     // third-person camera
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
     for (const c of this.colliders) {                      // keep the camera out of buildings and boulders

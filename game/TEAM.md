@@ -16,10 +16,12 @@ Then open http://localhost:8123/game/ . (Opening `index.html` directly does not 
 
 ## What is in v1
 
-- Title screen with difficulty (Cadet / Explorer / Commander), Mars chosen, Moon "coming soon".
-- Launch from Earth with countdown and lift-off, then the 7-month cruise (real radiation fact).
-- 3D Mars surface (Three.js): walk around in real Mars gravity (3.73 m/s² - you jump higher), collect ice and metal, salvage NASA's real Perseverance rover model, collect supply pods from Earth.
-- The outpost: split power between **life support, talking to Earth, science and shielding**. Every choice has a cost. Upgrades cost credits (the currency), earned by sending science to Earth.
+- Title screen with difficulty (Cadet / Explorer / Commander), Mars chosen, Moon "coming soon", and a "How do we get to Mars?" explainer.
+- **SLS launch** from Earth (orange core stage, two boosters, Orion + abort tower) with countdown captions.
+- **Mission-path explainer** after lift-off: SLS → Orion → lunar orbit (NRHO) → HLS lander → Moon → home, then NASA's Moon-to-Mars plan (transit habitat, Mars lander, ascent vehicle) - each step with a sourced NASA fact.
+- 3D Mars surface (Three.js): walk around in real Mars gravity (3.73 m/s²), **V switches first/third person**, collect ice and metal parts, salvage NASA's real Perseverance rover model, open supply pods from Earth.
+- **Walk inside the outpost** (first person): power console (the power split), workbench (build upgrades), greenhouse, storm-shelter bunks, window, airlock. Time keeps running inside and you are shielded.
+- **No money/credits.** Upgrades are **built from parts** you salvage, and their **designs arrive from Earth** once Earth has received enough of your science - so the radio and science still matter.
 - Events: solar storms based on **real flares** (NOAA GOES live data, NASA DONKI when it is online), dust storms (Opportunity 2018 fact), solar conjunction radio blackout.
 - In-game "Real NASA data used" panel with every source.
 

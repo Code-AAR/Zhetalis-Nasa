@@ -2,9 +2,9 @@
 // Real values come from data/mars-facts.json; "tuned" values are game balance and labelled as such.
 
 export const DIFFICULTY = {
-  easy:   { label: 'Cadet',     sols: 100, crew: 2, o2: 40, food: 40, credits: 40, eventRate: 0.6, blurb: '100 sols, 2 crew. Gentle storms.' },
-  normal: { label: 'Explorer',  sols: 300, crew: 3, o2: 30, food: 30, credits: 20, eventRate: 1.0, blurb: '300 sols, 3 crew. Real trade-offs.' },
-  hard:   { label: 'Commander', sols: 500, crew: 4, o2: 25, food: 25, credits: 0,  eventRate: 1.4, blurb: "500 sols, 4 crew - the length of NASA's long-stay plan." },
+  easy:   { label: 'Cadet',     sols: 100, crew: 2, o2: 40, food: 40, parts: 6, eventRate: 0.6, blurb: '100 sols, 2 crew. Gentle storms.' },
+  normal: { label: 'Explorer',  sols: 300, crew: 3, o2: 30, food: 30, parts: 3, eventRate: 1.0, blurb: '300 sols, 3 crew. Real trade-offs.' },
+  hard:   { label: 'Commander', sols: 500, crew: 4, o2: 25, food: 25, parts: 0, eventRate: 1.4, blurb: "500 sols, 4 crew - the length of NASA's long-stay plan." },
 };
 
 export const TUNED = {
@@ -22,12 +22,15 @@ export const TUNED = {
   suitSeconds: 75,         // seconds of EVA on a full suit tank
 };
 
+// No money: you BUILD upgrades from parts you salvage outside (metal, the old rover, supply pods),
+// and Earth's engineers radio you the DESIGN once they have received enough of your science.
+// So science and the radio still matter - without them you can't unlock the better upgrades.
 export const UPGRADES = {
-  panel:      { name: 'Extra solar panel', cost: 40, desc: '+5 kWh every clear sol.' },
-  wall:       { name: 'Water-wall shielding', cost: 60, desc: 'Water tanks in the walls block 15% more radiation. Real Mars habitat plans use water and soil as shields.' },
-  greenhouse: { name: 'Bigger greenhouse', cost: 50, desc: 'Grows 40% more food from the same power.' },
-  moxie:      { name: 'Better oxygen maker', cost: 50, desc: 'Makes 30% more oxygen from the same power - like an upgraded MOXIE.' },
-  suit:       { name: 'Suit tank upgrade', cost: 30, desc: 'Stay outside 50% longer.' },
+  panel:      { name: 'Extra solar panel', parts: 4, unlockAt: 10, desc: '+5 kWh every clear sol.' },
+  suit:       { name: 'Suit tank upgrade', parts: 3, unlockAt: 0,  desc: 'Stay outside 50% longer.' },
+  greenhouse: { name: 'Bigger greenhouse', parts: 5, unlockAt: 15, desc: 'Grows 40% more food from the same power.' },
+  moxie:      { name: 'Better oxygen maker', parts: 5, unlockAt: 35, desc: 'Makes 30% more oxygen from the same power - like an upgraded MOXIE.' },
+  wall:       { name: 'Water-wall shielding', parts: 6, unlockAt: 60, desc: 'Water tanks in the walls block 15% more radiation. Real Mars habitat plans use water and soil as shields.' },
 };
 
 const C = 299792.458; // km/s
@@ -40,7 +43,7 @@ export class Outpost {
     this.crew = d.crew;
     this.o2 = d.o2;                 // kg in the base tanks
     this.food = d.food;             // crew-day rations
-    this.credits = d.credits;
+    this.parts = d.parts;           // salvaged parts for building upgrades
     this.dose = 0;                  // mSv, the player's radiation badge
     this.science = 0;               // research waiting to be sent to Earth
     this.scienceSent = 0;
@@ -115,8 +118,10 @@ export class Outpost {
     this.dose += dose;
     this.science += f.science;
     if (f.link && this.science > 0) {
-      const sent = Math.round(this.science);
-      this.scienceSent += sent; this.credits += sent; this.science = 0;
+      const before = this.scienceSent;
+      this.scienceSent += Math.round(this.science); this.science = 0;
+      for (const [key, u] of Object.entries(UPGRADES))
+        if (u.unlockAt > before && u.unlockAt <= this.scienceSent) events.push({ type: 'blueprint', key });
     }
     if (this.shelter > 0) this.shelter -= 1;
     if (this.dust > 0 && --this.dust === 0) events.push({ type: 'dust-end' });
@@ -156,10 +161,12 @@ export class Outpost {
     this.storm = { sols: 2 + Math.round(strength), total: 2 + Math.round(strength), strength, label, real };
   }
 
+  unlocked(key) { return this.scienceSent >= UPGRADES[key].unlockAt; }
+
   buy(key) {
     const u = UPGRADES[key];
-    if (!u || this.credits < u.cost) return false;
-    this.credits -= u.cost;
+    if (!u || !this.unlocked(key) || this.parts < u.parts) return false;
+    this.parts -= u.parts;
     if (key === 'panel') this.panels += 1; else this.upgrades[key] += 1;
     this.today = this.forecast();
     return true;

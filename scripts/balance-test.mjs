@@ -20,14 +20,15 @@ for (const diff of ['easy', 'normal', 'hard']) {
       while (!o.over) {
         for (const ev of o.tick(rng)) {
           if (ev.type === 'solar-storm-warning') { o.startStorm(0.6 + rng() * 2.2, 'M', true); if (s.shelter) o.shelter = o.storm.sols; }
-          if (ev.type === 'supply-launched') { o.o2 += 15; o.food += 20; o.credits += 25; }
+          if (ev.type === 'supply-launched') { o.o2 += 15; o.food += 20; o.parts += 3; }
         }
-        if (s.buy) {   // spend credits on the most urgent upgrade
+        if (o.sol % 3 === 0) o.parts += 1;   // a player exploring finds roughly one part every few sols
+        if (s.buy) {   // build the most urgent upgrade that Earth has sent the design for
           const f = o.today;
-          if (f.o2Net < 0.1 && o.credits >= 50) o.buy(o.upgrades.moxie < 2 ? 'moxie' : 'panel');
-          else if (f.foodNet < 0.1 && o.credits >= 50) o.buy(o.upgrades.greenhouse < 2 ? 'greenhouse' : 'panel');
-          else if (o.dose > o.limit * 0.4 && o.credits >= 60 && o.upgrades.wall < 3) o.buy('wall');
-          else if (o.credits >= 80) o.buy('panel');
+          if (f.o2Net < 0.1) o.buy(o.upgrades.moxie < 2 && o.unlocked('moxie') ? 'moxie' : 'panel');
+          else if (f.foodNet < 0.1) o.buy(o.upgrades.greenhouse < 2 && o.unlocked('greenhouse') ? 'greenhouse' : 'panel');
+          else if (o.dose > o.limit * 0.4 && o.upgrades.wall < 3) o.buy('wall');
+          else if (o.parts >= 8) o.buy('panel');
         }
         if (Number.isNaN(o.o2 + o.food + o.dose)) throw new Error('NaN in simulation');
       }

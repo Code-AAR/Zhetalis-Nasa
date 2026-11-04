@@ -9,6 +9,7 @@ button { font: inherit; color: var(--ink); background: rgba(255,255,255,0.08); b
 button:hover:not(:disabled) { background: rgba(255,255,255,0.16); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #1a0f0b; font-weight: 800; font-size: 1.15rem; padding: 12px 28px; }
+button.primary:hover:not(:disabled) { background: #ff9a6a; }
 .hidden { display: none !important; }
 
 /* title */
@@ -82,6 +83,24 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 .shop { display: grid; gap: 8px; }
 .shop button { display: flex; justify-content: space-between; gap: 10px; text-align: left; }
 .shop button small { color: var(--muted); display: block; }
+
+/* mission path explainer */
+#mission-path { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; overflow: auto;
+  background: radial-gradient(ellipse at 50% 0%, #1c2440, #05060c 70%); }
+.mp-box { width: min(900px, 100%); }
+.mp-svg { width: 100%; height: auto; display: block; background: radial-gradient(ellipse at 30% 40%, rgba(80,110,200,.18), transparent 70%); border-radius: 18px; }
+.mp-path { fill: none; stroke: rgba(255,255,255,.14); stroke-width: 3; stroke-dasharray: 6 8; }
+.mp-path.done { stroke: rgba(125,255,178,.55); stroke-dasharray: none; }
+.mp-path.active { stroke: #ff7a3d; stroke-width: 4; stroke-dasharray: none; }
+.mp-label { fill: #fff7ee; font-size: 15px; font-weight: 600; text-anchor: middle; }
+.mp-tag { fill: #ffd27a; font-size: 13px; font-weight: 600; }
+#mp-title { font-size: 1.5rem; margin: 14px 0 6px; } #mp-text { line-height: 1.6; font-size: 1.05rem; }
+.mp-nav { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+#mp-count { color: var(--muted); font-size: .9rem; min-width: 52px; text-align: center; }
+#mp-skip { margin-left: auto; }
+
+/* first-person crosshair */
+#crosshair { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; pointer-events: none; z-index: 2; }
 
 #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: #2c1a12; border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; transition: all .3s; pointer-events: none; max-width: 90vw; text-align: center; z-index: 20; }
 #toast.show { opacity: 1; transform: translateX(-50%); }

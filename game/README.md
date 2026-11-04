@@ -18,6 +18,9 @@ real mission planners.
 | NASA radiation standard (OCHMO technical brief) | 600 mSv career limit = the radiation badge | Built in, with source |
 | NASA Mars Fact Sheet (NSSDC) | Gravity 3.73 m/s² (used for jumping), sol length, 43% sunlight, temperature, air, Earth-Mars distance (54.6-401.4 million km → 3 to 22 minute radio delay) | Built in, with source |
 | NASA Life Support BVAD | About 0.82 kg oxygen per astronaut per day | Built in, with source |
+| NASA SLS fact sheet, Orion, Artemis II, Human Landing Systems pages | The SLS launch scene and the step-by-step "How do we get there?" explainer (SLS → Orion → lunar orbit → HLS → Moon) | Built in, with sources |
+| NASA Moon to Mars Architecture | How a future Mars crew would travel: transit habitat, Mars lander, ascent vehicle (a plan still being designed) | Built in, with source |
+| NASA - Growing plants in space | The greenhouse station | Built in, with source |
 | NASA/JPL-Caltech Perseverance 3D model | The old rover you salvage | Asset |
 
 Game-balance numbers (how fast a sol passes, how strong storms are, how much a panel makes) are not
