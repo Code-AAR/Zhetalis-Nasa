@@ -12,7 +12,7 @@ const BODIES = {
 // Orthographic projection keeps these ratios the same everywhere on screen.
 // Positions compress the distances for the menu, but never change body sizes.
 const DIAMETERS = { earth: 12756, moon: 3475, mars: 6792 };
-const POSITIONS = { earth: [-1.3, .25, 0], moon: [.2, -.95, 0], mars: [1.4, .25, 0] };
+const POSITIONS = { earth: [-1.3, .25, 0], moon: [.2, -.95, 0], mars: [2.1, .25, 0] };
 const EARTH_RADIUS = 1.18;
 const MISSION = 'mars';
 // A tilted circular orbit: compressed distance and accelerated time for the
