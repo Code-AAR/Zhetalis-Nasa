@@ -77,7 +77,17 @@ export function showArrival(F, delayMinutes = 10) {
 
     const mapNote = root.querySelector('#ar-map');
     mapNote.textContent = 'Loading NASA\'s Mars map…';
+    // NASA 3D Resources' Mars map (saved in the game) shows at once; the live Mars Trek map replaces it if it loads
+    let trek = false;
+    new THREE.TextureLoader().load('assets/mars-map.jpg', tex => {
+      if (trek) return;
+      tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+      mat.map = tex; mat.color.set('#ffffff'); mat.needsUpdate = true;
+      mapNote.innerHTML = 'Real map: NASA 3D Resources - Mars (<a href="https://science.nasa.gov/3d-resources/mars/" target="_blank" rel="noopener">science.nasa.gov</a>)';
+    });
     loadMarsMap().then(({ canvas: map, ok }) => {
+      if (!ok) { if (!mat.map) mapNote.textContent = 'Couldn\'t reach NASA Mars Trek right now - showing a plain planet.'; return; }
+      trek = true;
       const tex = new THREE.CanvasTexture(map); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
       mat.map = tex; mat.color.set('#ffffff'); mat.needsUpdate = true;
       mapNote.innerHTML = ok

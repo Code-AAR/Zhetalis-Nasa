@@ -24,6 +24,7 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = !(coarse && smallScreen);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
 const F = (await (await fetch('data/mars-facts.json')).json()).facts;
 await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
@@ -97,7 +98,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -135,7 +136,7 @@ async function arrive() {
   await showMissionPath(F);
   const fade = $('#fade'); fade.classList.remove('hidden');
   fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
-  await new Promise(r => setTimeout(r, 4200));
+  await new Promise(r => setTimeout(r, 6500));
   fade.classList.add('hidden');
   setSound({ scene: 'arrival' });
   await showArrival(F, outpost.delayMinutes());
@@ -148,7 +149,7 @@ async function arrive() {
     ${speakerHTML('crew-commander', 'Your commander')}
     <p>You just climbed out of your capsule. The outpost in front of you has only the basics - and limited supplies. Inside, the <b>power console</b> shares out the power from the solar panels.</p>
     ${factHTML(F.sol)}
-    <p>In this game <b>1 second = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
+    <p>In this game <b>1.5 seconds = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
     <p>Your mission: keep the crew alive for <b>${outpost.d.sols} sols</b>, or grow your camp into a <b>self-sustaining settlement</b>. Watch your <b>oxygen</b>, <b>food</b> and <b>radiation badge</b>.</p>
     <p>Walk to the glowing green door and ${keyWord('press <b>E</b>', 'tap <b>Use</b>')} to go inside. ${keyWord('Press <b>V</b>', 'Tap <b>View</b>')} any time to see through your own helmet.</p>
     <p>🎧 <b>Listen:</b> the wind you hear outside is a <b>real recording from Mars</b>, made by the Perseverance rover's microphone. ${keyWord('Press <b>M</b>', 'Use the <b>Sound</b> button')} to turn sound on or off.</p>
@@ -512,10 +513,12 @@ $('#loading').classList.add('hidden');
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.phase === 'launch') {
-    const { left, lifted, title, caption } = launch.update(dt);
+    const { left, lifted, title, caption, km, karman } = launch.update(dt);
     const lift = -left;   // seconds since lift-off: engines start at T-1.5, full power after lift-off, quieter once the core stage is gone
-    setSound({ thrust: left > 1.5 ? 0 : lift < 0 ? 0.5 : lift < 11 ? 1 : 0.25 }); tickSound(dt);
-    $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>`;
+    setSound({ thrust: left > 1.5 ? 0 : lift < 0 ? 0.5 : lift < 37 ? 1 : 0.25 }); tickSound(dt);
+    const height = lifted ? `<em class="cd-alt${karman ? ' space' : ''}">Height: ${Math.round(km)} km${km >= 100 ? ' · in space!' : ''}</em>` : '';
+    $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>${height}`;
+    if (karman) logFact(F.karman);
     if (lifted && !launch.logged) { launch.logged = true; [F.sls, F.mobileLauncher, F.boosters, F.ascent, F.orbitSpeed].forEach(logFact); }
     renderer.render(launch.scene, launch.camera);
     if (launch.done) { state.phase = 'cruise'; arrive(); }

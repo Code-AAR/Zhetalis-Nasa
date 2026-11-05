@@ -8,7 +8,7 @@ export const DIFFICULTY = {
 };
 
 export const TUNED = {
-  solSeconds: 24.66,       // 1 real second = 1 Mars hour, so a sol (24.66 h) takes 24.66 s
+  solSeconds: 37,          // 1.5 real seconds = 1 Mars hour, so a sol (24.66 h) takes 37 s
   dayStart: 0.25, dayEnd: 0.75,   // fraction of the sol that is daylight
   kWhPerPanel: 6,          // per clear sol, with clean panels
   heaterKWh: 4,            // the heater keeps the crew warm at night - it runs from the batteries

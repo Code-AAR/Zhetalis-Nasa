@@ -121,9 +121,9 @@ export class Interior {
       this.vel.x += (wx - this.vel.x) * k; this.vel.z += (wz - this.vel.z) * k;
       this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
       const sp = Math.hypot(this.vel.x, this.vel.z), before = this.step;
-      this.step += sp * dt / 1.4 * Math.PI * 2;
+      this.step += sp * dt / 1.9 * Math.PI * 2;
       if (Math.floor(before / Math.PI) !== Math.floor(this.step / Math.PI) && sp > 1) this.onStep?.();
-      this.bob = Math.abs(Math.cos(this.step)) * 0.035 * Math.min(1, sp / 2.6);
+      this.bob = (Math.cos(this.step * 2) - 1) * 0.012 * Math.min(1, sp / 2.6);   // a smooth wave, not a hop
       const r = Math.hypot(this.pos.x, this.pos.z), max = R - 1.2;
       if (r > max) { this.pos.x *= max / r; this.pos.z *= max / r; }
       const tx = this.pos.x - this.table.x, tz = this.pos.z - this.table.z, tr = Math.hypot(tx, tz);   // walk around the table

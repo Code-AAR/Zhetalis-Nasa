@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadModel } from './nasamodels.js';
+import { loadNasaAstronaut, poseAstronaut } from './suit.js';
 
 // ---------- terrain shape (deterministic, so every player gets the same map) ----------
 function hash(x, z) { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); }
@@ -14,11 +15,30 @@ function vnoise(x, z) {
 function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, z * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
 
 export const WORLD_SIZE = 640;
+// The land around the outpost is shaped like the real Gusev Crater, where NASA's Spirit rover landed:
+// heights come from NASA's 3D model of the Spirit landing site (assets/gusev-height.bin, 256x256, made by
+// sampling NASA's 3D-print file). The real crater is about 160 km wide - here it is shrunk so its rim is
+// the hills you see around you, and heights are stretched so they are easy to see.
+const GUSEV = await fetch('assets/gusev-height.bin').then(r => (r.ok ? r.arrayBuffer() : null)).then(b => b && new Uint16Array(b)).catch(() => null);
+const GN = 256, G_CX = 0.52, G_CY = 0.4, G_SPAN = 980;   // crater centre in the map, and metres the map covers
+function gusev(x, z) {
+  const u = (G_CX + x / G_SPAN) * (GN - 1), v = (G_CY + z / G_SPAN) * (GN - 1);
+  const x0 = Math.max(0, Math.min(GN - 2, Math.floor(u))), y0 = Math.max(0, Math.min(GN - 2, Math.floor(v)));
+  const fx = Math.min(1, Math.max(0, u - x0)), fy = Math.min(1, Math.max(0, v - y0)), at = (i, j) => GUSEV[(y0 + j) * GN + x0 + i] / 65535;
+  return (at(0, 0) * (1 - fx) + at(1, 0) * fx) * (1 - fy) + (at(0, 1) * (1 - fx) + at(1, 1) * fx) * fy;
+}
+const FLOOR = GUSEV ? gusev(0, 0) : 0;
 export function heightAt(x, z) {
   const r = Math.hypot(x, z);
-  let h = (fbm(x * 0.011, z * 0.011) - 0.5) * 34 + (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 5;
-  h += Math.max(0, fbm(x * 0.005 + 20, z * 0.005, 4) - 0.52) * 220;        // distant mesas and crater rims
-  const edge = Math.max(0, r - WORLD_SIZE * 0.36) * 0.9;                      // hills ring the map so it feels endless
+  let h;
+  if (GUSEV) {
+    h = (gusev(x, z) - FLOOR) * 150;                                          // the crater floor, inner craters and rim
+    h += (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 4 + (fbm(x * 0.012, z * 0.012) - 0.5) * 8;   // small bumps
+  } else {
+    h = (fbm(x * 0.011, z * 0.011) - 0.5) * 34 + (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 5;
+    h += Math.max(0, fbm(x * 0.005 + 20, z * 0.005, 4) - 0.52) * 220;
+  }
+  const edge = Math.max(0, r - WORLD_SIZE * 0.4) * 0.6;                       // hills ring the map so it feels endless
   return (h + edge) * THREE.MathUtils.smoothstep(r, 26, 70);                  // flat landing pad around the outpost
 }
 
@@ -33,8 +53,26 @@ function makeSky(scene) {
   return sky;
 }
 
+// Fine sand and pebbles, tiled over the ground (made in code, so nothing to download). Light grey, so it
+// only adds grain on top of the terrain's own colours.
+function gravelTexture() {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d'), img = g.createImageData(N, N);
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < N * N; i++) { const v = 205 + rnd() * 50; img.data.set([v, v * 0.97, v * 0.94, 255], i * 4); }
+  g.putImageData(img, 0, 0);
+  for (let i = 0; i < 120; i++) {                       // little stones with a shadow side
+    const x = rnd() * N, y = rnd() * N, r = 0.8 + rnd() * 2.6;
+    g.fillStyle = `rgba(90,45,25,${0.12 + rnd() * 0.18})`; g.beginPath(); g.arc(x + r * 0.4, y + r * 0.4, r, 0, 7); g.fill();
+    g.fillStyle = `rgba(255,236,215,${0.15 + rnd() * 0.2})`; g.beginPath(); g.arc(x, y, r * 0.8, 0, 7); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(150, 150);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 function makeTerrain() {
-  const seg = 220;
+  const seg = 256;
   const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, colors = [];
@@ -50,7 +88,7 @@ function makeTerrain() {
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0, map: gravelTexture() }));
   mesh.receiveShadow = true;
   return mesh;
 }
@@ -202,6 +240,7 @@ function makeAstronaut() {
 }
 
 // Turn by the shortest way round (so you never spin 350° to face 10° to the left).
+const WALK = 4.2, RUN = 7.5;   // m/s - brisk for a game, but slow enough that the steps look right
 const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
 export class World {
@@ -282,7 +321,14 @@ export class World {
 
     // Team models: drop a .glb with one of these names into game/assets/ and it replaces the
     // placeholder shape automatically (scaled to the same height). No code changes needed.
-    this.swapModel('astronaut.glb', this.player.userData.rig, 1.85);   // inside the rig, so the team model bobs and leans too
+    // NASA's own Astronaut 3D model, cut into jointed parts so it can really walk (suit.js).
+    // If it can't load, the team model (assets/astronaut.glb) or the simple shapes are used instead.
+    loadNasaAstronaut().then(a => {
+      if (!a) return this.swapModel('astronaut.glb', this.player.userData.rig, 1.85);
+      const rig = this.player.userData.rig;
+      rig.children.forEach(c => (c.visible = false));
+      rig.add(a.root); this.suit = a;
+    }).catch(err => { console.warn('NASA astronaut failed', err); this.swapModel('astronaut.glb', this.player.userData.rig, 1.85); });
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
     this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
@@ -374,47 +420,54 @@ export class World {
     this.night = day < 0.35;
   }
 
-  // Smooth astronaut animation. The team model has no skeleton, so the whole body moves in code:
-  // a bouncy low-gravity lope (Mars has 38% of Earth's gravity), turning smoothly, leaning into the walk,
-  // swinging arms and legs, breathing when still, and a squash when you land.
+  // Astronaut animation. With NASA's jointed suit (suit.js) the hips, knees and arms really move, and the body
+  // rises and falls in a smooth wave over each foot. Steps follow the distance walked, so feet don't slide.
+  // Mars has 38% of Earth's gravity, so running becomes long, floaty strides.
   animateAstronaut(dt, running) {
     const u = this.player.userData, rig = u.rig, speed = Math.hypot(this.move.x, this.move.z);
-    const pace = Math.min(1, speed / 5), run = Math.min(1, Math.max(0, (speed - 5) / 4));
-    // face where you are going, turning smoothly
+    const pace = Math.min(1, speed / WALK), run = THREE.MathUtils.clamp((speed - WALK) / (RUN - WALK), 0, 1);
+    const ease = k => 1 - Math.exp(-dt * k);
+    // face where you are going, turning smoothly (no snapping)
     if (speed > 0.4) {
       const turn = angleTo(this.player.rotation.y, Math.atan2(this.move.x, this.move.z));
-      this.player.rotation.y += turn * (1 - Math.exp(-dt * 10));
-      this.lean.z += (THREE.MathUtils.clamp(-turn * 0.6, -0.25, 0.25) * pace - this.lean.z) * (1 - Math.exp(-dt * 6));
-    } else this.lean.z *= Math.exp(-dt * 6);
-    // the gait moves with distance, not time, so feet don't slide: one full stride is about 2.2 m (long, floaty steps)
-    const stride = running ? 3 : 2.2, before = this.gait;
-    if (this.onGround) this.gait += speed * dt / stride * Math.PI * 2;
-    if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3) this.onStep?.(run);   // a foot touches down
-    const s = Math.sin(this.gait), air = this.onGround ? 0 : 1;
-    this.swing += ((pace * (0.55 + 0.25 * run)) - this.swing) * (1 - Math.exp(-dt * 8));   // swing eases in and out
-    u.legs[0].rotation.x = s * this.swing - air * 0.35; u.legs[1].rotation.x = -s * this.swing - air * 0.15;
-    if (u.arms) { u.arms[0].rotation.x = -s * this.swing * 0.8; u.arms[1].rotation.x = s * this.swing * 0.8; }
-    // bounce: two bumps per stride, higher when running; breathing when standing still
-    const breathe = Math.sin(this.time * 1.6) * 0.012 * (1 - pace);
-    const bob = Math.abs(Math.cos(this.gait)) * (0.06 + 0.12 * run) * pace;
-    this.squash *= Math.exp(-dt * 7);
-    rig.position.y = bob + breathe - this.squash * 0.12;
-    rig.scale.set(1 + this.squash * 0.06, 1 - this.squash * 0.1 + breathe * 0.5, 1 + this.squash * 0.06);
-    this.lean.x += ((0.1 * pace + 0.12 * run) - this.lean.x) * (1 - Math.exp(-dt * 5));   // lean into the walk
+      this.player.rotation.y += turn * ease(7);
+      this.lean.z += (THREE.MathUtils.clamp(-turn * 0.35, -0.12, 0.12) * pace - this.lean.z) * ease(5);
+    } else this.lean.z *= Math.exp(-dt * 5);
+    // one full cycle (left + right step) per 2.7 m walking, 4.2 m running
+    const cycle = THREE.MathUtils.lerp(2.7, 4.2, run), before = this.gait;
+    if (this.onGround) this.gait += speed * dt / cycle * Math.PI * 2;
+    else this.gait += (Math.round(this.gait / Math.PI) * Math.PI - this.gait) * ease(3);   // in the air: legs drift to neutral
+    if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3 && this.onGround) this.onStep?.(run);
+    this.swing += (pace - this.swing) * ease(6);                 // the stride grows and shrinks smoothly
+    this.runMix = (this.runMix ?? 0) + (run - (this.runMix ?? 0)) * ease(4);
+    this.airMix = (this.airMix ?? 0) + ((this.onGround ? 0 : 1) - (this.airMix ?? 0)) * ease(8);
+    const breathe = Math.sin(this.time * 1.6) * 0.008 * (1 - this.swing);
+    this.squash *= Math.exp(-dt * 8);
+    let bob = 0, sway = 0, twist = 0;
+    if (this.suit) {
+      ({ bob, sway, twist } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time }));
+      this.suit.torso.rotation.y = twist;
+    } else {   // simple shapes: legs and arms swing, no knees
+      const s = Math.sin(this.gait);
+      u.legs[0].rotation.x = s * this.swing * 0.5; u.legs[1].rotation.x = -s * this.swing * 0.5;
+      if (u.arms) { u.arms[0].rotation.x = -s * this.swing * 0.4; u.arms[1].rotation.x = s * this.swing * 0.4; }
+      bob = ((Math.cos(this.gait * 2) + 1) / 2) * 0.04 * this.swing;
+    }
+    rig.position.set(sway, bob + breathe - this.squash * 0.08, 0);
+    rig.scale.set(1, 1 - this.squash * 0.04, 1);
+    this.lean.x += ((0.05 * this.swing + 0.1 * this.runMix) - this.lean.x) * ease(4);   // lean a little into the walk
     rig.rotation.set(this.lean.x, 0, this.lean.z);
-    if (u.head) u.head.rotation.x = Math.sin(this.gait * 2) * 0.04 * pace - this.lean.x * 0.5;
     // first person: a gentle head bob through the helmet
-    this.headBob = { y: bob * 0.5 - this.squash * 0.15 + breathe, x: Math.sin(this.gait) * 0.03 * pace };
-    // a rigged team model with its own animations: blend idle -> walk -> run by speed (slowed a little: low gravity)
+    this.headBob = { y: (bob - 0.02) * 0.6 - this.squash * 0.1, x: sway * 0.6 };
+    // a rigged team model with its own animations: blend idle -> walk -> run by speed
     const anim = this.astroAnim;
-    if (anim) {
+    if (anim && !this.suit) {
       const a = anim.actions, w = { idle: 1 - pace, walk: pace * (1 - (a.run ? run : 0)), run: a.run ? pace * run : 0 };
       if (!a.walk) w.idle = 1;
       for (const [k, act] of Object.entries(a)) act.setEffectiveWeight(w[k] ?? 0);
-      if (a.walk) a.walk.timeScale = Math.max(0.4, speed / 5) * 0.85;
-      if (a.run) a.run.timeScale = Math.max(0.5, speed / 9) * 0.85;
+      if (a.walk) a.walk.timeScale = Math.max(0.4, speed / WALK) * 0.85;
+      if (a.run) a.run.timeScale = Math.max(0.5, speed / RUN) * 0.85;
       anim.mixer.update(dt);
-      rig.position.y = breathe - this.squash * 0.12;     // the animation does its own bouncing
     }
   }
 
@@ -437,7 +490,7 @@ export class World {
       const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
       want.set(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
-      if (want.lengthSq() > 0) want.normalize().multiplyScalar(running ? 9 : 5);
+      if (want.lengthSq() > 0) want.normalize().multiplyScalar(running ? RUN : WALK);
       if (k.Space && this.onGround) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
     }
     // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
@@ -449,7 +502,7 @@ export class World {
     this.collide(p);
     const ground = heightAt(p.x, p.z), wasInAir = !this.onGround;
     if (p.y <= ground) {
-      if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(1, -this.vel.y / 6);   // land with a little squash
+      if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);   // land with a little squash
       p.y = ground; this.vel.y = 0; this.onGround = true;
     }
     this.animateAstronaut(dt, running);

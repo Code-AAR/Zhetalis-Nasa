@@ -287,3 +287,7 @@ body.layout-phone .forecast div { font-size: .82rem; }
 body.layout-phone .mp-label { font-size: 26px; }
 body.layout-phone .mp-tag { font-size: 24px; }
 body.layout-phone .mp-hohmann .lab { font-size: 11px; }
+
+/* launch: height gauge under the caption, glowing at the Kármán line */
+#countdown .cd-alt { display: inline-block; margin-top: 10px; font-style: normal; font-size: 1rem; font-weight: 700; letter-spacing: .04em; padding: 4px 14px; border-radius: 999px; background: rgba(0,0,0,.35); }
+#countdown .cd-alt.space { background: rgba(90,190,255,.35); box-shadow: 0 0 22px rgba(120,220,255,.8); color: #e6f8ff; }
