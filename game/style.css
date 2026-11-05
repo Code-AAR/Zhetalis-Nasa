@@ -49,7 +49,7 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 .meter.low .bar i { background: var(--bad); } .meter.mid .bar i { background: var(--warn); }
 .meter.danger .bar i { background: var(--blue); } .meter.danger.mid .bar i { background: var(--warn); } .meter.danger.low .bar i { background: var(--bad); }
 .status { position: absolute; top: 14px; right: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; text-align: right; display: flex; flex-direction: column; gap: 4px; max-width: 46vw; }
-#sol { font-weight: 800; font-size: 1.05rem; } #credits { color: var(--warn); font-weight: 600; } #link { font-size: .8rem; color: var(--muted); }
+#sol { font-weight: 800; font-size: 1.05rem; } #tod { font-size: .8rem; color: var(--ink); } #credits { color: var(--warn); font-weight: 600; } #link { font-size: .8rem; color: var(--muted); }
 .status-buttons { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
 .status-buttons button { padding: 6px 10px; font-size: .8rem; }
 #hint { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 10px 20px; font-weight: 600; text-align: center; max-width: 90vw; }

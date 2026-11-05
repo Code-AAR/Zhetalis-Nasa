@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Outpost, DIFFICULTY, UPGRADES, TUNED } from './sim.js';
+import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS } from './sim.js';
 import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords } from './spaceweather.js';
 import { World } from './world.js';
 import { Launch } from './launch.js';
@@ -19,7 +19,7 @@ let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
 const state = { phase: 'title', difficulty: 'normal', speed: 1 };
-let world, launch, interior, outpost, solClock = 0, suit = 1, inside = false, pending = [], tutorialStep = 0;
+let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
 // ---------------- title screen ----------------
@@ -98,9 +98,10 @@ async function arrive() {
   $('#hud').classList.remove('hidden');
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
-    <p>Your outpost is right in front of you. Inside, the <b>power console</b> decides how to share out the power from the solar panels.</p>
+    <p>You just climbed out of your capsule. The outpost in front of you has only the basics - and limited supplies. Inside, the <b>power console</b> shares out the power from the solar panels.</p>
     ${factHTML(F.sol)}
-    <p>Your mission: keep the crew alive for <b>${outpost.d.sols} sols</b>. Watch your <b>oxygen</b>, <b>food</b> and <b>radiation badge</b>.</p>
+    <p>In this game <b>1 second = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
+    <p>Your mission: keep the crew alive for <b>${outpost.d.sols} sols</b>, or grow your camp into a <b>self-sustaining settlement</b>. Watch your <b>oxygen</b>, <b>food</b> and <b>radiation badge</b>.</p>
     <p>Walk to the glowing green door and press <b>E</b> to go inside. Press <b>V</b> any time to see through your own helmet.</p>`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
@@ -131,12 +132,13 @@ function openPower() {
   if (!outpost || outpost.over) return;
   const s = outpost.split;
   const rows = [['life', '🫁 Life support'], ['comms', '📡 Talk to Earth'], ['science', '🔬 Science'], ['shield', '🛡 Shielding']];
-  const next = Object.entries(UPGRADES).filter(([k]) => !outpost.unlocked(k)).sort((a, b) => a[1].unlockAt - b[1].unlockAt)[0];
+  const nextTier = TIERS[outpost.tier + 1];
+  const next = nextTier ? [null, { name: `"${nextTier.name}" tier`, unlockAt: nextTier.science }] : null;
   const html = `
-    <p>You have <b>${outpost.energy().toFixed(0)} kWh</b> of power for each sol${outpost.dust ? ' (a dust storm is blocking the sunlight!)' : ''}. Move the sliders - the total always stays 100%.</p>
+    <p>Each sol you make <b>${outpost.energy().toFixed(0)} kWh</b>${outpost.dust ? ' (a dust storm is blocking the sunlight!)' : ''}. The night heater takes <b>${TUNED.heaterKWh} kWh</b> first, so you can share out <b>${outpost.today.energy.toFixed(0)} kWh</b>. Move the sliders - the total always stays 100%.</p>
     ${rows.map(([k, label]) => `<div class="split-row"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(s[k] * 100)}" data-k="${k}"><b id="v-${k}">${Math.round(s[k] * 100)}%</b></div>`).join('')}
     <div class="forecast" id="forecast"></div>
-    <p class="source">Science sent to Earth so far: <b>${outpost.scienceSent}</b>${next ? ` - Earth will send the <b>${next[1].name}</b> design at ${next[1].unlockAt}.` : ' - you have every design!'}</p>
+    <p class="source">Science sent to Earth so far: <b>${outpost.scienceSent}</b>${next ? ` - your base reaches the <b>${next[1].name}</b> at ${next[1].unlockAt}, and Earth sends new designs.` : ' - you are a self-sustaining settlement!'}</p>
     ${factHTML(F.sunlight)}`;
   const remote = !inside;
   modal({ title: remote ? '⚡ Power control (game paused)' : '🖥 Power console - time is passing', pause: remote, html, choices: [{ label: 'Done', primary: true }] });
@@ -148,9 +150,12 @@ function openPower() {
     box.querySelector('#forecast').innerHTML = `
       <div>Oxygen each sol: ${sign(f.o2Net)} kg<br><small>Crew breathes ${outpost.o2Need.toFixed(2)} kg (${outpost.crew} × ${F.oxygen.value} kg)</small></div>
       <div>Food each sol: ${sign(f.foodNet)} meals</div>
-      <div>Earth link: ${f.link ? '<span class="pos">ON</span>' : '<span class="neg">OFF</span>'}<br><small>needs ${TUNED.commsNeedKWh} kWh${outpost.blackout ? ' - blocked by the Sun!' : ''}</small></div>
+      <div>Earth link: ${f.link ? '<span class="pos">ON</span>' : '<span class="neg">OFF</span>'}<br><small>needs ${f.commsNeed.toFixed(0)} kWh${outpost.blackout ? ' - blocked by the Sun!' : ''}</small></div>
       <div>Radiation inside: ${f.dose.toFixed(2)} mSv/sol<br><small>${Math.round(f.protection * 100)}% blocked</small></div>
-      <div>Science: +${f.science.toFixed(1)}/sol<br><small>${f.link ? 'reaching Earth' : 'stuck here until the link is on'}</small></div>`;
+      <div>Science: +${f.science.toFixed(1)}/sol<br><small>${f.link ? 'reaching Earth' : 'stuck here until the link is on'}</small></div>
+      <div>Solar panels: ${f.solar.toFixed(0)} kWh<br><small>${Math.round(outpost.clean * 100)}% clean${outpost.clean < 0.8 ? ' - go outside and wipe them!' : ''}${outpost.reactors ? ` · reactor +${outpost.reactors * TUNED.reactorKWh}` : ''}</small></div>
+      <div>Night heater: ${f.heater} kWh<br><small>${f.cold ? '<span class="neg">batteries too small - cold nights!</span>' : `batteries hold ${outpost.battery} kWh - enough`}</small></div>
+      ${outpost.relayDown ? `<div><span class="neg">Relay orbiter lost</span><br><small>talking straight to Earth needs ${f.commsNeed.toFixed(0)} kWh (${outpost.relayDown} sols until a new one arrives)</small></div>` : ''}`;
     rows.forEach(([k]) => (box.querySelector('#v-' + k).textContent = Math.round(outpost.split[k] * 100) + '%'));
   };
   sliders.forEach(sl => sl.oninput = () => {
@@ -167,20 +172,26 @@ function openPower() {
 }
 
 function openWorkbench() {
-  const html = `
+  const byTier = TIERS.map((t, i) => {
+    const items = Object.entries(UPGRADES).filter(([, u]) => u.tier === i).map(([k, u]) => {
+      const open = outpost.unlocked(k), done = u.once && outpost.built(k);
+      const why = done ? 'Built!' : open ? u.desc : `Design arrives when your base becomes a ${t.name} (${t.science} science sent).`;
+      return `<button data-build="${k}" ${!open || done || outpost.parts < u.parts ? 'disabled' : ''}><span><b>${done ? '✅ ' : open ? '' : '🔒 '}${u.name}</b><small>${why}</small></span><b>${u.parts} parts</b></button>`;
+    }).join('');
+    return `<h4>${i <= outpost.tier ? '' : '🔒 '}Tier ${i + 1}: ${t.name}</h4><div class="shop">${items}</div>`;
+  }).join('');
+  modal({ title: '🔧 Workbench', pause: false, html: `
     <p>You have <b>${outpost.parts} parts</b>. Find more outside: metal chunks, the old rover, and supply pods from Earth.</p>
-    <p class="source">New designs arrive from Earth's engineers when they receive enough of your science (sent so far: <b>${outpost.scienceSent}</b>).</p>
-    <div class="shop">${Object.entries(UPGRADES).map(([k, u]) => {
-      const open = outpost.unlocked(k);
-      return `<button data-build="${k}" ${!open || outpost.parts < u.parts ? 'disabled' : ''}><span><b>${open ? '' : '🔒 '}${u.name}</b><small>${open ? u.desc : `Design arrives when Earth has received ${u.unlockAt} science.`}</small></span><b>${u.parts} parts</b></button>`;
-    }).join('')}</div>`;
-  modal({ title: '🔧 Workbench', pause: false, html, choices: [{ label: 'Done', primary: true }] });
+    <p class="source">Your base is a <b>${TIERS[outpost.tier].name}</b>. Science sent to Earth: <b>${outpost.scienceSent}</b>.</p>${byTier}`,
+    choices: [{ label: 'Done', primary: true }] });
   $('#modal .modal-box').querySelectorAll('[data-build]').forEach(b => b.onclick = () => {
     const key = b.dataset.build;
     if (outpost.buy(key)) {
       toast(`🔧 Built: ${UPGRADES[key].name}`);
-      world.setPanels(outpost.panels); world.setWall(outpost.upgrades.wall);
-      openWorkbench();
+      world.setPanels(outpost.panels); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
+      if (key === 'regolith') modal({ pause: false, title: '⛏ Outpost buried!', html: factHTML(F.regolith) });
+      else if (key === 'reactor') modal({ pause: false, title: '⚛ Reactor online!', html: factHTML(F.fission) });
+      else openWorkbench();
     }
   });
 }
@@ -218,17 +229,26 @@ function handle(ev) {
       toast(`📡 Earth heard you (your message took ${ev.delay.toFixed(1)} minutes to get there). A supply pod is coming!`, 5000);
       pending.push({ sol: outpost.sol + 3, type: 'pod' }); break;
     case 'supply-missed': toast('📡 Earth couldn\'t hear you - not enough power for the radio. No supply pod this time.', 5000); break;
-    case 'blueprint': {
-      const u = UPGRADES[ev.key];
+    case 'tier-up': {
+      const t = TIERS[ev.tier], designs = Object.values(UPGRADES).filter(u => u.tier === ev.tier);
       say('design');
-      modal({ title: '📨 New design from Earth!', html: `<p>Earth's engineers studied the science you sent and radioed you the design for the <b>${u.name}</b>.</p><p>${u.desc}</p><p>Build it at the <b>workbench</b> inside the outpost with <b>${u.parts} parts</b>.</p>` });
+      modal({ title: `🏗 Your base is now a ${t.name}!`, html: `<p>Earth's engineers studied the science you sent and radioed you new designs:</p><p>${designs.map(u => `• <b>${u.name}</b> - ${u.desc}`).join('<br>')}</p><p>Build them at the <b>workbench</b> inside the outpost using parts.</p>` });
       break;
     }
+    case 'cold-night': toast('🥶 Your batteries ran flat before morning - the cold slowed the oxygen maker and greenhouse. Build an extra battery!', 5000); break;
+    case 'wind-clean': toast('💨 A gust of wind blew some dust off your solar panels! (This really happened to the Spirit and Opportunity rovers.)', 5000); break;
+    case 'relay-lost': outpost.today = outpost.forecast(); say('relay'); modal({ title: '📡 A relay orbiter has failed!', html: `<p>Your messages to Earth usually bounce off orbiters circling Mars. One of them just went silent. Until Earth moves another one into place (about ${outpost.relayDown} sols), you must talk straight to Earth - which needs much more power.</p>${factHTML(F.relay)}` }); break;
+    case 'relay-restored': toast('📡 A new relay orbiter is in place - talking to Earth is easy again.'); break;
   }
 }
 
 function collect(n) {
   if (n.type === 'door') return goInside();
+  if (n.type === 'panels') {
+    outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false;
+    modal({ title: '🧽 Solar panels cleaned!', html: `<p>Back to full power. Dust settles on them a little every sol - and a lot during dust storms - so check them often.</p>${factHTML(F.dustPanels)}` });
+    return;
+  }
   if (n.type === 'rover') {
     world.rover.salvaged = true; outpost.parts += 8; say('rover');
     world.rover.group.children[0].visible = false; // switch off its beacon
@@ -246,7 +266,8 @@ function endMission() {
   const o = outpost.over;
   say(o.win ? 'win' : 'lose');
   const why = {
-    complete: `You kept your crew alive for all ${outpost.d.sols} sols. Mission complete!`,
+    complete: `You kept your crew alive for all ${outpost.d.sols} sols. Mission complete! Your base reached the "${TIERS[outpost.tier].name}" tier.`,
+    settlement: `Your base makes its own power, oxygen and food - a self-sustaining settlement on Mars! That is the big goal of NASA's Moon to Mars plans.`,
     oxygen: 'The oxygen ran out. Next time give life support more power, or collect more ice to make oxygen.',
     food: 'The crew ran out of food. The greenhouse needs power from life support - or supply pods from Earth.',
     radiation: `Your radiation badge reached NASA's ${F.careerLimit.value} mSv limit, so the crew had to go home. Try more shielding, or hiding in the shelter during solar storms.`,
@@ -292,11 +313,16 @@ function drawHUD() {
   const o = outpost, f = o.today;
   meter('#m-o2', o.o2 / 60, `${o.o2.toFixed(1)} kg · ${f.o2Net >= 0 ? 'steady' : Math.floor(o.o2 / -f.o2Net) + ' sols left'}`);
   meter('#m-food', o.food / 60, `${o.food.toFixed(0)} meals · ${f.foodNet >= 0 ? 'steady' : Math.floor(o.food / -f.foodNet) + ' sols left'}`);
-  meter('#m-power', f.energy / (o.panels * TUNED.kWhPerPanel), `${f.energy.toFixed(0)} kWh${o.dust ? ' - dust storm!' : ''}`);
+  meter('#m-power', f.total / (o.panels * TUNED.kWhPerPanel + o.reactors * TUNED.reactorKWh), `${f.total.toFixed(0)} kWh/sol · panels ${Math.round(o.clean * 100)}% clean${o.dust ? ' · dust storm!' : ''}`);
   meter('#m-rad', o.dose / o.limit, `${o.dose.toFixed(1)} of ${o.limit} mSv`, true);
   $('#m-suit').classList.toggle('hidden', inside);
   meter('#m-suit', suit, `${Math.round(suit * o.suitSeconds())} s of air left`);
   $('#sol').textContent = `Sol ${o.sol} of ${o.d.sols}`;
+  // time of day (1 s = 1 Mars hour) and a battery gauge: charges in daylight, the heater drains it at night
+  const ph = solClock / TUNED.solSeconds, hour = Math.floor(ph * 24.66), isDay = ph > TUNED.dayStart && ph < TUNED.dayEnd;
+  const nightDone = ph >= TUNED.dayEnd ? (ph - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart) : (ph + 1 - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart);
+  const battery = o.reactors ? 1 : isDay ? Math.min(1, (ph - TUNED.dayStart) / 0.3) : Math.max(0, 1 - nightDone * TUNED.heaterKWh / o.battery);
+  $('#tod').textContent = `${isDay ? '☀️ Day' : '🌙 Night'} · ${String(hour).padStart(2, '0')}:00 Mars time · 🔋 ${Math.round(battery * 100)}% · 🏗 ${TIERS[o.tier].name}`;
   $('#credits').textContent = `🔩 ${o.parts} parts · 🔬 ${o.scienceSent} science sent${o.science >= 1 ? ` (+${Math.floor(o.science)} waiting)` : ''}`;
   $('#link').textContent = f.link ? `📡 Earth link on · messages take ${o.delayMinutes().toFixed(1)} min` : (o.blackout ? '📵 Sun blocking the radio' : '📡 Earth link OFF (needs more power)');
   const list = [];
@@ -304,6 +330,9 @@ function drawHUD() {
   if (o.dust) list.push({ text: `🌪 Dust storm: ${o.dust} sols left` });
   if (f.o2Net < 0 && o.o2 / -f.o2Net < 8) list.push({ text: '🫁 Oxygen running low - more power to life support!' });
   if (!inside && suit < 0.3) list.push({ text: '🧑‍🚀 Suit air low - go back inside!' });
+  if (o.clean < 0.7) list.push({ text: '🧽 Solar panels are dusty - go and clean them!' });
+  if (f.cold) list.push({ text: '🥶 Batteries too small for the night heater' });
+  if (o.relayDown) list.push({ text: `📡 Relay orbiter lost: ${o.relayDown} sols` });
   alerts(list);
   $('#crosshair').classList.toggle('hidden', !(inside || world.firstPerson) || isModalOpen());
   let hint = '';
@@ -313,7 +342,7 @@ function drawHUD() {
       hint = s ? `Press E to ${s.label}` : 'Walk to a station · click to look around';
     } else {
       const n = world.nearest();
-      const names = { door: 'go inside the outpost', rover: 'salvage the old rover', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod' };
+      const names = { door: 'go inside the outpost', rover: 'salvage the old rover', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
       hint = n ? `Press E to ${names[n.type]}` : (tutorialStep === 0 ? 'Walk to the outpost door (green light) · click the game to look around · V for first person' : '');
     }
   }
@@ -322,7 +351,8 @@ function drawHUD() {
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }) };
+if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), phase: p => (solClock = p * TUNED.solSeconds) };
+let sunsetShown = false;
 
 // ---------------- main loop ----------------
 const clock = new THREE.Clock();
@@ -345,8 +375,8 @@ renderer.setAnimationLoop(() => {
       solClock += step;
       if (world.nearest()?.type === 'door') tutorialStep = 1;
       if (!inside) {
-        // Outside, the suit uses air and the outpost's shielding isn't protecting you.
-        suit -= step / outpost.suitSeconds();
+        // Outside, the suit uses air (faster in the freezing night) and the outpost's shielding isn't protecting you.
+        suit -= step / outpost.suitSeconds() * (world.night ? TUNED.coldSuit : 1);
         const f = outpost.today, perSol = step / TUNED.solSeconds;
         outpost.dose += F.surfaceDose.value * f.protection * perSol;   // the part the shield would have blocked
         if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection;
@@ -360,10 +390,15 @@ renderer.setAnimationLoop(() => {
         queue.push(...outpost.tick());
         pending = pending.filter(p => { if (p.sol <= outpost.sol) { world.dropSupplyPod(); toast('📦 A supply pod landed near the outpost - follow the orange beam!'); return false; } return true; });
         world.setLink(outpost.today.link);
+        world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
         if (outpost.over) { queue.length = 0; endMission(); }
       }
     }
     if (!isPaused() && queue.length && !outpost.over) handle(queue.shift());
+    world.setTime(solClock / TUNED.solSeconds);
+    if (!sunsetShown && !inside && solClock / TUNED.solSeconds > 0.72 && solClock / TUNED.solSeconds < 0.78) {
+      sunsetShown = true; toast('🌅 Look at the sunset - on Mars sunsets are BLUE! Fine dust lets blue light through. (NASA Curiosity photographed one in 2015.)', 7000);
+    }
     interior.setStorm(!!outpost.storm, clock.elapsedTime);
     drawHUD();
     if (inside) renderer.render(interior.scene, interior.camera);

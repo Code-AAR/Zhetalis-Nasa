@@ -121,9 +121,32 @@ function makeOutpost() {
   return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.6 }, { x: 9, z: 9, r: 0.6 }] };
 }
 
+// Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
+function makeSkyLights(scene) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'); const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.25, 'rgba(255,255,255,0.55)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(c);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#fff1dc', transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
+  glow.scale.setScalar(260); scene.add(glow);
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
+  scene.add(disc);
+  const pts = [];
+  for (let i = 0; i < 900; i++) {
+    const u = Math.random(), v = Math.random() * 0.48 + 0.02, th = u * Math.PI * 2, ph = Math.acos(1 - v * 2) ;
+    pts.push(Math.sin(ph) * Math.cos(th) * 850, Math.cos(ph) * 850, Math.sin(ph) * Math.sin(th) * 850);
+  }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+  scene.add(stars);
+  return { glow, disc, stars };
+}
+
 function makeSolarField() {
   const g = new THREE.Group(); g.position.set(16, 0, -8);
   const panelMat = new THREE.MeshLambertMaterial({ color: '#1d3a6e', flatShading: true });
+  g.userData.panelMat = panelMat;
   const frame = mat('#bfbab2');
   const panels = [];
   for (let i = 0; i < 12; i++) {
@@ -174,7 +197,11 @@ export class World {
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1800);
     this.scene.fog = new THREE.Fog('#d9a27a', 70, 460);
     this.sky = makeSky(this.scene);
+    this.skyLights = makeSkyLights(this.scene);
     this.hemi = new THREE.HemisphereLight('#ffe2c4', '#6b3a22', 1.15); this.scene.add(this.hemi);
+    this.headlamp = new THREE.SpotLight('#fff4e0', 0, 40, 0.5, 0.8, 1.4);   // switches on at night
+    this.scene.add(this.headlamp, this.headlamp.target);
+    this.phase = 0.3; this.dustOn = false;
     this.sun = new THREE.DirectionalLight('#fff1dc', 1.9);
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(1024, 1024);
     Object.assign(this.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
@@ -214,17 +241,28 @@ export class World {
     }, undefined, err => { console.warn('Perseverance model failed to load', err); onLoaded?.(); });
 
     this.player = makeAstronaut();
-    this.player.position.set(0, 0, 14);
+    this.player.position.set(-1.5, 0, -11);                 // you climb out of your capsule (the lander)...
+    this.yaw = Math.atan2(1.5, 11);                          // ...and see the outpost waiting for you
     this.scene.add(this.player);
+
+    // regolith (Mars soil) mound, shown once you bury the outpost - with a gap left for the door
+    const soil = new THREE.MeshLambertMaterial({ color: '#9a5a36', flatShading: true });
+    this.regolith = new THREE.Group();
+    this.regolith.add(at(new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.4, 4.8, 20, 1, false, Math.PI * 0.12, Math.PI * 1.76), soil), 0, 2.4, 0));
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.6, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), soil); cap.position.y = 4.6; cap.scale.y = 0.75;
+    this.regolith.add(cap);
+    this.regolith.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.regolith.visible = false; this.scene.add(this.regolith);
 
     // Team models: drop a .glb with one of these names into game/assets/ and it replaces the
     // placeholder shape automatically (scaled to the same height). No code changes needed.
     this.swapModel('astronaut.glb', this.player, 1.85);
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
     this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
-    this.vel = new THREE.Vector3(); this.onGround = true; this.yaw = Math.PI; this.pitch = 0.25;
+    this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
     this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
-    this.keys = {}; this.time = 0;
+    this.keys = {}; this.time = 0; this.panelsDirty = false;
+    this.setTime(this.phase);
   }
 
   swapModel(file, target, height, onlyChildren) {
@@ -257,12 +295,38 @@ export class World {
   }
 
   setPanels(n) { this.solar.panels.forEach((p, i) => (p.visible = i < n)); }
+  setPanelDust(clean) { this.solar.group.userData.panelMat.color.set('#1d3a6e').lerp(new THREE.Color('#b06a43'), (1 - clean) * 1.2); }
   setWall(level) { this.outpost.wall.visible = level > 0; }
+  setRegolith(on) {
+    this.regolith.visible = on;
+    const hab = this.colliders.find(c => c.x === 0 && c.z === 0); if (hab) hab.r = on ? 8.2 : 7;
+  }
   setLink(up) { this.outpost.beacon.material.color.set(up ? '#7dffb2' : '#ff4b3a'); this.linkUp = up; }
-  setDust(on) {
-    this.scene.fog.near = on ? 18 : 70; this.scene.fog.far = on ? 140 : 460;
-    this.scene.fog.color.set(on ? '#b06a43' : '#d9a27a');
-    this.sun.intensity = on ? 0.7 : 1.9;
+  setDust(on) { this.dustOn = on; this.setTime(this.phase); }
+
+  // phase: 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset (one sol = 24.66 Mars hours)
+  setTime(phase) {
+    this.phase = phase;
+    const ang = (phase - 0.25) * Math.PI * 2, elev = Math.sin(ang);          // sun height, -1..1
+    const day = THREE.MathUtils.smoothstep(elev, -0.3, 0.22);                  // 0 at night, 1 in full day (long dusty twilight)
+    const dusk = Math.max(0, 1 - Math.abs(elev + 0.05) / 0.38);                // around sunrise and sunset
+    const dir = new THREE.Vector3(Math.cos(ang) * 0.9, elev, 0.35).normalize();
+    this.sunDir = dir;
+    this.sun.intensity = (this.dustOn ? 0.6 : 1.9) * day;
+    this.sun.color.set('#fff1dc').lerp(new THREE.Color('#ffc08a'), dusk);
+    this.hemi.intensity = 0.22 + 0.93 * day * (this.dustOn ? 0.7 : 1);
+    this.sky.material.color.set('#ffffff').lerp(new THREE.Color('#141a2e'), 1 - day);
+    const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
+    this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
+    this.scene.fog.near = this.dustOn ? 18 : 70; this.scene.fog.far = this.dustOn ? 140 : 460 - 180 * (1 - day);
+    this.skyLights.stars.material.opacity = (1 - day) * (this.dustOn ? 0.2 : 0.95);
+    this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset
+    this.skyLights.glow.material.opacity = THREE.MathUtils.clamp((elev + 0.3) / 0.2, 0, 0.95);
+    this.skyLights.glow.scale.setScalar(260 + dusk * 520);
+    this.glowDir = new THREE.Vector3(dir.x, Math.max(dir.y, 0.07), dir.z).normalize();   // keep the glow just above the hills
+    this.skyLights.disc.visible = elev > -0.06;
+    this.headlamp.intensity = (1 - day) * 25;
+    this.night = day < 0.35;
   }
 
   // Simple circle collisions so you can't walk through the base or big boulders.
@@ -304,9 +368,8 @@ export class World {
       const eyeFP = new THREE.Vector3(p.x, p.y + 1.7, p.z);
       this.camera.position.copy(eyeFP);
       this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
-      this.sun.position.set(p.x + 60, p.y + 90, p.z + 30); this.sun.target.position.copy(p);
-      this.sky.position.copy(this.camera.position);
-      for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+      this.placeSky(p);
+            for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
       if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
       return;
     }
@@ -321,17 +384,29 @@ export class World {
     eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
     this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
     this.camera.lookAt(p.x, p.y + 1.6, p.z);
-    this.sun.position.set(p.x + 60, p.y + 90, p.z + 30); this.sun.target.position.copy(p);
-    this.sky.position.copy(this.camera.position);
-
+    this.placeSky(p);
+    
     for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
     if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+  }
+
+  // Sun, glow, stars, sky and headlamp follow the camera; the sun's direction follows the time of day.
+  placeSky(p) {
+    const cam = this.camera.position, dir = this.sunDir || new THREE.Vector3(0.5, 0.8, 0.3);
+    this.sun.position.set(p.x + dir.x * 120, p.y + Math.max(dir.y, 0.05) * 120, p.z + dir.z * 120); this.sun.target.position.copy(p);
+    this.sky.position.copy(cam);
+    this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
+    this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
+    this.skyLights.stars.position.copy(cam);
+    const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
+    this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);
   }
 
   // What the player is close enough to use with E.
   nearest() {
     const p = this.player.position, list = [];
     list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
+    if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
     for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });
     list.sort((a, b) => a.d - b.d);

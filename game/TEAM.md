@@ -25,6 +25,19 @@ Then open http://localhost:8123/game/ . (Opening `index.html` directly does not 
 - Events: solar storms based on **real flares** (NOAA GOES live data, NASA DONKI when it is online), dust storms (Opportunity 2018 fact), solar conjunction radio blackout.
 - In-game "Real NASA data used" panel with every source.
 
+## Day/night + power update (storyboard "core")
+
+- **Time:** 1 real second = 1 Mars hour, so a sol (24.66 h) takes about 25 s. Missions: Cadet 40 sols, Explorer 80, Commander 150.
+- **Day/night:** the Sun rises and sets, the sky gets dark, stars come out and a **blue Mars sunset** glows (NASA Curiosity, 2015). A headlamp comes on at night. The HUD shows Day/Night, Mars time, battery % and base tier.
+- **Batteries + heater:** solar only works in the day. At night the heater runs from the batteries; when they run out, the crew gets cold and suits use air faster. Build more batteries at the workbench.
+- **Dusty panels:** dust slowly covers the panels (real problem for Spirit/Opportunity). Walk up to them and press **E** to clean them. Sometimes wind cleans them for you.
+- **Relay orbiter failure:** sometimes a relay orbiter fails (like MAVEN in 2025), so talking to Earth costs 2.5× the power until it is fixed.
+- **Regolith burial:** pile Mars soil over the outpost for strong radiation shielding.
+- **Tiers:** Landing camp → Sealed base → Industrial outpost → Self-sustaining settlement. Each tier unlocks when Earth has received enough of your science (40 / 120 / 260) and brings new designs: panels and greenhouse, then MOXIE and water walls, then a **fission reactor** (NASA Fission Surface Power, 40 kW) that works at night and in dust storms.
+- **Win:** reach the settlement tier with a reactor, more oxygen and food made than used, and at least half the mission done. Otherwise survive to the last sol.
+
+Debug for testers: open the game with `#debug` at the end of the address, then in the browser console use `game.phase(0.75)` (sunset), `game.event('relay-lost')`, `game.outpost.parts = 30`, `game.goInside()`.
+
 ## Who does what
 
 ### Modelling - Sidney, Charm
