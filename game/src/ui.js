@@ -2,9 +2,20 @@
 export const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export function factHTML(f) {
+export function factHTML(f, log = true) {
+  if (log) logFact(f);
   return `<div class="fact">${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div></div>`;
 }
+
+// The mission logbook: every real fact the player meets is saved as a card, in the order they found it.
+export const logbook = new Map();
+const logListeners = [];
+export function logFact(f) {
+  if (!f?.id || logbook.has(f.id)) return;
+  logbook.set(f.id, f);
+  logListeners.forEach(fn => fn(logbook.size, f));
+}
+export const onLog = fn => logListeners.push(fn);
 
 let modalOpen = false, modalPauses = true;
 export const isModalOpen = () => modalOpen;

@@ -5,7 +5,10 @@ import { World } from './world.js';
 import { Launch } from './launch.js';
 import { Interior } from './interior.js';
 import { showMissionPath } from './missionpath.js';
-import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say } from './ui.js';
+import { showArrival } from './arrival.js';
+import { loadRoverPhotos, loadEarthToday, loadMarsMap, dateWords } from './nasaimages.js';
+import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
+import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
@@ -15,6 +18,17 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const F = (await (await fetch('data/mars-facts.json')).json()).facts;
+for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
+onLog(n => { $('#log-btn').textContent = `📒 Logbook: ${n} (L)`; });
+
+// The mission logbook: every real fact you have met, as cards you can read again.
+function openLogbook() {
+  const cards = [...logbook.values()];
+  modal({ title: `📒 Mission logbook - ${cards.length} fact cards`, pause: !inside, html: `
+    <p>Every real NASA fact you discover on your mission is saved here. At the end of the mission there is a quick quiz to earn your <b>Junior Astronaut badge</b>!</p>
+    <div class="log-list">${cards.slice().reverse().map(f => factHTML(f, false)).join('') || '<p>No cards yet - explore!</p>'}</div>`,
+    choices: [{ label: 'Close', primary: true }] });
+}
 let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
@@ -57,6 +71,11 @@ function showData() {
     <h4>Space weather (solar storms)</h4>
     ${sourcesHTML(weather.sources)}
     <p class="source">Right now: ${s.count} flares in the last 7 days; biggest ${s.biggest ? s.biggest.cls : 'unknown'}; radiation-storm level S${s.radiationStorm ?? '?'} on NOAA's 0-5 scale. Every solar storm in the game is based on one of these real flares.</p>
+    <h4>Real NASA pictures (loaded live, no key needed)</h4>
+    <p class="source">• Outpost window: the newest colour photos from Perseverance's Mastcam-Z - <a href="https://mars.nasa.gov/mars2020/multimedia/raw-images/" target="_blank" rel="noopener">NASA/JPL-Caltech/ASU raw images</a></p>
+    <p class="source">• Power console: today's whole-Earth photo - <a href="https://epic.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA EPIC camera on DSCOVR</a></p>
+    <p class="source">• Arrival globe: <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a> - Viking orbiters colour mosaic</p>
+    <p class="source">• If a service is down, the game shows a saved list of the same real photos, labelled ARCHIVED.</p>
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models</h4>
@@ -75,6 +94,7 @@ $('#start').onclick = () => {
   Object.assign(skip.style, { position: 'fixed', right: '16px', bottom: '16px', zIndex: 5 });
   skip.onclick = () => (launch.done = true); document.body.appendChild(skip);
   buildWorld(); // start building Mars in the background during the countdown
+  loadMarsMap(); loadRoverPhotos(); loadEarthToday();   // and start fetching the real NASA pictures
 };
 
 function buildWorld() {
@@ -92,8 +112,9 @@ async function arrive() {
   const fade = $('#fade'); fade.classList.remove('hidden');
   fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
   await new Promise(r => setTimeout(r, 4200));
-  await weatherReady;
   fade.classList.add('hidden');
+  await showArrival(F, outpost.delayMinutes());
+  await weatherReady;
   state.phase = 'mars';
   $('#hud').classList.remove('hidden');
   say('welcome');
@@ -124,7 +145,32 @@ function stationAction(s) {
   if (s.type === 'workbench') return openWorkbench();
   if (s.type === 'greenhouse') return modal({ pause: false, title: '🌱 The greenhouse', html: `<p>Plants here grow your food. They need light and warmth, so they use <b>life-support power</b>. Right now they make <b>${outpost.today.food.toFixed(1)} meals</b> each sol and your crew eats <b>${outpost.crew}</b>.</p>${factHTML(F.farming)}` });
   if (s.type === 'shelter') return modal({ pause: false, title: '🛏 Storm shelter', html: `<p>During a solar storm, the crew squeezes into this small room with the thickest walls. It blocks most of the radiation - but nobody can do science or go outside.</p><p>${outpost.storm ? (outpost.shelter ? `<b>Sheltering now:</b> ${outpost.shelter} sols left.` : '<b>A solar storm is happening!</b> Choosing "hide in the shelter" in the warning keeps you safe.') : 'No storm right now.'}</p>${factHTML(F.careerLimit)}` });
-  if (s.type === 'window') return modal({ pause: false, title: '🪟 The view', html: `<p>Outside it is about <b>${F.temperature.value} °C</b>, the air is far too thin to breathe and it is mostly carbon dioxide.</p>${factHTML(F.air)}${factHTML(F.temperature)}` });
+  if (s.type === 'window') return openWindow();
+}
+
+// The outpost window shows REAL photos from Mars: the newest colour pictures from NASA's Perseverance rover.
+async function openWindow() {
+  modal({ pause: false, title: '🪟 Mars today - real photos', html: '<p>Loading the newest photos from NASA\'s Perseverance rover…</p>' });
+  const { mode, photos } = await loadRoverPhotos();
+  if (!isModalOpen() || !$('#modal h3')?.textContent.includes('Mars today')) return;   // the player closed it while loading
+  if (!photos.length) return modal({ pause: false, title: '🪟 The view', html: `<p>Couldn't reach NASA's photo server right now.</p>${factHTML(F.air)}${factHTML(F.temperature)}` });
+  const tag = mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>';
+  modal({ pause: false, title: '🪟 Mars today - real photos', html: `
+    <p>${tag}These are <b>real photos</b> that NASA's Perseverance rover took in Jezero Crater on Mars a few days ago. In our story it is 2126 - but this is what Mars looks like <b>right now</b>.</p>
+    <figure class="slide"><img id="ph-img" alt="Photo of Mars taken by NASA's Perseverance rover"><figcaption id="ph-cap"></figcaption></figure>
+    <div class="slide-nav"><button id="ph-prev">‹</button><button id="ph-play">⏸ Pause</button><button id="ph-next">›</button></div>
+    ${factHTML(F.perseverance)}${factHTML(F.temperature)}`, choices: [{ label: 'Done', primary: true, onPick: () => clearInterval(timer) }] });
+  let i = 0, timer;
+  const show = () => {
+    const p = photos[i];
+    $('#ph-img').src = p.src;
+    $('#ph-cap').innerHTML = `Sol ${p.sol} of Perseverance's mission · ${dateWords(p.when + 'Z')} · ${p.camera} · <a href="${p.link}" target="_blank" rel="noopener">NASA/JPL-Caltech/ASU</a> (${i + 1}/${photos.length})`;
+  };
+  const step = d => { i = (i + d + photos.length) % photos.length; show(); };
+  const play = () => { clearInterval(timer); timer = setInterval(() => { if (!$('#ph-img')) return clearInterval(timer); step(1); }, 3500); };
+  $('#ph-prev').onclick = () => step(-1); $('#ph-next').onclick = () => step(1);
+  $('#ph-play').onclick = e => { if (timer) { clearInterval(timer); timer = null; e.target.textContent = '▶ Play'; } else { play(); e.target.textContent = '⏸ Pause'; } };
+  show(); play();
 }
 
 // ---------------- the power trade-off ----------------
@@ -139,6 +185,7 @@ function openPower() {
     ${rows.map(([k, label]) => `<div class="split-row"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(s[k] * 100)}" data-k="${k}"><b id="v-${k}">${Math.round(s[k] * 100)}%</b></div>`).join('')}
     <div class="forecast" id="forecast"></div>
     <p class="source">Science sent to Earth so far: <b>${outpost.scienceSent}</b>${next ? ` - your base reaches the <b>${next[1].name}</b> at ${next[1].unlockAt}, and Earth sends new designs.` : ' - you are a self-sustaining settlement!'}</p>
+    <div class="earth-card" id="earth-card"><img alt="The whole Earth, photographed by NASA's EPIC camera"><p>Looking for today's photo of Earth…</p></div>
     ${factHTML(F.sunlight)}`;
   const remote = !inside;
   modal({ title: remote ? '⚡ Power control (game paused)' : '🖥 Power console - time is passing', pause: remote, html, choices: [{ label: 'Done', primary: true }] });
@@ -158,6 +205,14 @@ function openPower() {
       ${outpost.relayDown ? `<div><span class="neg">Relay orbiter lost</span><br><small>talking straight to Earth needs ${f.commsNeed.toFixed(0)} kWh (${outpost.relayDown} sols until a new one arrives)</small></div>` : ''}`;
     rows.forEach(([k]) => (box.querySelector('#v-' + k).textContent = Math.round(outpost.split[k] * 100) + '%'));
   };
+  // the people you are talking to: today's real photo of the whole Earth, from NASA's EPIC camera
+  loadEarthToday().then(e => {
+    const card = box.querySelector('#earth-card'); if (!card) return;
+    if (!e) return card.remove();
+    card.querySelector('img').src = e.src;
+    card.querySelector('p').innerHTML = `${e.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>'}<b>Home, ${dateWords(e.when.replace(' ', 'T') + 'Z')}.</b> A real photo of Earth from NASA's EPIC camera, 1.5 million km from Earth. A radio message from here takes <b>${outpost.delayMinutes().toFixed(1)} minutes</b> to get there.<br><span class="source">Source: <a href="${F.epic.url}" target="_blank" rel="noopener">${F.epic.source}</a></span>`;
+    logFact(F.epic);
+  });
   sliders.forEach(sl => sl.oninput = () => {
     // Moving one slider takes the difference from the others, so the total is always 100%.
     const k = sl.dataset.k, want = sl.value / 100, others = rows.map(r => r[0]).filter(x => x !== k);
@@ -275,8 +330,17 @@ function endMission() {
   modal({ title: o.win ? '🏆 Mission complete!' : '🚀 Mission over', html: `
     <p>${why}</p>
     <p>Sols survived: <b>${outpost.sol}</b> · Science sent to Earth: <b>${outpost.scienceSent}</b> · Radiation: <b>${outpost.dose.toFixed(0)} mSv</b> · Score: <b>${outpost.score()}</b></p>
-    ${factHTML(F.roundTrip)}`,
+    ${factHTML(F.roundTrip)}
+    <h4>📒 You collected ${logbook.size} real NASA fact cards. Quick quiz for your badge:</h4>
+    <div id="quiz"></div><div id="badge"></div>
+    <details><summary>📒 Read my logbook</summary><div class="log-list">${[...logbook.values()].map(f => factHTML(f, false)).join('')}</div></details>`,
     choices: [{ label: 'Play again', primary: true, onPick: () => location.reload() }] });
+  const qs = pickQuestions(new Set(logbook.keys()));
+  runQuiz($('#quiz'), qs, score => {
+    const b = badgeFor(score, qs.length);
+    $('#badge').innerHTML = `<div class="badge"><b>${b.icon}</b>${score} of ${qs.length} right - you earned the <b>${b.name}</b> badge!</div>`;
+    try { const best = +localStorage.getItem('ja-best') || 0; if (score > best) localStorage.setItem('ja-best', score); } catch { /* storage blocked */ }
+  });
 }
 
 // ---------------- input ----------------
@@ -288,6 +352,7 @@ addEventListener('keydown', e => {
     else { const n = world.nearest(); if (n) collect(n); }
   }
   if (e.code === 'KeyP') openPower();
+  if (e.code === 'KeyL') openLogbook();
   if (e.code === 'KeyV' && !inside) { world.firstPerson = !world.firstPerson; toast(world.firstPerson ? '👁 First-person view (V to switch back)' : '🎥 Third-person view'); }
 });
 addEventListener('keyup', e => { if (world) world.keys[e.code] = false; });
@@ -304,6 +369,7 @@ addEventListener('mousemove', e => {
   }
 });
 $('#power-btn').onclick = openPower;
+$('#log-btn').onclick = openLogbook;
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); world?.resize(); launch?.resize(); interior?.resize(); });
@@ -360,8 +426,9 @@ $('#loading').classList.add('hidden');
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.phase === 'launch') {
-    const { left, lifted, caption } = launch.update(dt);
-    $('#countdown').innerHTML = `${lifted ? 'LIFT-OFF!' : Math.max(0, left)}<small>${caption}</small>`;
+    const { left, lifted, title, caption } = launch.update(dt);
+    $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>`;
+    if (lifted && !launch.logged) { launch.logged = true; logFact(F.ascent); logFact(F.orbitSpeed); logFact(F.sls); }
     renderer.render(launch.scene, launch.camera);
     if (launch.done) { state.phase = 'cruise'; arrive(); }
     return;

@@ -1,0 +1,59 @@
+{
+ "saved": "2026-11-05T01:36:51.482Z",
+ "note": "Backup of real NASA photo links. Perseverance: mars.nasa.gov raw images feed. Earth: NASA EPIC on DSCOVR.",
+ "rover": [
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622583_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:21:53.576",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622583_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622517_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:20:51.575",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622517_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622454_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:19:42.584",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622454_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622367_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:18:21.580",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622367_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622294_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:17:01.573",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622294_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622230_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:15:59.568",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622230_145EBY_N0930000ZCAM10058_1100LMJ"
+  },
+  {
+   "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622154_145ECM_N0930000ZCAM10058_1100LMJ01_1200.jpg",
+   "sol": 2024,
+   "when": "2026-10-30T09:14:47.569",
+   "camera": "Mastcam-Z camera",
+   "link": "https://mars.nasa.gov/mars2020/multimedia/raw-images/ZL0_2024_0846622154_145ECM_N0930000ZCAM10058_1100LMJ"
+  }
+ ],
+ "earth": {
+  "src": "https://epic.gsfc.nasa.gov/archive/natural/2026/11/01/jpg/epic_1b_20261101115250.jpg",
+  "when": "2026-11-01 11:48:01"
+ }
+}

@@ -36,6 +36,19 @@ Then open http://localhost:8123/game/ . (Opening `index.html` directly does not 
 - **Tiers:** Landing camp → Sealed base → Industrial outpost → Self-sustaining settlement. Each tier unlocks when Earth has received enough of your science (40 / 120 / 260) and brings new designs: panels and greenhouse, then MOXIE and water walls, then a **fission reactor** (NASA Fission Surface Power, 40 kW) that works at night and in dust storms.
 - **Win:** reach the settlement tier with a reactor, more oxygen and food made than used, and at least half the mission done. Otherwise survive to the last sol.
 
+## Learning-journey update (real NASA pictures + course topics)
+
+- **Real NASA pictures, loaded live** (like the Space Apps "Earth Change Slideshow" guide, but for Mars):
+  - Outpost **window** = slideshow of the newest colour photos from **Perseverance** (Mastcam-Z), with sol and date.
+  - **Power console** = today's photo of the whole **Earth** from NASA's **EPIC** camera (the people you are radioing).
+  - **Arrival globe** = NASA **Mars Trek** map (Viking orbiters colour mosaic) with Jezero Crater marked.
+  - If NASA is down, a saved list is used and labelled ARCHIVED. Refresh it with `node scripts/snapshot-nasa-images.mjs` (uses the NASA key from `.env` for EPIC; the saved file has no key in it).
+  - The Mars Rover Photos API that many tutorials use is **dead** (404 "No such app") - don't use it.
+- **Launch phases** (Artemis I timeline): lift-off → max-Q → boosters off (2:12) → escape tower off (~3 min) → core stage off (~8 min) → orbit. The parts really drop away.
+- **Launch window** step in "How do we get there?": Hohmann transfer diagram, why Mars launches happen every ~26 months.
+- **Landing at Mars**: heat shield → parachute → rockets → "seven minutes of terror" (radio is slower than the landing).
+- **Logbook (L)**: every fact you meet becomes a card. **End-of-mission quiz** (3 questions from your cards) → Gold/Silver/Bronze Junior Astronaut badge.
+
 Debug for testers: open the game with `#debug` at the end of the address, then in the browser console use `game.phase(0.75)` (sunset), `game.event('relay-lost')`, `game.outpost.parts = 30`, `game.goInside()`.
 
 ## Who does what
@@ -97,5 +110,6 @@ The demo video for judging (1-2 minutes): show one real trade-off, e.g. a solar 
 ## Updating the real data
 ```
 node scripts/snapshot-noaa.mjs      # saves this week's real space weather
+node scripts/snapshot-nasa-images.mjs  # saves backup links to real Perseverance + EPIC photos
 node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when DONKI is online)
 ```

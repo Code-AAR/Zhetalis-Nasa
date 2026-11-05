@@ -32,12 +32,18 @@
     "water": { "kid": "Mars has water today - as ice just under the ground near the poles, and as salty (briny) water that seasonally trickles down some slopes.", "source": "NASA - Mars facts", "url": "https://science.nasa.gov/mars/facts/" },
     "regolith": { "kid": "'Regolith' is the loose dust, soil and broken rock that covers Mars. Piling it on top of a habitat makes a thick shield against radiation - scientists have measured how much it helps.", "source": "Research paper on regolith shielding, JGR Planets (AGU), 2019", "url": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019JE006246" },
     "fission": { "kid": "NASA is designing a small nuclear fission reactor that makes at least 40 kilowatts for about 10 years - day and night, even in dust storms. It would be tested on the Moon first, then used on Mars.", "source": "NASA Fission Surface Power (IAC 2024 paper)", "url": "https://ntrs.nasa.gov/api/citations/20240011694/downloads/IAC%202024%20Manuscript_FSP%20FINAL.pdf" },
+    "marsMap": { "kid": "NASA's Viking 1 and 2 orbiters photographed the whole of Mars in the 1970s. Scientists joined thousands of their pictures into one colour map of the planet - the one on this globe.", "source": "NASA Mars Trek (Viking MDIM 2.1 colour mosaic)", "url": "https://trek.nasa.gov/mars/" },
+    "edl": { "kid": "Landing on Mars is called 'entry, descent and landing'. Perseverance went from nearly 20,000 km/h to a gentle touchdown in about seven minutes: first a heat shield hotter than 1,260 °C, then a parachute, then rocket engines.", "source": "NASA JPL - 7 Minutes to Mars (Perseverance landing)", "url": "https://www.jpl.nasa.gov/videos/7-minutes-to-mars-nasas-perseverance-rover-attempts-most-dangerous-landing-yet/" },
+    "launchWindow": { "kid": "The fuel-saving path to Mars is called a 'Hohmann transfer': half a loop around the Sun that starts at Earth's orbit and ends at Mars's orbit. It only works when Mars will be in the right place when you arrive - about every 26 months.", "source": "NASA - Basics of Space Flight, Interplanetary Trajectories", "url": "https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/" },
+    "ascent": { "kid": "On the Artemis I launch, the two side boosters dropped off 2 minutes 12 seconds after lift-off, the escape tower came off after about 3 minutes, and the orange core stage switched off after about 8 minutes.", "source": "NASA - Artemis I mission timeline", "url": "https://www.nasa.gov/reference/artemis-i-mission-timeline/" },
+    "orbitSpeed": { "kid": "To stay in orbit around Earth you must go about 28,000 km/h - fast enough to go all the way around the world in about 90 minutes, like the International Space Station.", "source": "NASA - International Space Station facts", "url": "https://www.nasa.gov/international-space-station/space-station-facts-and-figures/" },
+    "epic": { "kid": "NASA's EPIC camera rides on the DSCOVR satellite, 1.5 million km from Earth, and photographs the whole sunlit side of our planet every day.", "source": "NASA EPIC (DSCOVR)", "url": "https://epic.gsfc.nasa.gov/" },
     "farming": { "kid": "Astronauts on the International Space Station have grown lettuce, cabbage and even chili peppers. Growing food matters for Mars, where resupply from Earth takes months.", "source": "NASA - Growing plants in space", "url": "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/" }
   },
   "tuned": {
     "note": "These are game balance numbers so a whole mission fits into minutes of play. They are NOT measurements.",
     "solSeconds": "1 real second = 1 Mars hour, so a sol (24.66 hours) passes in about 25 seconds",
     "solarStormDose": "Solar storm radiation is made stronger than reality so you can see shielding matter within one game",
-    "kWhPerPanel": "Each solar panel makes 5 kWh per clear sol in the game"
+    "kWhPerPanel": "Each solar panel makes 6 kWh per clear sol in the game"
   }
 }

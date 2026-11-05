@@ -31,7 +31,8 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 
 /* launch */
 #countdown { position: fixed; top: 12%; left: 0; right: 0; text-align: center; font-size: clamp(4rem, 14vw, 9rem); font-weight: 800; text-shadow: 0 6px 30px rgba(0,0,0,.5); pointer-events: none; }
-#countdown small { display: block; font-size: 1.1rem; font-weight: 600; }
+#countdown small { display: block; font-size: 1.1rem; font-weight: 600; max-width: 90vw; margin: 0 auto; }
+#countdown .cd-phase { font-size: clamp(2.4rem, 8vw, 5rem); }
 #fade { position: fixed; inset: 0; background: #000; display: grid; place-items: center; text-align: center; padding: 24px; font-size: 1.25rem; line-height: 1.6; transition: opacity .8s; }
 #fade p { max-width: 640px; }
 
@@ -98,6 +99,40 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 .mp-nav { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
 #mp-count { color: var(--muted); font-size: .9rem; min-width: 52px; text-align: center; }
 #mp-skip { margin-left: auto; }
+.mp-hohmann { width: min(420px, 100%); display: block; margin: 0 auto 10px; }
+.mp-hohmann .orb { fill: none; stroke: rgba(255,255,255,.22); stroke-dasharray: 3 4; }
+.mp-hohmann .hop { fill: none; stroke: #ff7a3d; stroke-width: 2.5; }
+.mp-hohmann .lab { fill: #fff7ee; font-size: 9px; text-anchor: middle; }
+.mp-hohmann .lab.hl { fill: #ffd27a; font-weight: 700; }
+
+/* arrival: real Mars globe + landing steps */
+#arrival { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; overflow: auto; background: radial-gradient(ellipse at 50% 30%, #241622, #05060c 70%); }
+.ar-stage { position: relative; }
+#ar-globe { width: 100%; height: min(42vh, 340px); display: block; }
+#ar-icon { position: absolute; right: 4%; top: 12%; width: min(22vw, 140px); }
+#ar-icon svg { width: 100%; height: auto; display: block; }
+#ar-map { text-align: center; margin: 4px 0 0; }
+
+/* real photo slideshows (Perseverance, EPIC) */
+.slide { margin: 10px 0; }
+.slide img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: #120a07; display: block; }
+.slide figcaption { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+.slide figcaption a { color: var(--muted); }
+.slide-nav { display: flex; gap: 8px; justify-content: center; }
+.earth-card { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; background: rgba(143,212,255,0.08); border-radius: 12px; padding: 8px 10px; margin: 10px 0; }
+.earth-card img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: #000; }
+.earth-card p { margin: 0; font-size: .85rem; }
+
+/* logbook + quiz */
+.log-list { display: grid; gap: 8px; }
+.log-list .fact { font-size: .86rem; }
+.quiz-q { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.quiz-q p { margin: 0 0 8px; font-weight: 600; }
+.quiz-q .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.quiz-q button.right { background: rgba(125,255,178,.3); border-color: var(--good); }
+.quiz-q button.wrong { background: rgba(255,90,74,.3); border-color: var(--bad); }
+.badge { text-align: center; font-size: 1.1rem; margin: 12px 0; }
+.badge b { display: block; font-size: 3rem; }
 
 /* first-person crosshair */
 #crosshair { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; pointer-events: none; z-index: 2; }

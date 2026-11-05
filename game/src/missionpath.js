@@ -12,6 +12,19 @@ const PATHS = {
   landMars: 'M690,182 L690,214',
 };
 
+// A Hohmann transfer, seen from above the Sun: leave Earth, coast half an ellipse, meet Mars.
+// Mars moves about 136° while you travel, so it has to be that far ahead when you launch.
+const HOHMANN = `
+  <svg viewBox="0 0 260 160" class="mp-hohmann" aria-label="Diagram of a Hohmann transfer from Earth to Mars">
+    <circle cx="110" cy="80" r="40" class="orb"/><circle cx="110" cy="80" r="62" class="orb"/>
+    <path d="M70,80 A51,50 0 0 1 172,80" class="hop"/>
+    <circle cx="110" cy="80" r="9" fill="#ffd27a"/><text x="110" y="104" class="lab">Sun</text>
+    <circle cx="70" cy="80" r="6" fill="#4f9be8"/><text x="70" y="100" class="lab">Earth at launch</text>
+    <circle cx="65" cy="37" r="5" fill="#c9774a" opacity=".45"/><text x="40" y="24" class="lab">Mars at launch</text>
+    <circle cx="172" cy="80" r="6" fill="#e0703d"/><text x="200" y="100" class="lab">Mars on arrival</text>
+    <text x="198" y="30" class="lab hl">7 to 9 months</text>
+  </svg>`;
+
 // Each step: which path animates, what kids read, and the real-source fact card.
 function steps(F) {
   return [
@@ -21,8 +34,9 @@ function steps(F) {
     { path: 'nrho', title: '3. A giant loop around the Moon', text: "Orion goes into a huge, stretched loop around the Moon. A lander is already waiting there.", fact: F.nrho },
     { path: 'landMoon', title: '4. Change spaceships: the HLS lander', text: 'Orion cannot land, so it docks with the Human Landing System (HLS). The astronauts float across into the lander, which flies them down to the surface - and later back up to Orion.', fact: F.hls },
     { path: 'homeMoon', title: '5. Home again', text: "Orion brings the crew back to Earth and splashes down in the ocean, slowed by parachutes. In April 2026 Artemis II flew four astronauts around the Moon - real people, not a game!", fact: F.artemis2 },
-    { path: 'toMars', title: '6. To Mars: a bigger spaceship', text: "Mars is much farther, so NASA is designing a 'transit habitat' with its own engines - a house that flies. SLS and Orion take the crew up to meet it, then the long trip begins: about 7 months!", fact: F.cruiseDose },
-    { path: 'landMars', title: '7. Landing on Mars', text: "In orbit around Mars, the crew moves into a Mars lander that takes them down to the outpost. A return rocket sent ahead of time waits there to lift them back up for the trip home. In our game it is the year 2126 - this plan has become real, and you are the junior astronaut!", fact: F.moonToMars },
+    { path: null, title: '6. Wait for the launch window', text: "You can't fly straight at Mars - it is moving! The fuel-saving path is half a loop around the Sun that ends exactly where Mars will be when you get there. Earth and Mars only line up right for this about every 26 months, so missions must launch in that 'window' or wait two more years.", fact: F.launchWindow, extra: HOHMANN },
+    { path: 'toMars', title: '7. To Mars: a bigger spaceship', text: "Mars is much farther, so NASA is designing a 'transit habitat' with its own engines - a house that flies. SLS and Orion take the crew up to meet it, then the long trip begins: about 7 months!", fact: F.cruiseDose },
+    { path: 'landMars', title: '8. Landing on Mars', text: "In orbit around Mars, the crew moves into a Mars lander that takes them down to the outpost. A return rocket sent ahead of time waits there to lift them back up for the trip home. In our game it is the year 2126 - this plan has become real, and you are the junior astronaut!", fact: F.moonToMars },
   ];
 }
 
@@ -59,7 +73,7 @@ export function showMissionPath(F, { from = 0 } = {}) {
       const s = list[i];
       root.querySelector('#mp-title').textContent = s.title;
       root.querySelector('#mp-text').textContent = s.text;
-      root.querySelector('#mp-fact').innerHTML = s.fact ? factHTML(s.fact) : '';
+      root.querySelector('#mp-fact').innerHTML = (s.extra || '') + (s.fact ? factHTML(s.fact) : '');
       root.querySelector('#mp-count').textContent = `${i + 1} / ${list.length}`;
       root.querySelector('#mp-back').disabled = i === 0;
       root.querySelector('#mp-next').textContent = i === list.length - 1 ? 'Go to Mars ›' : 'Next ›';
