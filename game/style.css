@@ -209,7 +209,7 @@ body.layout-phone .story { font-size: .95rem; }
 body.layout-phone .cards { grid-template-columns: 1fr; }
 body.layout-phone .actions { gap: 8px; }
 body.layout-phone .actions button { flex: 1 1 calc(50% - 8px); padding: 10px 12px; }
-body.layout-phone .actions #start { flex-basis: 100%; }
+body.layout-phone .actions #start, body.layout-phone .actions #resume { flex-basis: 100%; }
 body.layout-phone .screen-pick button { flex: 1 1 0; padding: 6px 4px; }
 body.layout-phone .screen { padding: max(10px, env(safe-area-inset-top)) 10px 10px; place-items: start center; }
 

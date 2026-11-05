@@ -105,7 +105,69 @@ function showData() {
     <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up.</p>` });
 }
 
+// ---------------- save and resume ----------------
+// The mission saves itself every few seconds (and when the tab is hidden or closed), in this browser only.
+// After a refresh, the title screen offers "Resume" to carry on from the same sol.
+const SAVE_KEY = 'ja-save-v1';
+function saveGame() {
+  if (state.phase !== 'mars' || !outpost || outpost.over || !world) return;
+  const o = {};
+  for (const [k, v] of Object.entries(outpost)) if (!['d', 'facts', 'today'].includes(k)) o[k] = v;
+  const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
+  const data = {
+    v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
+    solClock, suit, inside, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
+    world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
+      pickups: world.pickups.map(k => [k.kind, k.x, k.z]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage blocked: no saving */ }
+}
+function readSave() {
+  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d?.v === 1 && DIFFICULTY[d.difficulty] ? d : null; } catch { return null; }
+}
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ } }
+addEventListener('pagehide', saveGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+setInterval(saveGame, 5000);
+
+const saved = readSave();
+if (saved) {
+  const b = $('#resume');
+  b.textContent = `▶ Resume: sol ${saved.outpost.sol} of ${DIFFICULTY[saved.difficulty].sols} (${DIFFICULTY[saved.difficulty].label})`;
+  b.classList.remove('hidden');
+  b.onclick = () => resume(saved);
+}
+
+// Back to Mars straight away, with everything as it was.
+async function resume(d) {
+  startSound();
+  $('#title').classList.add('hidden');
+  state.difficulty = d.difficulty; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
+  buildWorld();
+  Object.assign(outpost, d.outpost); outpost.today = outpost.forecast();
+  ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
+  d.logbook.forEach(id => F[id] && logFact(F[id]));
+  const w = d.world;
+  world.pickups.slice().forEach(p => world.removePickup(p));
+  w.pickups.forEach(([kind, x, z]) => world.addPickup(kind, x, z));
+  if (w.rover) { world.rover.salvaged = true; world.rover.group.children[0].visible = false; }
+  world.heli.seen = w.heli; world.sevShown = w.sevShown;
+  world.player.position.set(w.player[0], 0, w.player[1]); world.yaw = w.yaw;
+  world.sev.pos.set(w.sev[0], 0, w.sev[1]); world.sev.yaw = w.sev[2]; world.sev.battery = w.sev[3];
+  world.setPanels(outpost.panels); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
+  world.setLink(outpost.today.link); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
+  world.setDust(!!outpost.dust);
+  if (d.inside) goInside(); else inside = false;
+  loadRoverPhotos(); loadEarthToday();
+  setSound({ scene: 'mars' });
+  await weatherReady;
+  state.phase = 'mars';
+  $('#hud').classList.remove('hidden');
+  toast(`👋 Welcome back, astronaut! Sol ${outpost.sol} - your mission carries on where you left it.`);
+}
+
 $('#start').onclick = () => {
+  clearSave();                                                 // a new mission replaces the old save
   startSound(); setSound({ scene: 'launch', thrust: 0 });   // sound can only start after a click
   $('#title').classList.add('hidden');
   state.phase = 'launch';
@@ -366,6 +428,7 @@ function collect(n) {
 }
 
 function endMission() {
+  clearSave();   // the mission is over, so there is nothing to resume
   document.exitPointerLock?.();
   const o = outpost.over;
   say(o.win ? 'win' : 'lose');
