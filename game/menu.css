@@ -1,0 +1,95 @@
+/* The menu is a self-contained layer; in-mission controls keep their own styles.
+   Desktop: 46% mission controls + 54% planetary view inside equal 5vw gutters. */
+#title { --menu-ground: #080a0b; --menu-surface: #171a1b; --menu-ink: #f1f2f2; --menu-muted: #a8aeaf; --menu-rule: #343a3c; background: var(--menu-ground) url("assets/menu-stars.svg") repeat; background-size: 1200px 900px; color: var(--menu-ink); display: block; padding: 0; overscroll-behavior: contain; }
+#title .mission-shell { width: 100%; max-width: 1600px; min-height: 100%; margin: auto; padding: max(24px, env(safe-area-inset-top)) max(5vw, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(5vw, env(safe-area-inset-left)); display: flex; flex-direction: column; }
+#title button, #title a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+#title button { color: var(--menu-ink); border: 0; border-radius: 6px; background: transparent; box-shadow: none; }
+#title button:focus-visible, #title a:focus-visible { outline: 2px solid var(--menu-ink); outline-offset: 5px; }
+#title button:hover { background: #24282a; }
+#title a { color: inherit; }
+.mission-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.mission-brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+.mission-brand img { width: 58px; height: 58px; object-fit: contain; }
+.mission-brand > span { font-size: 22px; font-weight: 600; letter-spacing: -.6px; }
+.mission-brand small { display: block; color: var(--menu-muted); font-size: 11px; font-weight: 400; letter-spacing: 0; margin-top: 2px; }
+.mission-header nav { display: flex; gap: 12px; }
+#title .mission-header button { font-size: 12px; padding: 10px 12px; }
+.mission-header nav span { margin-left: 10px; }
+.mission-main { flex: 1; display: grid; grid-template-columns: 46% 54%; align-items: center; padding: 40px 0 32px; gap: 0; }
+.mission-copy { padding: 12px 32px 16px 0; }
+.mission-series { color: var(--menu-muted); font-size: 13px; margin: 0 0 22px; }
+#title h1 { font-size: clamp(40px, 4.5vw, 68px); line-height: 1.09; font-weight: 600; letter-spacing: -.065em; margin: 0; }
+.mission-intro { color: var(--menu-muted); font-size: 15px; line-height: 1.85; max-width: 420px; margin: 25px 0 32px; }
+.mission-level { border: 0; padding: 0; margin: 0; min-width: 0; }
+.mission-level legend { font-size: 12px; padding: 0; margin-bottom: 12px; }
+#title #difficulties { display: flex; gap: 6px; background: var(--menu-surface); padding: 5px; border-radius: 8px; max-width: 420px; }
+#title #difficulties .card { flex: 1; padding: 12px 6px; text-align: center; display: block; color: var(--menu-muted); border-radius: 5px; }
+#title #difficulties b { font-size: 12px; font-weight: 400; }
+#title #difficulties .selected { background: #353b3d; color: var(--menu-ink); }
+.mission-summary { color: var(--menu-muted); font-size: 12px; margin: 12px 0 24px; min-height: 20px; }
+.launch-actions { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+#title #start { display: flex; justify-content: space-between; align-items: center; background: var(--menu-ink); color: #101313; border-radius: 7px; padding: 17px 22px; font-size: 15px; font-weight: 600; }
+#title #start:hover { background: #d5d8d4; }
+#title #start span { font-size: 22px; line-height: 1; }
+#title #resume { padding: 13px 18px; background: #252b2d; font-size: 12px; text-align: left; }
+#title .journey-link { margin-top: 14px; padding: 8px 0; color: var(--menu-muted); font-size: 12px; text-align: left; }
+#title .journey-link:hover { background: transparent; color: var(--menu-ink); }
+.journey-link span { margin-left: 18px; }
+.planet-explorer { min-width: 0; padding-left: 16px; }
+.planet-heading { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--menu-muted); }
+.planet-heading > :first-child { color: var(--menu-ink); }
+.planet-stage { position: relative; height: clamp(280px, 30vw, 430px); }
+#menu-globes { position: absolute; inset: 0; display: block; width: 100%; height: 100%; z-index: 1; }
+.planet-fallback { position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; left: 34%; top: 15%; background: #a65e40 url('assets/mars-map.jpg') center / cover; box-shadow: inset -35px -12px 50px 12px #080a0b; }
+.planet-stage.has-globes .planet-fallback { visibility: hidden; }
+.planet-annotation { position: absolute; transform: translateX(-50%); white-space: nowrap; font-size: 11px; color: var(--menu-muted); pointer-events: none; z-index: 2; }
+.mission-annotation { color: #f4c485; font-weight: 600; }
+.mission-annotation b { font-weight: 600; }
+.mission-annotation small { display: block; font-size: 11px; }
+.planet-scale { position: absolute; left: 0; bottom: 0; color: var(--menu-muted); font-size: 11px; }
+.planet-scale a { text-decoration-color: var(--menu-rule); text-underline-offset: 3px; }
+.planet-caption { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 22px 0 19px; }
+#title .planet-caption h2 { color: var(--menu-ink); font-size: 30px; line-height: 1.2; font-weight: 400; letter-spacing: -1px; margin: 0 0 8px; }
+.planet-caption p { font-size: 11px; color: var(--menu-muted); margin: 0; }
+.planet-spin { color: var(--menu-muted); font-size: 11px; white-space: nowrap; }
+.planet-tabs { display: flex; gap: 5px; border-top: 1px solid var(--menu-rule); }
+#title .planet-tabs button { flex: 1; text-align: left; padding: 16px 6px 10px; border-radius: 0; border-top: 2px solid transparent; margin-top: -1px; color: var(--menu-muted); }
+#title .planet-tabs button[aria-pressed="true"] { border-color: var(--menu-ink); color: var(--menu-ink); }
+#title .planet-tabs button[data-mission="true"] small { color: #f4c485; }
+.planet-tabs span { font-size: 13px; }
+.planet-tabs small { display: block; margin-top: 5px; font-size: 11px; color: var(--menu-muted); }
+.planet-credit { color: var(--menu-muted); font-size: 11px; margin: 15px 0 0; }
+#menu-earth-photo { display: inline-block; font-size: 11px; margin-top: 8px; text-underline-offset: 3px; }
+.mission-footer { display: flex; justify-content: space-between; gap: 24px; align-items: center; padding-top: 20px; border-top: 1px solid var(--menu-rule); }
+.mission-weather { display: flex; align-items: center; gap: 12px; max-width: 54%; }
+.weather-symbol { width: 18px; height: 18px; flex-shrink: 0; border: 1px solid var(--menu-muted); border-radius: 50%; }
+#title .sun-line { margin: 0; font-size: 11px; line-height: 1.7; color: var(--menu-muted); }
+#title .sun-line b { color: var(--menu-ink); }
+#title .real-tag { font-size: 11px; border-radius: 3px; background: #d7dfd6; color: #142019; padding: 1px 4px; }
+#title .real-tag.archived { background: #343a3c; color: var(--menu-ink); }
+.mission-settings { display: flex; align-items: center; gap: 15px; }
+#title .screen-pick { margin: 0; gap: 2px; flex-wrap: nowrap; font-size: 11px; }
+#title .screen-pick span { margin-right: 8px; color: var(--menu-muted); }
+#title .screen-pick button { padding: 6px; min-height: 32px; font-size: 11px; }
+#title .screen-pick button.selected { background: #343a3c; border: 0; color: var(--menu-ink); }
+#title #fs-btn-title { margin: 0; padding: 8px; font-size: 11px; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 1100px) and (min-height: 840px) { .mission-main { max-height: 860px; } }
+@media (max-width: 1050px) { #title .mission-shell { padding-left: 4vw; padding-right: 4vw; } #title h1 { font-size: clamp(32px, 4.2vw, 44px); } .mission-copy { padding-right: 20px; } .mission-intro { font-size: 13px; } .mission-settings { flex-wrap: wrap; justify-content: flex-end; gap: 3px; } .mission-header nav { gap: 0; } .planet-spin { display: none; } }
+@media (max-width: 720px) {
+  #title .mission-shell { padding: max(18px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left)); }
+  .mission-brand img { width: 45px; height: 45px; } .mission-brand > span { font-size: 19px; } .mission-brand small { display: none; }
+  #title .mission-header button { font-size: 11px; padding: 8px; } .mission-header nav span { display: none; } .mission-header { gap: 8px; }
+  .mission-main { display: flex; flex-direction: column; align-items: stretch; padding: 34px 0 26px; }
+  .mission-copy { padding: 0; } .mission-series { margin-bottom: 16px; font-size: 11px; }
+  #title h1 { font-size: clamp(38px, 9.5vw, 60px); line-height: 1.07; }
+  .mission-intro { font-size: 13px; margin: 20px 0 24px; } .desktop-break { display: none; }
+  #title #difficulties, .launch-actions { max-width: none; } #title #difficulties .card { min-height: 44px; }
+  .mission-summary { margin-bottom: 18px; } #title .journey-link { margin-top: 10px; }
+  .planet-explorer { padding-left: 0; margin-top: 34px; } .planet-stage { height: 285px; }
+  .planet-caption { padding-top: 14px; } .planet-caption p { font-size: 11px; max-width: 290px; }
+  .mission-footer { flex-direction: column; align-items: stretch; gap: 18px; }
+  .mission-weather { max-width: none; } .mission-settings { justify-content: space-between; gap: 10px; }
+  #title .screen-pick button, #title #fs-btn-title { min-height: 44px; } #title .screen-pick { gap: 3px; }
+}
+@media (prefers-reduced-motion: reduce) { #title * { scroll-behavior: auto; } }

@@ -45,3 +45,38 @@ short quiz on those facts for a Gold, Silver or Bronze **Junior Astronaut badge*
 
 Game-balance numbers (how fast a sol passes, how strong storms are, how much a panel makes) are not
 measurements; the in-game "Real NASA data used" panel lists them separately so nobody mistakes them for science.
+
+## Mission-launch menu
+
+The title screen uses the Zhetalis badge and interactive Earth, Moon and Mars globes.
+Drag directly on any globe to rotate it independently, or choose a tab to inspect
+it up close. Each globe keeps its own rotation and momentum; dragging empty space
+does nothing. The star field is decorative, not a map of actual stars. Earth and the Moon are previews;
+**Launch to Mars** always starts the playable Mars mission. Mission difficulty,
+saved-game resume, instructions, NASA credits and display controls remain available.
+
+Surface maps are bundled assets, not live photographs; body diameters are proportional to NASA’s equatorial
+diameters (Earth 12,756 km, Mars 6,792 km, Moon 3,475 km); distances are compressed.
+Mars has a persistent mission-selection outline, independent of the preview tabs. Earth uses the existing NASA Blue Marble map, Mars uses the existing
+NASA 3D Resources map, and the Moon uses the [NASA SVS CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/)
+(NASA's Scientific Visualization Studio / Ernie Wright, LRO / LROC).
+
+The Moon circles Earth on a tilted orbit, passing in front of and behind it.
+Its diameter remains to scale with Earth; the orbit distance is compressed and
+time is accelerated to one revolution per minute, as labelled in the menu.
+Hovering over or dragging the Moon pauses its orbit so you can rotate it easily.
+Reduced-motion mode freezes the orbit while keeping manual globe rotation available.
+
+Refresh the menu's archived EPIC Earth-photo metadata and download the Moon map with:
+
+```powershell
+node scripts/snapshot-menu-space.mjs
+```
+
+Run this from the repository root. It reads `NASA_API_KEY` from the environment or
+the ignored `.env`, and writes only whitelisted, key-free metadata to
+`game/data/menu-space-data.json`. The Earth photo carries its capture date and an
+**Archived** label. If NASA is unavailable, the script preserves the previous Earth
+record; the bundled globes still work. Restarting the game is not required after
+a data refresh, just reload the page. The menu stops its renderer when a mission
+starts and respects reduced-motion preferences.

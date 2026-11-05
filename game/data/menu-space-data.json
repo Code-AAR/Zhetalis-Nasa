@@ -1,0 +1,18 @@
+{
+  "note": "Archived NASA imagery metadata. Globes are rendered surface maps, not live photographs. Body diameters are to scale; distances are compressed.",
+  "earth": {
+    "src": "https://epic.gsfc.nasa.gov/archive/natural/2026/11/03/jpg/epic_1b_20261103060041.jpg",
+    "when": "2026-11-03 05:55:52",
+    "centre": {
+      "lat": -6.774902,
+      "lon": 76.604004
+    }
+  },
+  "sources": {
+    "diameters": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/",
+    "earth": "https://epic.gsfc.nasa.gov/about/api",
+    "moon": "https://svs.gsfc.nasa.gov/4720/",
+    "mars": "https://github.com/nasa/NASA-3D-Resources"
+  },
+  "epicFetched": "2026-11-05T15:21:05.066Z"
+}

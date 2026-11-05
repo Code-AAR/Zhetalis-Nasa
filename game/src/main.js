@@ -14,6 +14,7 @@ import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels,
 import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
 import { initTouch, isTouch } from './touch.js';
 import { earthGlobe } from './globe.js';
+import { initMissionMenu } from './menu.js';
 import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
@@ -48,12 +49,19 @@ let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
 // ---------------- title screen ----------------
+const missionMenu = initMissionMenu();
 const diffBox = $('#difficulties');
 for (const [key, d] of Object.entries(DIFFICULTY)) {
   const b = document.createElement('button');
   b.className = 'card' + (key === state.difficulty ? ' selected' : '');
-  b.innerHTML = `<b>${d.label}</b><small>${d.blurb}</small>`;
-  b.onclick = () => { state.difficulty = key; diffBox.querySelectorAll('.card').forEach(c => c.classList.remove('selected')); b.classList.add('selected'); };
+  b.innerHTML = `<b>${d.label}</b>`;
+  b.setAttribute('aria-pressed', String(key === state.difficulty));
+  b.onclick = () => {
+    state.difficulty = key;
+    diffBox.querySelectorAll('.card').forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
+    b.classList.add('selected'); b.setAttribute('aria-pressed', 'true');
+    $('#mission-summary').textContent = d.blurb;
+  };
   diffBox.appendChild(b);
 }
 
@@ -89,6 +97,7 @@ function showData() {
     ${sourcesHTML(weather.sources)}
     <p class="source">Right now: ${s.count} flares in the last 7 days; biggest ${s.biggest ? s.biggest.cls : 'unknown'}; radiation-storm level S${s.radiationStorm ?? '?'} on NOAA's 0-5 scale. Every solar storm in the game is based on one of these real flares.</p>
     <h4>Real NASA pictures (loaded live, no key needed)</h4>
+    <p class="source">• Menu globes: saved Earth and Mars maps from the existing NASA assets, plus the <a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noopener">NASA SVS CGI Moon Kit</a> (NASA / Ernie Wright, LRO / LROC). These are rendered surface maps with body diameters to scale and compressed distances. The Earth preview also links to a dated, archived EPIC photo, refreshed locally with the private NASA key; the key is never shipped with the game.</p>
     <p class="source">• Outpost window: the newest colour photos from Perseverance's Mastcam-Z - <a href="https://mars.nasa.gov/mars2020/multimedia/raw-images/" target="_blank" rel="noopener">NASA/JPL-Caltech/ASU raw images</a></p>
     <p class="source">• Power console: today's whole-Earth photo - <a href="https://epic.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA EPIC camera on DSCOVR</a></p>
     <p class="source">• Arrival globe: <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a> - Viking orbiters colour mosaic</p>
@@ -141,6 +150,7 @@ if (saved) {
 
 // Back to Mars straight away, with everything as it was.
 async function resume(d) {
+  missionMenu.dispose();
   startSound();
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();
   $('#title').classList.add('hidden');
@@ -170,6 +180,7 @@ async function resume(d) {
 }
 
 $('#start').onclick = () => {
+  missionMenu.dispose();
   clearSave();                                                 // a new mission replaces the old save
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();   // phones: fill the screen like an app
   startSound(); setSound({ scene: 'launch', thrust: 0 });   // sound can only start after a click
@@ -609,14 +620,8 @@ function showCaption(big, bigClass, caption) {
 
 // ---------------- main loop ----------------
 const clock = new THREE.Clock();
-// Team illustrations on the title screen (each slot is optional)
-if (hasArt('title')) {
-  $('#title').style.backgroundImage = `linear-gradient(180deg, rgba(26,15,11,0.25), rgba(26,15,11,0.85)), url("${artUrl('title')}")`;
-  $('#title').classList.add('has-art');
-  $('#title').insertAdjacentHTML('beforeend', '<span class="ill-tag screen-tag">Background: illustration</span>');
-}
-if (hasArt('logo')) $('#title .kicker').insertAdjacentHTML('beforebegin', `<img class="logo" src="${artUrl('logo')}" alt="Zhetalis logo">`);
-if (hasArt('icon') || hasArt('logo')) { const l = document.createElement('link'); l.rel = 'icon'; l.href = artUrl('icon') || artUrl('logo'); document.head.appendChild(l); }
+// The menu uses the team's existing badge; optional story panels still work.
+{ const l = document.createElement('link'); l.rel = 'icon'; l.href = 'assets/zhetalis-badge.png'; document.head.appendChild(l); }
 if (storyPanels().length) {
   const b = document.createElement('button'); b.id = 'story-btn'; b.textContent = '📖 The story'; b.onclick = showStory;
   $('#path-btn').before(b);
