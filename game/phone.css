@@ -1,0 +1,68 @@
+/* Phone held upright (body.layout-phone.portrait.touch): fixes from tester round 3.
+   The bottom 150 px belong to the thumbs (joystick left, buttons right), the tool belt sits just above
+   them on the left, so everything else stacks above that or under the meters at the top.
+   Loaded after style.css, so it wins without touching the main stylesheet. */
+
+/* 1. The hint: full width just above the tool belt, never more than two lines */
+body.layout-phone.portrait.touch #hud #hint {
+  left: 10px; right: 10px; transform: none; max-width: none; width: auto;
+  bottom: calc(236px + env(safe-area-inset-bottom));
+  border-radius: 14px; padding: 7px 12px; font-size: .78rem; line-height: 1.35; text-align: center;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+body.layout-phone.portrait.touch #hud #hint:empty { display: none; }
+
+/* short messages go near the top (one row below where an alert shows), so they never land on the hint or the thumbs */
+body.layout-phone.portrait.touch #toast {
+  top: calc(164px + env(safe-area-inset-top)); bottom: auto !important;
+  max-width: calc(100vw - 20px); font-size: .82rem;
+}
+
+/* 2. Alerts: under the meters at the top, full width, the most important one only */
+body.layout-phone.portrait #hud #alerts {
+  top: calc(126px + env(safe-area-inset-top)); bottom: auto; left: 8px; right: 8px; transform: none;
+  max-width: none; align-items: center;
+}
+body.layout-phone.portrait #hud #alerts .alert { font-size: .74rem; padding: 5px 10px; text-align: center; }
+
+/* 3. First person: the visor numbers wrap into two short rows inside the screen, above the hint */
+body.layout-phone.portrait #hud #visor {
+  left: 10px; right: 10px; transform: none; width: auto;
+  flex-wrap: wrap; justify-content: center; row-gap: 2px; column-gap: 12px;
+  font-size: .64rem; bottom: calc(292px + env(safe-area-inset-bottom));
+}
+body.layout-phone.portrait #hud #visor small { font-size: .56rem; }
+body.layout-phone.portrait:not(.touch) #hud #visor { bottom: 110px; }
+
+/* 4. Small taps: everything a finger presses is at least 44 px wide */
+.screen-pick button { min-width: 44px; }
+.slide-nav button { min-width: 48px; min-height: 44px; }
+.earth-card .earth-globe .epic-thumb { width: 46px; height: 46px; }
+
+/* ---------- Tester round 4: sideways phones and tablets ---------- */
+
+/* Alerts on every touch layout: just under the meters / Sol panel (measured by src/phone-layout.js),
+   never across the thumb buttons. Short messages sit one row lower. */
+body.touch #hud #alerts {
+  top: var(--top-clear, 126px); bottom: auto; left: 8px; right: 8px; transform: none;
+  max-width: none; align-items: center;
+}
+body.touch #hud #alerts .alert { text-align: center; }
+body.touch:not(.portrait) #toast, body.layout-tablet.touch #toast {
+  top: calc(var(--top-clear, 126px) + 38px); bottom: auto !important;
+}
+body.layout-phone.portrait #hud #alerts { top: var(--top-clear, 126px); }
+body.layout-phone.portrait.touch #toast { top: calc(var(--top-clear, 126px) + 38px); }
+
+/* The menu on touch screens: the thumb buttons step aside while it is open, and the menu scrolls
+   if it is taller than the screen */
+body.touch #hud.menu-open #touch { visibility: hidden; }
+body.touch #hud.menu-open .status {
+  z-index: 6; max-height: calc(100dvh - 20px); overflow-y: auto; overscroll-behavior: contain;
+}
+/* sideways phone: two columns of menu buttons, so it fits in 375 px of height */
+body.layout-phone:not(.portrait) #hud.menu-open .status { width: 320px; max-width: calc(100vw - 20px); }
+body.layout-phone:not(.portrait) #hud.menu-open .status-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* Title screen size buttons: 44 px tall on every touch screen */
+body.touch #title .screen-pick button, body.layout-tablet #title .screen-pick button, body.touch #title #fs-btn-title { min-height: 44px; min-width: 44px; }

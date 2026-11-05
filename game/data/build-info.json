@@ -1,0 +1,23 @@
+{
+  "id": "zhetalis-unity-mars-20261106",
+  "name": "Zhetalis Mars Outpost",
+  "builtFor": "UNITY/Zhetalis-Mars",
+  "saveKey": "zhetalis-unity-mars-save-v1",
+  "habitatFootprintMetres": 102,
+  "habitatRevision": 3,
+  "greenhouseQuest": "First harvest",
+  "accessRevision": 7,
+  "airlocks": 6,
+  "pressureTubeDiameterMetres": 4.4,
+  "liveViewRevision": 8,
+  "briefingChapters": 11,
+  "phoneRevision": 9,
+  "phoneTestViewports": [
+    "320x568",
+    "360x640",
+    "390x844",
+    "430x932",
+    "640x360",
+    "844x390"
+  ]
+}

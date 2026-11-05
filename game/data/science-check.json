@@ -1,0 +1,78 @@
+{
+  "requestedDate": "2026-11-06",
+  "checkedUTC": "2026-11-05T16:24:20.894Z",
+  "checks": {
+    "surfaceImagery": {
+      "status": "ok",
+      "source": "NASA Image and Video Library (public, no key required)",
+      "items": [
+        {
+          "title": "Sweeping View of the Columbia",
+          "nasaId": "PIA03250",
+          "preview": "https://images-assets.nasa.gov/image/PIA03250/PIA03250~thumb.jpg"
+        },
+        {
+          "title": "Intricately Rippled Sand Deposits",
+          "nasaId": "PIA03274",
+          "preview": "https://images-assets.nasa.gov/image/PIA03274/PIA03274~thumb.jpg"
+        },
+        {
+          "title": "Southern Half of Spirit Bonestell Panorama Anaglyph",
+          "nasaId": "PIA11050",
+          "preview": "https://images-assets.nasa.gov/image/PIA11050/PIA11050~thumb.jpg"
+        }
+      ]
+    },
+    "earthMarsDistance": {
+      "status": "ok",
+      "source": "NASA JPL Horizons",
+      "date": "2026-11-06",
+      "km": 208168056,
+      "lightMinutes": 11.6,
+      "note": "Actual ephemeris for this date. Not the game’s fictional 2126 mission distance."
+    },
+    "marsWeather": {
+      "status": "ok",
+      "source": "NASA Curiosity REMS / Gale Crater",
+      "measurementDate": "2026-08-25",
+      "sol": 4995,
+      "lowC": -71,
+      "highC": -5,
+      "pressurePa": 777,
+      "note": "Latest available feed record; Gale Crater measurement, not live Gusev weather or a 2126 forecast."
+    },
+    "authenticatedEPIC": {
+      "status": "ok",
+      "privateKeyUsed": true,
+      "service": "NASA EPIC",
+      "latestPhotoDate": "2026-11-03 00:31:45",
+      "note": "Confirms authenticated NASA access and the Earth reference only. Mars surface conclusions use the Mars-specific sources below."
+    },
+    "authenticatedNASA": {
+      "status": "unavailable"
+    }
+  },
+  "references": {
+    "marsFacts": "https://science.nasa.gov/mars/facts/",
+    "sky": "https://science.nasa.gov/solar-system/planets/mars/what-does-a-sunrise-sunset-look-like-on-mars/",
+    "terrain": "https://science.nasa.gov/3d-resources/mars-spirit-landing-site/",
+    "surface": "https://nssdc.gsfc.nasa.gov/planetary/mars/mars_exploration_rovers/mera_images.html",
+    "atmosphere": "https://www.jpl.nasa.gov/news/press_kits/insight/landing/facts/mars-at-a-glance/"
+  },
+  "design": {
+    "basis": "Gusev-inspired dry basaltic plain using the existing NASA Spirit-derived heightmap. Distances and relief remain compressed/stretched for play.",
+    "fictional": [
+      "2126 habitat layout",
+      "survey-station positions",
+      "subsurface survey results are not predetermined",
+      "display fitting of imported building dimensions"
+    ],
+    "recommendations": [
+      "Keep dusty rusty-brown daylight and blue near-Sun sunset; no Earth-blue daytime sky.",
+      "Keep mineral exploration, crater/rubble landmarks and empty travel space; avoid exposed lakes, lawns or decorative blue ice at this near-equatorial site.",
+      "Use lit materials, opaque pressure modules and shielding concepts; greenhouse crops stay inside.",
+      "Fit colliders and airlock interactions to the imported modules before production use.",
+      "Keep solar event data separate from simulated local radiation dose."
+    ]
+  }
+}

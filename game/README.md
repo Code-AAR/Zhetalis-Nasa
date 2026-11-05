@@ -1,82 +1,72 @@
-# Junior Astronaut: Mars Outpost
+# Zhetalis · Mars Outpost
 
-A browser game for kids aged 7-12, built by team Zhetalis for the NASA Space Apps Challenge 2026
-(*Build a Junior Astronaut Mission Trainer*). No download or account - it runs in any modern browser.
+Double-click **Start Mars.cmd**, then choose your mission and launch.
+Python 3 and an internet connection are needed: Python serves the files locally,
+and the game loads Three.js, Draco decoders and optional live NASA/NOAA feeds.
+The launcher serves only this folder at `http://127.0.0.1:8777/`.
 
-You land at a Mars outpost in the year 2126 and keep your crew alive by splitting limited solar power
-between **life support** (oxygen and food), **talking to Earth** (science and supply pods),
-**science**, and **radiation shielding**. There is never enough power for everything - just like for
-real mission planners.
+## Play
 
-Day turns to night (with a blue Mars sunset), so batteries must keep the heater on until morning.
-Dust covers the solar panels and has to be cleaned off, relay orbiters can fail, and you can bury the
-outpost in regolith to block radiation. Sending science to Earth unlocks new designs in four tiers,
-from a landing camp up to a self-sustaining settlement with a fission reactor.
+- WASD / arrows: walk. Shift: run. Space: jump. Click the game: mouse look.
+- Esc or C: release/capture the mouse. V: first/third person. E: interact.
+- G: surface operations map. P: power. L: logbook. M: sound.
+- Enter the green-marked airlock for the six linked crew modules. Power, storage,
+  workshop, life support, shelter, observation and hazard stations are inside.
+- The rover is near camp. Use it for longer survey trips; suit air and the return
+  journey matter. A first survey at each field site adds eight science to transmit.
+- Mining, building greenhouses, farming, upgrades, solar storms, day/night,
+  landing/launch, the lander's cabin, quiz and badges reuse the existing game code.
+- The game saves automatically in this browser. This version has its own save
+  identifier and does not replace saves made by the original project.
 
-## Which NASA data we use, and why
+## Included changes
 
-| Data | Used for | Live or saved |
-|---|---|---|
-| NOAA Space Weather Prediction Center - GOES X-ray flares, proton flux, NOAA scales | Every solar storm in the game is based on a real flare. The title screen shows what the Sun did this week. | **Live** when it loads, otherwise a saved snapshot (labelled ARCHIVED) |
-| NASA DONKI (CCMC) space weather database | Two years of real flares for storm events | Saved snapshot (when DONKI is online) |
-| Curiosity RAD measurements (Hassler et al., *Science* 2014) | 0.64 mSv/day on the surface, 1.84 mSv/day in cruise | Built in, with source |
-| NASA radiation standard (OCHMO technical brief) | 600 mSv career limit = the radiation badge | Built in, with source |
-| NASA Mars Fact Sheet (NSSDC) | Gravity 3.73 m/s² (used for jumping), sol length, 43% sunlight, temperature, air, Earth-Mars distance (54.6-401.4 million km → 3 to 22 minute radio delay) | Built in, with source |
-| NASA Life Support BVAD | About 0.82 kg oxygen per astronaut per day | Built in, with source |
-| NASA SLS fact sheet, Orion, Artemis II, Human Landing Systems pages | The SLS launch scene and the step-by-step "How do we get there?" explainer (SLS → Orion → lunar orbit → HLS → Moon) | Built in, with sources |
-| NASA Moon to Mars Architecture | How a future Mars crew would travel: transit habitat, Mars lander, ascent vehicle (a plan still being designed) | Built in, with source |
-| NASA - Growing plants in space | The greenhouse station | Built in, with source |
-| NASA Mars facts, SVS blue sunset (Curiosity 2015), Spirit dusty panels, MAVEN/DSN relay | Day/night length and temperature swing, blue sunset, panel cleaning, relay orbiter failure | Built in, with sources |
-| Regolith shielding study (JGR Planets 2019), NASA Fission Surface Power (IAC 2024) | Burying the outpost; the 40 kW reactor in the last tier | Built in, with sources |
-| NASA/JPL-Caltech Perseverance 3D model | The old rover you salvage | Asset |
-| NASA 3D Resources: SLS Block 1, Mobile Launcher, Mars Reconnaissance Orbiter, Ingenuity | The launch (SLS really drops its stages), the relay orbiter at Mars, the helicopter near the rover | Assets (NASA's own models) |
-| NASA Perseverance SuperCam microphone recording (sol 4) | The wind you hear on Mars is a real recording from Mars | Asset (NASA audio) |
-| NASA/JPL Perseverance sound study | Mars is quiet (sound fades after ~8 m), so the soundscape is soft and muffled; fact card | Built in, with source |
-| Curiosity rover REMS daily weather | Real high/low temperature, air pressure and sunrise in the outpost window | Saved by script (dated) |
-| NASA JPL Horizons | Today's real Earth-Mars distance and radio delay on the console | Saved by script (dated) |
-| NASA Image and Video Library | A real photo of the Artemis II launch (1 April 2026) in the "How do we get there?" explainer | **Live**, or saved (ARCHIVED) |
-| Perseverance raw images (NASA/JPL-Caltech/ASU) | The outpost window shows the rover's newest colour photos of Jezero Crater | **Live**, or a saved list (ARCHIVED) |
-| NASA EPIC camera on DSCOVR | Today's whole-Earth photo on the power console - the people you are radioing | **Live**, or saved (ARCHIVED) |
-| NASA Mars Trek (Viking colour mosaic) | The 3D Mars globe you arrive at, with Jezero Crater marked | **Live** map tiles |
-| NASA Artemis I timeline, Basics of Space Flight, JPL "7 Minutes to Mars" | Launch phases, the launch window / Hohmann transfer, and the landing sequence | Built in, with sources |
+The supplied Mars One base is the playable settlement, with 512px textures,
+lighting-aware materials, enlarged crew-scale fitting (roughly 8.9 m module diameter), six module collision footprints,
+a connected interior and a working exterior airlock. Survey tasks and a map are
+integrated into the normal game; there are no model-comparison controls.
 
-Playing is a learning journey: every fact a player meets is saved in a **logbook**, and the mission ends with a
-short quiz on those facts for a Gold, Silver or Bronze **Junior Astronaut badge**.
+NASA's Spirit/Gusev-derived terrain is retained with less exaggerated relief.
+The same height function positions terrain, rocks, astronaut and rover. Daylight
+remains dusty/tan, sunset blue near the Sun, and gravity is approximately 3.71 m/s².
+Surface positions and the future settlement are game design rather than a surveyed
+reconstruction or a NASA-approved engineering habitat. The in-game NASA data panel
+contains credits and distinguishes measured data from balance numbers.
 
-Game-balance numbers (how fast a sol passes, how strong storms are, how much a panel makes) are not
-measurements; the in-game "Real NASA data used" panel lists them separately so nobody mistakes them for science.
+The Zhetalis.com-style loading screen, planet menu, independent globe rotation
+and orbiting Moon are included. View the loader alone at `loading-preview.html`.
 
-## Mission-launch menu
+## Sources and attribution
 
-The title screen uses the Zhetalis badge and interactive Earth, Moon and Mars globes.
-Drag directly on any globe to rotate it independently, or choose a tab to inspect
-it up close. Each globe keeps its own rotation and momentum; dragging empty space
-does nothing. The star field is decorative, not a map of actual stars. Earth and the Moon are previews;
-**Launch to Mars** always starts the playable Mars mission. Mission difficulty,
-saved-game resume, instructions, NASA credits and display controls remain available.
+Based on **“Mars One” Mission – Base** by **admone**, CC BY 4.0:
+https://sketchfab.com/3d-models/mars-one-mission-base-83ced347037f47aba8473147d65df074
+The original licence is retained in `assets/mars-base/license.txt`. Adaptations:
+export terrain removal, texture reduction, lit materials, scaling and gameplay integration.
+NASA assets and science references are credited in the game's data panel.
 
-Surface maps are bundled assets, not live photographs; body diameters are proportional to NASA’s equatorial
-diameters (Earth 12,756 km, Mars 6,792 km, Moon 3,475 km); distances are compressed.
-Mars has a persistent mission-selection outline, independent of the preview tabs. Earth uses the existing NASA Blue Marble map, Mars uses the existing
-NASA 3D Resources map, and the Moon uses the [NASA SVS CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/)
-(NASA's Scientific Visualization Studio / Ernie Wright, LRO / LROC).
+`data/science-check.json` records the 6 November 2026 Singapore-time NASA audit.
+NASA EPIC authenticated successfully; DONKI was unavailable. Curiosity's latest
+usable feed record was dated 25 August 2026 and is archived. No API key is packaged.
 
-The Moon circles Earth on a tilted orbit, passing in front of and behind it.
-Its diameter remains to scale with Earth; the orbit distance is compressed and
-time is accelerated to one revolution per minute, as labelled in the menu.
-Hovering over or dragging the Moon pauses its orbit so you can rotate it easily.
-Reduced-motion mode freezes the orbit while keeping manual globe rotation available.
+## Verification and limits
 
-Refresh the menu's archived EPIC Earth-photo metadata and download the Moon map with:
+Browser checks exercised launch/landing, all five interior connectors, power
+console, exterior return, three survey completions, the map, rover entry,
+independent saves and resume without JavaScript runtime errors. Results are in
+`checks.json`. Phone layout was inspected; physical-device performance and a full
+multi-sol mission balance pass have not been completed. See `BUILD-NOTES.md` for
+remaining polish work.
 
-```powershell
-node scripts/snapshot-menu-space.mjs
-```
+The camp was enlarged to a 102 m overall footprint on 6 November: module bodies are roughly 8.9 m across and 7.3 m tall, with 8 m-wide interiors, 6.6 m interior ceilings and 3 m-high connecting corridors. Embedded static astronaut figures are removed; the playable astronaut stays at 1.85 m. The rover, lander, active panels, airlock and collision footprints move with the new layout.
 
-Run this from the repository root. It reads `NASA_API_KEY` from the environment or
-the ignored `.env`, and writes only whitelisted, key-free metadata to
-`game/data/menu-space-data.json`. The Earth photo carries its capture date and an
-**Archived** label. If NASA is unavailable, the script preserves the previous Earth
-record; the bundled globes still work. Restarting the game is not required after
-a data refresh, just reload the page. The menu stops its renderer when a mission
-starts and respects reduced-motion preferences.
+
+Revision 3: integrates the repository walk-in greenhouse and four working hydroponic beds with persistent First Harvest quest (+12 science, once), piped water, power-gated growth and food harvest. Original repository code credited in Git to Zagyu. Reuses its distance-based gait and exponential movement easing, smooths the follow-camera target and throttles HUD DOM writes to 10 Hz. Static supplied astronaut mesh removed; playable NASA suit remains animated. No remote push.
+
+
+Access revision 7: replaces decorative stairs with six 2.4 m-wide, 2.4 m-high stair approaches and 2.65 m-tall airlock doors. Movement now follows the stair surface, module colliders permit the marked entrance lanes, and every module has its own E interaction. Entry and exit preserve the selected module, including after save/resume. Pressure links are 4.4 m in diameter. The greenhouse is behind the habitat row so its larger tube leaves all front stairways clear. Browser checks climbed and descended all six stairs using the normal movement update, entered and exited using E, checked remaining wall collisions, and verified save/resume plus the greenhouse hatch route without runtime errors. No push.
+
+
+Revision 8: greenhouse glass and all three lander windows now look into the actual outside scene, using an aligned world camera and a second interior render pass. The former painted panorama and cabin window textures were removed. Views follow player position, terrain, camp geometry, sky, weather and time of day; the player and the matching exterior building are hidden only during the outside render pass and restored afterwards. Cabin pressure-shell geometry and frames have real window apertures. Upper bulkheads fill the gaps above passage and airlock openings, leaving 8 m rooms and 3 m connector headroom unchanged. The greenhouse tunnel hatch now aligns with the habitat direction. Six journey chapters and five landing chapters use interactive 3D art, NASA surface maps and the existing SLS/lander assets, additional explanations, chapter navigation and science notes. No publishing or push. Validation exercised every chapter, phone layout, greenhouse/cabin parallax, all three window sightlines, day/night, farming, five connectors and greenhouse save/resume without runtime errors.
+
+
+Phone revision 9: dynamic viewport sizing, safe-area-aware controls, at least 44 px touch targets, narrower joystick on small screens, multitouch movement and look, cancellation on rotation/focus loss, suspended controls while menus are open, scrollable panels with sticky dismiss buttons, and messages hidden behind menu/modal overlays. Tested at 320x568, 360x640, 390x844, 430x932, 640x360 and 844x390 with emulated native touch events. Touch stair climbing and Use entry, power-panel scrolling, map fit, simultaneous movement/look and rotation release passed without runtime errors. Room dimensions, planet diameter ratios and world scale are unchanged. Real-device Safari/Chrome browser chrome, safe areas and sustained frame rate still need hardware testing. For a local phone preview, run Start Phone Preview.cmd on the computer and open its displayed URL from a phone on the same private Wi-Fi; it does not change firewall rules and stops when Enter is pressed. The published GitHub Pages URL is directly usable from a phone. No additional Unity/engine splash was added, per the user’s follow-up.

@@ -36,6 +36,7 @@ export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause
     b.onclick = () => { close(); c.onPick?.(); };
     list.appendChild(b);
   });
+  if(choices.length===1&&!choices[0].onPick){const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='modal-dismiss';dismiss.setAttribute('aria-label','Close panel');dismiss.textContent='×';dismiss.onclick=close;box.prepend(dismiss);}
   $('#modal').classList.remove('hidden'); modalOpen = true;
   document.exitPointerLock?.();
   function close() { $('#modal').classList.add('hidden'); modalOpen = false; onClose?.(); }

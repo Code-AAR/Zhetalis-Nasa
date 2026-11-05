@@ -1,50 +1,309 @@
 {
   "note": "Real values with sources. Values marked 'tuned' are game balance, not measurements, and the game says so.",
   "facts": {
-    "gravity": { "value": 3.73, "unit": "m/s²", "earth": 9.81, "kid": "Mars gravity is about 38% of Earth's - you can jump almost 3 times higher!", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "sol": { "value": 24.6597, "unit": "hours", "kid": "A 'sol' is one day on Mars. It is 24 hours and 40 minutes long - a bit longer than an Earth day.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "sunlight": { "value": 586.2, "unit": "W/m²", "earth": 1361, "kid": "Mars is farther from the Sun, so solar panels get only about 43% of the sunlight they would on Earth.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "temperature": { "value": -59, "unit": "°C average", "range": [-89, -31], "kid": "The average temperature is about -59 °C. At the Viking 1 landing site it swung from -89 °C at night to -31 °C in the day.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "air": { "value": 6.36, "unit": "millibars", "earth": 1013, "co2": 95.1, "kid": "The air is 95% carbon dioxide and about 160 times thinner than Earth's. No breathing without a suit!", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "distance": { "min": 54.6, "max": 401.4, "unit": "million km", "kid": "Earth and Mars move around the Sun at different speeds, so the distance between them keeps changing.", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "synodic": { "value": 779.9, "unit": "days", "kid": "Earth and Mars line up again about every 780 days (about 26 months).", "source": "NASA Mars Fact Sheet (NSSDC)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "surfaceDose": { "value": 0.64, "unit": "mSv per day", "kid": "On the surface of Mars, astronauts would get about 0.64 millisieverts (mSv) of radiation each day. A millisievert measures how much radiation your body soaks up.", "source": "Curiosity RAD instrument - Hassler et al., Science, 2014", "url": "https://ntrs.nasa.gov/citations/20180007641" },
-    "cruiseDose": { "value": 1.84, "unit": "mSv per day", "kid": "Travelling between planets is worse: about 1.84 mSv per day, because there is no planet or air to block anything.", "source": "Curiosity RAD instrument (cruise to Mars)", "url": "https://space.com/23875-mars-radiation-life-manned-mission.html" },
-    "careerLimit": { "value": 600, "unit": "mSv", "kid": "NASA allows an astronaut at most 600 mSv of space radiation in their whole career.", "source": "NASA OCHMO Radiation Protection Technical Brief (NASA-STD-3001)", "url": "https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf" },
-    "roundTrip": { "value": 1.01, "unit": "Sv", "kid": "A full trip - 180 days there, 500 days on Mars, 180 days back - would add up to about 1,010 mSv. That is MORE than NASA's limit, which is why scientists work so hard on shielding.", "source": "Based on Curiosity RAD measurements (Hassler et al., 2014)", "url": "https://space.com/23875-mars-radiation-life-manned-mission.html" },
-    "oxygen": { "value": 0.82, "unit": "kg per astronaut per day", "kid": "Each astronaut breathes about 0.82 kg of oxygen every day.", "source": "NASA Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570/REV1, 2018)", "url": "https://ntrs.nasa.gov/citations/20180001338" },
-    "conjunction": { "value": 14, "unit": "days without contact", "kid": "About every 26 months the Sun gets exactly between Earth and Mars and scrambles radio signals. Missions stop sending commands for about two weeks.", "source": "NASA JPL - Mars solar conjunction", "url": "https://mars.nasa.gov/all-about-mars/night-sky/solar-conjunction/" },
-    "dustStorm": { "kid": "In 2018 a dust storm covered the whole planet. It blocked so much sunlight that the solar-powered rover Opportunity ran out of power and never woke up.", "source": "NASA - Opportunity rover mission comes to end (2019)", "url": "https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/" },
-    "perseverance": { "kid": "This is NASA's Perseverance rover. It landed in Jezero Crater on 18 February 2021 to look for signs of ancient life. In this story it is 105 years old!", "source": "NASA/JPL-Caltech 3D model", "url": "https://science.nasa.gov/resource/mars-perseverance-rover-3d-model/" },
-    "moxie": { "kid": "Perseverance carried MOXIE, a machine that made real oxygen out of Martian carbon dioxide - 122 grams in total, up to 12 grams an hour. That proved astronauts could one day make their own oxygen on Mars.", "source": "NASA - MOXIE", "url": "https://mars.nasa.gov/mars2020/spacecraft/instruments/moxie/" },
-    "sls": { "kid": "SLS (Space Launch System) is NASA's Moon rocket. It is 98 metres (322 feet) tall - taller than the Statue of Liberty - and pushes with 8.8 million pounds of thrust, 15% more than the Saturn V that took astronauts to the Moon in the 1960s.", "source": "NASA SLS fact sheet", "url": "https://nasa.gov/wp-content/uploads/2020/07/0080_sls_fact_sheet_10162019a_final_508.pdf" },
-    "orion": { "kid": "Orion is the capsule the astronauts ride in. It sits on top of SLS and has a heat shield to survive coming back through Earth's air.", "source": "NASA - Orion spacecraft", "url": "https://www.nasa.gov/humans-in-space/orion-spacecraft/" },
-    "artemis2": { "kid": "On 1 April 2026, SLS launched four astronauts in Orion on Artemis II - the first people to fly around the Moon in more than 50 years.", "source": "NASA - Artemis II", "url": "https://www.nasa.gov/mission/artemis-ii/" },
-    "hls": { "kid": "Orion can't land. For the landing, astronauts move into a Human Landing System (HLS) waiting near the Moon. NASA is working with SpaceX (a Moon version of Starship) and Blue Origin (Blue Moon) on landers.", "source": "NASA - Human Landing Systems", "url": "https://www.nasa.gov/reference/human-landing-systems-2/" },
-    "nrho": { "kid": "Orion and the lander meet in a huge, stretched-out orbit around the Moon called a 'near-rectilinear halo orbit' (NRHO). It keeps them in contact with Earth all the time.", "source": "NASA - Artemis", "url": "https://www.nasa.gov/humans-in-space/artemis/" },
-    "moonToMars": { "kid": "NASA's plan is to learn on the Moon first, then go to Mars. For Mars it is studying a 'transit habitat' with its own engines for the long trip, a lander to reach the surface, and an ascent vehicle sent ahead to bring the crew back up. The design is still being worked on.", "source": "NASA - Moon to Mars Architecture", "url": "https://www.nasa.gov/moontomarsarchitecture/" },
-    "delay": { "min": 3, "max": 22, "unit": "minutes one way", "kid": "Radio signals travel at the speed of light, but Mars is so far away that a message takes about 3 to 22 minutes to arrive - depending on where the two planets are. No quick help from Earth!", "source": "Worked out from NASA Mars Fact Sheet distances (54.6-401.4 million km)", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" },
-    "relay": { "kid": "Most messages from Mars bounce off orbiters circling the planet, which pass them to NASA's giant Deep Space Network dishes on Earth. In December 2025 the MAVEN orbiter went silent, and in 2026 NASA said it could not be saved - so the other orbiters had to do more of the work.", "source": "NASA Deep Space Network; news reports on MAVEN (2025-2026)", "url": "https://www.nasa.gov/communicating-with-missions/dsn/" },
-    "dustPanels": { "kid": "Dust slowly covers solar panels on Mars. The rovers Spirit and Opportunity lost power as dust built up - and got lucky when gusts of wind blew it off. Astronauts will have to clean their panels.", "source": "NASA - Spirit rover mission", "url": "https://science.nasa.gov/mission/mer-spirit/" },
-    "blueSunset": { "kid": "Sunsets on Mars are blue! Fine dust in the air lets blue light through near the Sun. NASA's Curiosity rover photographed one in 2015.", "source": "NASA Scientific Visualization Studio", "url": "https://svs.gsfc.nasa.gov/11875" },
-    "dayNight": { "kid": "Mars spins once every 24.6 hours. It can be about 20 °C on a summer day and drop to about -153 °C, so heaters need power through the night.", "source": "NASA - Mars facts", "url": "https://science.nasa.gov/mars/facts/" },
-    "marsYear": { "kid": "A year on Mars lasts 669.6 sols (687 Earth days). Its seasons are different lengths - from about 142 to 194 sols.", "source": "NASA - Mars facts", "url": "https://science.nasa.gov/mars/facts/" },
-    "water": { "kid": "Mars has water today - as ice just under the ground near the poles, and as salty (briny) water that seasonally trickles down some slopes.", "source": "NASA - Mars facts", "url": "https://science.nasa.gov/mars/facts/" },
-    "regolith": { "kid": "'Regolith' is the loose dust, soil and broken rock that covers Mars. Piling it on top of a habitat makes a thick shield against radiation - scientists have measured how much it helps.", "source": "Research paper on regolith shielding, JGR Planets (AGU), 2019", "url": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019JE006246" },
-    "fission": { "kid": "NASA is designing a small nuclear fission reactor that makes at least 40 kilowatts for about 10 years - day and night, even in dust storms. It would be tested on the Moon first, then used on Mars.", "source": "NASA Fission Surface Power (IAC 2024 paper)", "url": "https://ntrs.nasa.gov/api/citations/20240011694/downloads/IAC%202024%20Manuscript_FSP%20FINAL.pdf" },
-    "marsMap": { "kid": "NASA's Viking 1 and 2 orbiters photographed the whole of Mars in the 1970s. Scientists joined thousands of their pictures into one colour map of the planet - the one on this globe.", "source": "NASA Mars Trek (Viking MDIM 2.1 colour mosaic)", "url": "https://trek.nasa.gov/mars/" },
-    "edl": { "kid": "Landing on Mars is called 'entry, descent and landing'. Perseverance went from nearly 20,000 km/h to a gentle touchdown in about seven minutes: first a heat shield hotter than 1,260 °C, then a parachute, then rocket engines.", "source": "NASA JPL - 7 Minutes to Mars (Perseverance landing)", "url": "https://www.jpl.nasa.gov/videos/7-minutes-to-mars-nasas-perseverance-rover-attempts-most-dangerous-landing-yet/" },
-    "launchWindow": { "kid": "The fuel-saving path to Mars is called a 'Hohmann transfer': half a loop around the Sun that starts at Earth's orbit and ends at Mars's orbit. It only works when Mars will be in the right place when you arrive - about every 26 months.", "source": "NASA - Basics of Space Flight, Interplanetary Trajectories", "url": "https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/" },
-    "ascent": { "kid": "On the Artemis I launch, the two side boosters dropped off 2 minutes 12 seconds after lift-off, the escape tower came off after about 3 minutes, and the orange core stage switched off after about 8 minutes.", "source": "NASA - Artemis I mission timeline", "url": "https://www.nasa.gov/reference/artemis-i-mission-timeline/" },
-    "karman": { "kid": "Most scientists say space begins at the Kármán line, 100 km (62 miles) above the ground. 99.99997% of all of Earth's air is below it - above it, the sky is black even in the daytime.", "source": "NASA Science - Earth's Atmosphere: A Multi-layered Cake", "url": "https://science.nasa.gov/earth/earth-atmosphere/earths-atmosphere-a-multi-layered-cake/" },
-    "orbitSpeed": { "kid": "To stay in orbit around Earth you must go about 28,000 km/h - fast enough to go all the way around the world in about 90 minutes, like the International Space Station.", "source": "NASA - International Space Station facts", "url": "https://www.nasa.gov/international-space-station/space-station-facts-and-figures/" },
-    "epic": { "kid": "NASA's EPIC camera rides on the DSCOVR satellite, 1.5 million km from Earth, and photographs the whole sunlit side of our planet every day.", "source": "NASA EPIC (DSCOVR)", "url": "https://epic.gsfc.nasa.gov/" },
-    "ingenuity": { "kid": "Ingenuity rode to Mars under Perseverance. On 19 April 2021 it made the first powered, controlled flight on another planet. It was meant to fly 5 times - it flew 72 times, until a rotor blade broke in January 2024.", "source": "NASA - Ingenuity Mars Helicopter", "url": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/" },
-    "mro": { "kid": "The Mars Reconnaissance Orbiter (MRO) has circled Mars since 2006. Besides taking sharp photos, it is one of the orbiters that pass messages between rovers on the ground and NASA's Deep Space Network on Earth.", "source": "NASA - Mars Reconnaissance Orbiter", "url": "https://science.nasa.gov/mission/mars-reconnaissance-orbiter/" },
-    "boosters": { "kid": "SLS's two solid rocket boosters burn a solid fuel (PBAN) for about two minutes and give more than 75% of the rocket's thrust at launch. The four RS-25 engines on the core stage burn liquid hydrogen and liquid oxygen.", "source": "NASA - SLS solid rocket boosters", "url": "https://www.nasa.gov/reference/space-launch-system-solid-rocket-booster/" },
-    "mobileLauncher": { "kid": "SLS is put together standing up on the Mobile Launcher - a 380-foot (116 m) steel tower on a base - and then the whole thing is driven to the launch pad.", "source": "NASA - Mobile Launcher 1", "url": "https://www.nasa.gov/humans-in-space/exploration-ground-systems/mobile-launcher/" },
-    "marsSound": { "kid": "Perseverance carries microphones. They showed that Mars is much quieter than Earth: in the thin carbon-dioxide air, sound fades out after about 8 metres (on Earth, about 65 m). Sound is also slower - about 240 m/s for low pitches and 250 m/s for high pitches, compared with 343 m/s on Earth.", "source": "NASA JPL - What sounds captured by Perseverance reveal about Mars", "url": "https://www.jpl.nasa.gov/news/what-sounds-captured-by-nasas-perseverance-rover-reveal-about-mars/" },
-    "farming": { "kid": "Astronauts on the International Space Station have grown lettuce, cabbage and even chili peppers. Growing food matters for Mars, where resupply from Earth takes months.", "source": "NASA - Growing plants in space", "url": "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/" }
+    "gravity": {
+      "value": 3.71,
+      "unit": "m/s²",
+      "earth": 9.81,
+      "kid": "Mars gravity is about 38% of Earth's - you can jump almost 3 times higher!",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "sol": {
+      "value": 24.6597,
+      "unit": "hours",
+      "kid": "A 'sol' is one day on Mars. It is 24 hours and 40 minutes long - a bit longer than an Earth day.",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "sunlight": {
+      "value": 586.2,
+      "unit": "W/m²",
+      "earth": 1361,
+      "kid": "Mars is farther from the Sun, so solar panels get only about 43% of the sunlight they would on Earth.",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "temperature": {
+      "value": -59,
+      "unit": "°C average",
+      "range": [
+        -89,
+        -31
+      ],
+      "kid": "The average temperature is about -59 °C. At the Viking 1 landing site it swung from -89 °C at night to -31 °C in the day.",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "air": {
+      "value": 6.36,
+      "unit": "millibars",
+      "earth": 1013,
+      "co2": 95.1,
+      "kid": "The air is 95% carbon dioxide and about 160 times thinner than Earth's. No breathing without a suit!",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "distance": {
+      "min": 54.6,
+      "max": 401.4,
+      "unit": "million km",
+      "kid": "Earth and Mars move around the Sun at different speeds, so the distance between them keeps changing.",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "synodic": {
+      "value": 779.9,
+      "unit": "days",
+      "kid": "Earth and Mars line up again about every 780 days (about 26 months).",
+      "source": "NASA Mars Fact Sheet (NSSDC)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "surfaceDose": {
+      "value": 0.64,
+      "unit": "mSv per day",
+      "kid": "On the surface of Mars, astronauts would get about 0.64 millisieverts (mSv) of radiation each day. A millisievert measures how much radiation your body soaks up.",
+      "source": "Curiosity RAD instrument - Hassler et al., Science, 2014",
+      "url": "https://ntrs.nasa.gov/citations/20180007641"
+    },
+    "cruiseDose": {
+      "value": 1.84,
+      "unit": "mSv per day",
+      "kid": "Travelling between planets is worse: about 1.84 mSv per day, because there is no planet or air to block anything.",
+      "source": "Curiosity RAD instrument (cruise to Mars)",
+      "url": "https://space.com/23875-mars-radiation-life-manned-mission.html"
+    },
+    "careerLimit": {
+      "value": 600,
+      "unit": "mSv",
+      "kid": "NASA allows an astronaut at most 600 mSv of space radiation in their whole career.",
+      "source": "NASA OCHMO Radiation Protection Technical Brief (NASA-STD-3001)",
+      "url": "https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf"
+    },
+    "roundTrip": {
+      "value": 1.01,
+      "unit": "Sv",
+      "kid": "A full trip - 180 days there, 500 days on Mars, 180 days back - would add up to about 1,010 mSv. That is MORE than NASA's limit, which is why scientists work so hard on shielding.",
+      "source": "Based on Curiosity RAD measurements (Hassler et al., 2014)",
+      "url": "https://space.com/23875-mars-radiation-life-manned-mission.html"
+    },
+    "oxygen": {
+      "value": 0.82,
+      "unit": "kg per astronaut per day",
+      "kid": "Each astronaut breathes about 0.82 kg of oxygen every day.",
+      "source": "NASA Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570/REV1, 2018)",
+      "url": "https://ntrs.nasa.gov/citations/20180001338"
+    },
+    "conjunction": {
+      "value": 14,
+      "unit": "days without contact",
+      "kid": "About every 26 months the Sun gets exactly between Earth and Mars and scrambles radio signals. Missions stop sending commands for about two weeks.",
+      "source": "NASA JPL - Mars solar conjunction",
+      "url": "https://mars.nasa.gov/all-about-mars/night-sky/solar-conjunction/"
+    },
+    "dustStorm": {
+      "kid": "In 2018 a dust storm covered the whole planet. It blocked so much sunlight that the solar-powered rover Opportunity ran out of power and never woke up.",
+      "source": "NASA - Opportunity rover mission comes to end (2019)",
+      "url": "https://www.nasa.gov/news-release/nasas-record-setting-opportunity-rover-mission-on-mars-comes-to-end/"
+    },
+    "perseverance": {
+      "kid": "This is NASA's Perseverance rover. It landed in Jezero Crater on 18 February 2021 to look for signs of ancient life. In this story it is 105 years old!",
+      "source": "NASA/JPL-Caltech 3D model",
+      "url": "https://science.nasa.gov/resource/mars-perseverance-rover-3d-model/"
+    },
+    "moxie": {
+      "kid": "Perseverance carried MOXIE, a machine that made real oxygen out of Martian carbon dioxide - 122 grams in total, up to 12 grams an hour. That proved astronauts could one day make their own oxygen on Mars.",
+      "source": "NASA - MOXIE",
+      "url": "https://mars.nasa.gov/mars2020/spacecraft/instruments/moxie/"
+    },
+    "sls": {
+      "kid": "SLS (Space Launch System) is NASA's Moon rocket. It is 98 metres (322 feet) tall - taller than the Statue of Liberty - and pushes with 8.8 million pounds of thrust, 15% more than the Saturn V that took astronauts to the Moon in the 1960s.",
+      "source": "NASA SLS fact sheet",
+      "url": "https://nasa.gov/wp-content/uploads/2020/07/0080_sls_fact_sheet_10162019a_final_508.pdf"
+    },
+    "orion": {
+      "kid": "Orion is the capsule the astronauts ride in. It sits on top of SLS and has a heat shield to survive coming back through Earth's air.",
+      "source": "NASA - Orion spacecraft",
+      "url": "https://www.nasa.gov/humans-in-space/orion-spacecraft/"
+    },
+    "artemis2": {
+      "kid": "On 1 April 2026, SLS launched four astronauts in Orion on Artemis II - the first people to fly around the Moon in more than 50 years.",
+      "source": "NASA - Artemis II",
+      "url": "https://www.nasa.gov/mission/artemis-ii/"
+    },
+    "hls": {
+      "kid": "Orion can't land. For the landing, astronauts move into a Human Landing System (HLS) waiting near the Moon. NASA is working with SpaceX (a Moon version of Starship) and Blue Origin (Blue Moon) on landers.",
+      "source": "NASA - Human Landing Systems",
+      "url": "https://www.nasa.gov/reference/human-landing-systems-2/"
+    },
+    "nrho": {
+      "kid": "Orion and the lander meet in a huge, stretched-out orbit around the Moon called a 'near-rectilinear halo orbit' (NRHO). It keeps them in contact with Earth all the time.",
+      "source": "NASA - Artemis",
+      "url": "https://www.nasa.gov/humans-in-space/artemis/"
+    },
+    "moonToMars": {
+      "kid": "NASA's plan is to learn on the Moon first, then go to Mars. For Mars it is studying a 'transit habitat' with its own engines for the long trip, a lander to reach the surface, and an ascent vehicle sent ahead to bring the crew back up. The design is still being worked on.",
+      "source": "NASA - Moon to Mars Architecture",
+      "url": "https://www.nasa.gov/moontomarsarchitecture/"
+    },
+    "delay": {
+      "min": 3,
+      "max": 22,
+      "unit": "minutes one way",
+      "kid": "Radio signals travel at the speed of light, but Mars is so far away that a message takes about 3 to 22 minutes to arrive - depending on where the two planets are. No quick help from Earth!",
+      "source": "Worked out from NASA Mars Fact Sheet distances (54.6-401.4 million km)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"
+    },
+    "relay": {
+      "kid": "Most messages from Mars bounce off orbiters circling the planet, which pass them to NASA's giant Deep Space Network dishes on Earth. In December 2025 the MAVEN orbiter went silent, and in 2026 NASA said it could not be saved - so the other orbiters had to do more of the work.",
+      "source": "NASA Deep Space Network; news reports on MAVEN (2025-2026)",
+      "url": "https://www.nasa.gov/communicating-with-missions/dsn/"
+    },
+    "dustPanels": {
+      "kid": "Dust slowly covers solar panels on Mars. The rovers Spirit and Opportunity lost power as dust built up - and got lucky when gusts of wind blew it off. Astronauts will have to clean their panels.",
+      "source": "NASA - Spirit rover mission",
+      "url": "https://science.nasa.gov/mission/mer-spirit/"
+    },
+    "blueSunset": {
+      "kid": "Sunsets on Mars are blue! Fine dust in the air lets blue light through near the Sun. NASA's Curiosity rover photographed one in 2015.",
+      "source": "NASA Scientific Visualization Studio",
+      "url": "https://svs.gsfc.nasa.gov/11875"
+    },
+    "dayNight": {
+      "kid": "Mars spins once every 24.6 hours. It can be about 20 °C on a summer day and drop to about -153 °C, so heaters need power through the night.",
+      "source": "NASA - Mars facts",
+      "url": "https://science.nasa.gov/mars/facts/"
+    },
+    "marsYear": {
+      "kid": "A year on Mars lasts 669.6 sols (687 Earth days). Its seasons are different lengths - from about 142 to 194 sols.",
+      "source": "NASA - Mars facts",
+      "url": "https://science.nasa.gov/mars/facts/"
+    },
+    "water": {
+      "kid": "Mars has water today - as ice just under the ground near the poles, and as salty (briny) water that seasonally trickles down some slopes.",
+      "source": "NASA - Mars facts",
+      "url": "https://science.nasa.gov/mars/facts/"
+    },
+    "regolith": {
+      "kid": "'Regolith' is the loose dust, soil and broken rock that covers Mars. Piling it on top of a habitat makes a thick shield against radiation - scientists have measured how much it helps.",
+      "source": "Research paper on regolith shielding, JGR Planets (AGU), 2019",
+      "url": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019JE006246"
+    },
+    "fission": {
+      "kid": "NASA is designing a small nuclear fission reactor that makes at least 40 kilowatts for about 10 years - day and night, even in dust storms. It would be tested on the Moon first, then used on Mars.",
+      "source": "NASA Fission Surface Power (IAC 2024 paper)",
+      "url": "https://ntrs.nasa.gov/api/citations/20240011694/downloads/IAC%202024%20Manuscript_FSP%20FINAL.pdf"
+    },
+    "marsMap": {
+      "kid": "NASA's Viking 1 and 2 orbiters photographed the whole of Mars in the 1970s. Scientists joined thousands of their pictures into one colour map of the planet - the one on this globe.",
+      "source": "NASA Mars Trek (Viking MDIM 2.1 colour mosaic)",
+      "url": "https://trek.nasa.gov/mars/"
+    },
+    "edl": {
+      "kid": "Landing on Mars is called 'entry, descent and landing'. Perseverance went from nearly 20,000 km/h to a gentle touchdown in about seven minutes: first a heat shield hotter than 1,260 °C, then a parachute, then rocket engines.",
+      "source": "NASA JPL - 7 Minutes to Mars (Perseverance landing)",
+      "url": "https://www.jpl.nasa.gov/videos/7-minutes-to-mars-nasas-perseverance-rover-attempts-most-dangerous-landing-yet/"
+    },
+    "launchWindow": {
+      "kid": "The fuel-saving path to Mars is called a 'Hohmann transfer': half a loop around the Sun that starts at Earth's orbit and ends at Mars's orbit. It only works when Mars will be in the right place when you arrive - about every 26 months.",
+      "source": "NASA - Basics of Space Flight, Interplanetary Trajectories",
+      "url": "https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/"
+    },
+    "ascent": {
+      "kid": "On the Artemis I launch, the two side boosters dropped off 2 minutes 12 seconds after lift-off, the escape tower came off after about 3 minutes, and the orange core stage switched off after about 8 minutes.",
+      "source": "NASA - Artemis I mission timeline",
+      "url": "https://www.nasa.gov/reference/artemis-i-mission-timeline/"
+    },
+    "karman": {
+      "kid": "Most scientists say space begins at the Kármán line, 100 km (62 miles) above the ground. 99.99997% of all of Earth's air is below it - above it, the sky is black even in the daytime.",
+      "source": "NASA Science - Earth's Atmosphere: A Multi-layered Cake",
+      "url": "https://science.nasa.gov/earth/earth-atmosphere/earths-atmosphere-a-multi-layered-cake/"
+    },
+    "orbitSpeed": {
+      "kid": "To stay in orbit around Earth you must go about 28,000 km/h - fast enough to go all the way around the world in about 90 minutes, like the International Space Station.",
+      "source": "NASA - International Space Station facts",
+      "url": "https://www.nasa.gov/international-space-station/space-station-facts-and-figures/"
+    },
+    "epic": {
+      "kid": "NASA's EPIC camera rides on the DSCOVR satellite, 1.5 million km from Earth, and photographs the whole sunlit side of our planet every day.",
+      "source": "NASA EPIC (DSCOVR)",
+      "url": "https://epic.gsfc.nasa.gov/"
+    },
+    "ingenuity": {
+      "kid": "Ingenuity rode to Mars under Perseverance. On 19 April 2021 it made the first powered, controlled flight on another planet. It was meant to fly 5 times - it flew 72 times, until a rotor blade broke in January 2024.",
+      "source": "NASA - Ingenuity Mars Helicopter",
+      "url": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
+    },
+    "mro": {
+      "kid": "The Mars Reconnaissance Orbiter (MRO) has circled Mars since 2006. Besides taking sharp photos, it is one of the orbiters that pass messages between rovers on the ground and NASA's Deep Space Network on Earth.",
+      "source": "NASA - Mars Reconnaissance Orbiter",
+      "url": "https://science.nasa.gov/mission/mars-reconnaissance-orbiter/"
+    },
+    "boosters": {
+      "kid": "SLS's two solid rocket boosters burn a solid fuel (PBAN) for about two minutes and give more than 75% of the rocket's thrust at launch. The four RS-25 engines on the core stage burn liquid hydrogen and liquid oxygen.",
+      "source": "NASA - SLS solid rocket boosters",
+      "url": "https://www.nasa.gov/reference/space-launch-system-solid-rocket-booster/"
+    },
+    "mobileLauncher": {
+      "kid": "SLS is put together standing up on the Mobile Launcher - a 380-foot (116 m) steel tower on a base - and then the whole thing is driven to the launch pad.",
+      "source": "NASA - Mobile Launcher 1",
+      "url": "https://www.nasa.gov/humans-in-space/exploration-ground-systems/mobile-launcher/"
+    },
+    "marsSound": {
+      "kid": "Perseverance carries microphones. They showed that Mars is much quieter than Earth: in the thin carbon-dioxide air, sound fades out after about 8 metres (on Earth, about 65 m). Sound is also slower - about 240 m/s for low pitches and 250 m/s for high pitches, compared with 343 m/s on Earth.",
+      "source": "NASA JPL - What sounds captured by Perseverance reveal about Mars",
+      "url": "https://www.jpl.nasa.gov/news/what-sounds-captured-by-nasas-perseverance-rover-reveal-about-mars/"
+    },
+    "farming": {
+      "kid": "Astronauts on the International Space Station have grown lettuce, cabbage and even chili peppers. Growing food matters for Mars, where resupply from Earth takes months.",
+      "source": "NASA - Growing plants in space",
+      "url": "https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/"
+    },
+    "hematite": {
+      "kid": "In 2004 the Opportunity rover found the ground covered in tiny grey balls nicknamed 'blueberries'. They are hematite, an iron mineral that usually forms in water - a clue that Mars was once wet. Iron like this could one day be mined to build on Mars.",
+      "source": "NASA Science - Opportunity rover mission",
+      "url": "https://science.nasa.gov/mission/mer-opportunity/"
+    },
+    "gypsum": {
+      "kid": "In 2011 Opportunity found a bright vein of gypsum filling a crack in a rock. Gypsum forms when water flows through rock, and it holds water locked inside it.",
+      "source": "NASA Science - Opportunity rover mission",
+      "url": "https://science.nasa.gov/mission/mer-opportunity/"
+    },
+    "meteorite": {
+      "kid": "In 2005 Opportunity found a rock the size of a basketball made of iron and nickel. It was a meteorite - the first meteorite ever found on another planet.",
+      "source": "NASA Science - Opportunity rover mission",
+      "url": "https://science.nasa.gov/mission/mer-opportunity/"
+    },
+    "perchlorate": {
+      "kid": "In 2008 NASA's Phoenix lander found perchlorate salts in Mars soil. They are harmful to people, so space farms plan to grow plants in water with nutrients (hydroponics) instead of in raw Mars soil.",
+      "source": "NASA Science - Phoenix Mars lander",
+      "url": "https://science.nasa.gov/mission/phoenix/"
+    },
+    "veggie": {
+      "kid": "NASA's Veggie garden on the International Space Station grows plants under red, blue and green LED lights. In 2015 astronauts ate red romaine lettuce they grew in space.",
+      "source": "NASA - Veggie plant growth system",
+      "url": "https://www.nasa.gov/missions/station/iss-research/veggie/"
+    },
+    "samples": {
+      "kid": "Perseverance is sealing pieces of Mars rock in tubes, so that a future mission can bring them back to Earth for scientists to study in their labs.",
+      "source": "NASA Science - Perseverance rover mission",
+      "url": "https://science.nasa.gov/mission/mars-2020-perseverance/"
+    },
+    "cme": {
+      "kid": "When the Sun throws out a huge cloud of particles (a coronal mass ejection), it takes from less than a day to a few days to cross space. Space-weather forecasters watch the Sun all the time, so astronauts can be warned before it arrives.",
+      "source": "NOAA Space Weather Prediction Center - Coronal mass ejections",
+      "url": "https://www.swpc.noaa.gov/phenomena/coronal-mass-ejections"
+    },
+    "marci": {
+      "kid": "NASA's Mars Reconnaissance Orbiter photographs the whole of Mars every day with its MARCI weather camera, so scientists can watch dust storms grow and warn the rovers.",
+      "source": "NASA Science - Mars Reconnaissance Orbiter",
+      "url": "https://science.nasa.gov/mission/mars-reconnaissance-orbiter/"
+    },
+    "phobos": {
+      "kid": "Mars's moon Phobos goes round Mars so fast that, seen from the ground, it rises in the west and sets in the east - about twice every sol. The smaller moon, Deimos, looks like a bright star.",
+      "source": "NASA Science - Phobos",
+      "url": "https://science.nasa.gov/mars/moons/phobos/"
+    }
   },
   "tuned": {
     "note": "These are game balance numbers so a whole mission fits into minutes of play. They are NOT measurements.",

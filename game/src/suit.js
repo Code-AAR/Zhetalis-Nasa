@@ -146,29 +146,50 @@ function addPatch(root, spine) {
 // each arm swings with the opposite leg with a soft elbow, the chest turns a little against the hips,
 // the hips tilt over the standing leg, and the body is highest when passing over the standing foot.
 // Mars has 38% of Earth's gravity, so running is a long, floaty lope.
-export function poseAstronaut(a, { phase, pace, run, air, t }) {
+// Jumping: `air` blends from the walk into a jump pose (0..1) and `vy` is the upward speed in m/s.
+// Going up, the legs push off then tuck; at the top they hang loose; coming down they stretch out to land,
+// one foot ahead. The arms lift out for balance. Mars gravity is 38% of Earth's, so each jump lasts long
+// enough to see all of this.
+// Mining: `swing` runs 0..1 through one pickaxe swing (lift over the head, strike down, recover).
+export function poseAstronaut(a, { phase, pace, run, air, t, vy = 0, swing = -1 }) {
   const s = Math.sin(phase), c = Math.cos(phase);
-  const hipAmp = 0.48 * pace + 0.15 * run, kneeAmp = 0.75 * pace + 0.3 * run, armAmp = 0.3 * pace + 0.18 * run;
-  const tuck = air * (1 - pace * 0.3);
-  // legs: forward swing is a negative x turn; each knee bends most in the middle of that leg's swing
-  a.hips[0].rotation.x = -hipAmp * s - tuck * 0.45 - 0.04 * run;
-  a.hips[1].rotation.x = hipAmp * s - tuck * 0.25 - 0.04 * run;
-  a.knees[0].rotation.x = kneeAmp * Math.max(0, c) ** 1.4 + 0.06 * pace + tuck * 0.8;
-  a.knees[1].rotation.x = kneeAmp * Math.max(0, -c) ** 1.4 + 0.06 * pace + tuck * 0.6;
-  // arms come down to the sides (NASA's model holds them out) and swing with the opposite leg
+  const ground = 1 - air;
+  const hipAmp = (0.48 * pace + 0.15 * run) * ground, kneeAmp = (0.75 * pace + 0.3 * run) * ground, armAmp = (0.3 * pace + 0.18 * run) * ground;
+  // jump shape from the vertical speed: rise = 1 just after take-off, 0 at the top, -1 falling fast
+  const rise = Math.max(-1, Math.min(1, vy / 3.2));
+  const tuck = air * Math.max(0, 1 - Math.abs(rise) * 0.6);              // most tucked near the top
+  const reach = air * Math.max(0, -rise);                                // legs reach down to land
+  const push = air * Math.max(0, rise);                                  // legs straighten as they push off
+  const lead = pace > 0.3 ? 0.3 : 0.12;                                  // one leg forward, more when running
+  a.hips[0].rotation.x = -hipAmp * s - 0.04 * run - tuck * 0.75 - reach * (0.25 + lead) + push * 0.15;
+  a.hips[1].rotation.x = hipAmp * s - 0.04 * run - tuck * 0.45 - reach * 0.12 + push * 0.3;
+  a.knees[0].rotation.x = kneeAmp * Math.max(0, c) ** 1.4 + 0.06 * pace + tuck * 1.15 + reach * 0.25 + push * 0.1;
+  a.knees[1].rotation.x = kneeAmp * Math.max(0, -c) ** 1.4 + 0.06 * pace + tuck * 0.95 + reach * 0.45 + push * 0.35;
+  // arms come down to the sides (NASA's model holds them out) and swing with the opposite leg;
+  // in a jump they lift out to the sides and drift a little, like balancing
   const breathe = Math.sin(t * 1.5) * 0.02 * (1 - pace);
   const idle = Math.sin(t * 0.7) * (1 - pace);                        // standing still: shift weight a little
-  const hang = 1.36 - 0.1 * run - 0.2 * tuck;
-  a.arms[0].rotation.set(armAmp * s + 0.12 * run, 0, hang + breathe);
-  a.arms[1].rotation.set(-armAmp * s + 0.12 * run, 0, -hang - breathe);
+  const float = Math.sin(t * 3) * 0.08 * air;
+  const hang = 1.36 - 0.1 * run - 0.55 * air - float;
+  a.arms[0].rotation.set(armAmp * s + 0.12 * run - 0.25 * push + 0.2 * reach, 0, hang + breathe);
+  a.arms[1].rotation.set(-armAmp * s + 0.12 * run - 0.25 * push + 0.2 * reach, 0, -hang - breathe);
   // elbows: always a little bent (a pressurised suit's arms don't hang straight), more on the forward swing
-  a.elbows[0].rotation.y = 0.28 + 0.35 * run + 0.3 * Math.max(0, s) * pace;
-  a.elbows[1].rotation.y = -(0.28 + 0.35 * run + 0.3 * Math.max(0, -s) * pace);
+  a.elbows[0].rotation.y = 0.28 + 0.35 * run + 0.3 * Math.max(0, s) * pace + 0.3 * air;
+  a.elbows[1].rotation.y = -(0.28 + 0.35 * run + 0.3 * Math.max(0, -s) * pace + 0.3 * air);
   // chest turns against the hips; hips tilt over the standing leg; a slight forward lean when running
-  a.torso.rotation.set(0.04 * run + breathe * 0.5, -s * 0.07 * pace + idle * 0.02, 0);
+  a.torso.rotation.set(0.04 * run + breathe * 0.5 + 0.12 * tuck - 0.06 * push, -s * 0.07 * pace + idle * 0.02, 0);
   a.pelvis.rotation.set(0, s * 0.05 * pace, -s * 0.03 * pace + idle * 0.015);
+  if (swing >= 0) {
+    // both hands on the pickaxe: lift it up over the helmet, bring it down hard in front, then recover
+    const ease = k => k * k * (3 - 2 * k);
+    const lift = swing < 0.45 ? ease(swing / 0.45) : swing < 0.6 ? 1 - ease((swing - 0.45) / 0.15) * 1.35 : -0.35 * (1 - ease((swing - 0.6) / 0.4));
+    const x = -0.55 - 2.05 * Math.max(0, lift);   // -2.6 = over the head, -0.55 = down in front (where the rock is)
+    a.arms[0].rotation.set(x, 0, 1.2); a.arms[1].rotation.set(x, 0, -1.2);
+    a.elbows[0].rotation.y = 0.35 + 0.4 * Math.max(0, lift); a.elbows[1].rotation.y = -(0.35 + 0.4 * Math.max(0, lift));
+    a.torso.rotation.x = 0.05 - 0.12 * Math.max(0, lift) + 0.25 * Math.max(0, -lift) / 0.35;   // bend into the strike
+  }
   return {
-    bob: ((Math.cos(phase * 2) + 1) / 2) * (0.03 * pace + 0.07 * run) - 0.025 * pace - 0.02 * tuck,
-    sway: s * 0.02 * pace + idle * 0.012,
+    bob: ((Math.cos(phase * 2) + 1) / 2) * (0.03 * pace + 0.07 * run) * ground - 0.025 * pace * ground,
+    sway: s * 0.02 * pace * ground + idle * 0.012,
   };
 }

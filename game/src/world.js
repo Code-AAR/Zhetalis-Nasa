@@ -34,25 +34,105 @@ export function heightAt(x, z) {
   const r = Math.hypot(x, z);
   let h;
   if (GUSEV) {
-    h = (gusev(x, z) - FLOOR) * 150;                                          // the crater floor, inner craters and rim
+    h = (gusev(x, z) - FLOOR) * 55;                                          // the crater floor, inner craters and rim
     h += (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 4 + (fbm(x * 0.012, z * 0.012) - 0.5) * 8;   // small bumps
   } else {
     h = (fbm(x * 0.011, z * 0.011) - 0.5) * 34 + (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 5;
     h += Math.max(0, fbm(x * 0.005 + 20, z * 0.005, 4) - 0.52) * 220;
   }
-  const edge = Math.max(0, r - WORLD_SIZE * 0.4) * 0.6;                       // hills ring the map so it feels endless
-  return (h + edge) * THREE.MathUtils.smoothstep(r, 26, 70);                  // flat landing pad around the outpost
+  const edge = Math.max(0, r - WORLD_SIZE * 0.4) * 0.22;                       // hills ring the map so it feels endless
+  return (h + edge) * THREE.MathUtils.smoothstep(r, 70, 115);                  // flat landing pad around the outpost
 }
 
+// The Mars sky, coloured like NASA rover photos: butterscotch near the horizon, darker and browner overhead
+// (fine red dust hangs high in the thin air), a pale glow around the Sun, and a BLUE glow at sunset
+// (the same dust scatters blue light forward, towards you). Night is almost black - the air is 1% of Earth's.
 function makeSky(scene) {
-  const c = document.createElement('canvas'); c.width = 2; c.height = 256;
-  const g = c.getContext('2d'); const grad = g.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#b8774f'); grad.addColorStop(0.55, '#d9a27a'); grad.addColorStop(1, '#efc9a4');
-  g.fillStyle = grad; g.fillRect(0, 0, 2, 256);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 24, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
+  const material = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: {
+      zenith: { value: new THREE.Color('#9c6646') }, horizon: { value: new THREE.Color('#dcb08a') },
+      halo: { value: new THREE.Color('#f2eee6') }, haloPower: { value: 1 }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, haze: { value: 0 },
+    },
+    vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      uniform vec3 zenith, horizon, halo, sunDir; uniform float haloPower, haze; varying vec3 vDir;
+      void main() {
+        vec3 d = normalize(vDir);
+        float up = clamp(d.y, 0.0, 1.0);
+        vec3 col = mix(horizon, zenith, pow(up, 0.5));
+        col = mix(col, horizon * 0.85, clamp(-d.y * 5.0, 0.0, 1.0));            // below the horizon line
+        float s = max(dot(d, normalize(sunDir)), 0.0);
+        col += halo * (pow(s, 10.0) * 0.45 + pow(s, 80.0) * 0.7) * haloPower;    // wide halo + bright core around the Sun
+        col = mix(col, horizon, haze * 0.65);                                    // a dust storm flattens everything
+        gl_FragColor = vec4(col, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 20), material);
   scene.add(sky);
   return sky;
+}
+
+// Fine dust floating in the air around you, catching the sunlight (and a lot more of it in a dust storm).
+function makeMotes() {
+  const N = 420, R = 16, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 2 * R;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+  const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16); grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+  const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#ffd9b0', size: 0.07, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const points = new THREE.Points(geo, mat); points.frustumCulled = false;
+  points.userData.update = (dt, cam, t, wind) => {
+    // specks stay put in the world (so they slide past as you walk); any that fall too far behind you
+    // wrap round to the other side, so there is always a cloud around you. Each drifts with the wind.
+    const a = geo.attributes.position.array, c = [cam.x, cam.y, cam.z];
+    for (let i = 0; i < N; i++) {
+      const j = i * 3;
+      a[j] += (wind + Math.sin(t * 0.3 + i) * 0.15) * dt; a[j + 1] += Math.sin(t * 0.5 + i * 1.7) * 0.05 * dt; a[j + 2] += Math.cos(t * 0.2 + i) * 0.12 * dt;
+      for (let k = 0; k < 3; k++) { const rel = a[j + k] - c[k]; if (rel > R) a[j + k] -= 2 * R; else if (rel < -R) a[j + k] += 2 * R; }
+    }
+    geo.attributes.position.needsUpdate = true;
+  };
+  return points;
+}
+
+// Mars's two small moons. Phobos orbits so fast (every 7.7 hours) that it rises in the WEST and sets in the
+// EAST, crossing the sky about twice a sol; from the surface it looks about a third as wide as our Moon.
+// Deimos is farther out and slower, and looks like a bright star.
+function makeMoons() {
+  const g = new THREE.Group();
+  const geo = new THREE.IcosahedronGeometry(1, 3), p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {   // a lumpy potato, not a ball
+    const v = new THREE.Vector3().fromBufferAttribute(p, i);
+    v.multiply(new THREE.Vector3(1.35, 1, 1.1)).multiplyScalar(1 + (Math.sin(v.x * 7) * Math.cos(v.y * 5) + Math.sin(v.z * 9)) * 0.05);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  geo.computeVertexNormals();
+  // Phobos is lit by the Sun even when it is night on the ground (it is high above Mars), so it glows softly
+  const phobos = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: '#8d857c', emissive: '#7a7168', emissiveIntensity: 0.9, fog: false, transparent: true }));
+  phobos.scale.setScalar(4.5);   // drawn about twice its real size (it looks about a third as wide as our Moon), so you can spot it
+  const dc = document.createElement('canvas'); dc.width = dc.height = 32; const dg = dc.getContext('2d');
+  const grad = dg.createRadialGradient(16, 16, 0, 16, 16, 16); grad.addColorStop(0, 'rgba(255,250,240,1)'); grad.addColorStop(0.3, 'rgba(255,250,240,0.5)'); grad.addColorStop(1, 'rgba(255,250,240,0)');
+  dg.fillStyle = grad; dg.fillRect(0, 0, 32, 32);
+  const deimos = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(dc), fog: false, transparent: true, depthWrite: false }));
+  deimos.scale.setScalar(5);
+  g.add(phobos, deimos);
+  const tilt = new THREE.Euler(0.26, 0, 0);   // Gusev Crater is about 15° south of the equator, so the moons' path tilts
+  g.userData = {
+    phobos, deimos,
+    place(phase, cam, night) {
+      const hours = phase * 24.66;
+      const pa = -hours / 11.1 * Math.PI * 2 + 1.2, da = -hours / 131 * Math.PI * 2 + 2.5;   // west -> east
+      const on = (a, r) => new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0).applyEuler(tilt).add(cam);
+      phobos.position.copy(on(pa, 780)); phobos.rotation.y = pa;
+      deimos.position.copy(on(da, 800));
+      phobos.material.opacity = 0.25 + 0.75 * night; deimos.material.opacity = night;
+      phobos.visible = phobos.position.y > cam.y - 20; deimos.visible = deimos.position.y > cam.y;
+    },
+  };
+  return g;
 }
 
 // Fine sand and pebbles, tiled over the ground (made in code, so nothing to download). Light grey, so it
@@ -118,6 +198,8 @@ function makeRocks(rng) {
   return { rocks, colliders };
 }
 
+export const GH={x:0,z:38,r:7};
+const LANDER_SCALE = 1.6;   // the team lander model is 11 m tall; 1.6x makes it a roomy crew lander
 function mat(color, extra = {}) { return new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra }); }
 // Three.js positions can't be replaced, only changed - this places a mesh and returns it.
 function at(mesh, x, y, z) { mesh.position.set(x, y, z); return mesh; }
@@ -125,41 +207,46 @@ function at(mesh, x, y, z) { mesh.position.set(x, y, z); return mesh; }
 // The outpost that is "already there" when you land.
 function makeOutpost() {
   const g = new THREE.Group();
-  const white = mat('#ece8e1'), stripe = mat('#d9683a'), dark = mat('#23262b'), glass = new THREE.MeshLambertMaterial({ color: '#9fd7c9', transparent: true, opacity: 0.45 });
-  const hab = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, 4.5, 16), white); hab.position.y = 2.25; g.add(hab);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), white); dome.position.y = 4.5; g.add(dome);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(6.45, 6.45, 0.5, 16), stripe); band.position.y = 3.6; g.add(band);
+  const white = mat('#ece8e1', { flatShading: false }), stripe = mat('#d9683a', { flatShading: false }), dark = mat('#23262b'), glass = new THREE.MeshLambertMaterial({ color: '#9fd7c9', transparent: true, opacity: 0.45 });
+  const hab = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, 4.5, 64), white); hab.position.y = 2.25; g.add(hab);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 64, 20, 0, Math.PI * 2, 0, Math.PI / 2), white); dome.position.y = 4.5; g.add(dome);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(6.45, 6.45, 0.5, 64), stripe); band.position.y = 3.6; g.add(band);
   const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3, 0.6), dark); door.position.set(0, 1.5, 6.1); g.add(door);
   const doorLight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.7), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); doorLight.position.set(0, 3.1, 6.15); g.add(doorLight);
-  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 10), white); tunnel.rotation.z = Math.PI / 2; tunnel.position.set(-8.5, 1.4, 1); g.add(tunnel);
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 32), white); tunnel.rotation.z = Math.PI / 2; tunnel.position.set(-8.5, 1.4, 1); g.add(tunnel);
   // greenhouse
-  const gh = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), glass); gh.position.set(-14, 0, 1); g.add(gh);
+  const gh = new THREE.Mesh(new THREE.SphereGeometry(4.2, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), glass); gh.position.set(-14, 0, 1); g.add(gh);
   for (let i = 0; i < 14; i++) {
-    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1 + (i % 3) * 0.3, 5), mat('#4caf50'));
+    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1 + (i % 3) * 0.3, 8), mat('#4caf50'));
     plant.position.set(-14 + Math.cos(i) * 2.4 * ((i % 4) / 4 + 0.3), 0.6, 1 + Math.sin(i * 1.7) * 2.2 * ((i % 3) / 3 + 0.3)); g.add(plant);
   }
   // comms dish
   const comms = new THREE.Group(); comms.position.set(9, 0, 9);
-  comms.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 5, 8), white), 0, 2.5, 0));
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 14, 6, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshLambertMaterial({ color: '#ece8e1', side: THREE.DoubleSide }));
+  comms.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 5, 20), white), 0, 2.5, 0));
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 40, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshLambertMaterial({ color: '#ece8e1', side: THREE.DoubleSide }));
   dish.rotation.x = -Math.PI / 2.6; dish.position.y = 5.2; comms.add(dish);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); beacon.position.y = 6.4; comms.add(beacon);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 14), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); beacon.position.y = 6.4; comms.add(beacon);
   g.add(comms);
   // water-wall shielding ring, shown after the upgrade
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 18, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 64, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
   wall.position.y = 1.3; wall.visible = false; g.add(wall);
-  // the lander you arrived in
-  const lander = new THREE.Group(); lander.position.set(-6, 0, -17);
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.2, 7, 12), white), 0, 4.5, 0));
-  lander.add(at(new THREE.Mesh(new THREE.ConeGeometry(1.6, 3, 12), white), 0, 9.5, 0));
+  // the lander you arrived in: the team's lander model (assets/lander.glb, loaded in World), made 1.6x bigger -
+  // about 17.6 m tall and 6.3 m wide, like the big crew landers NASA studies for Mars. Its ladder and door face the outpost.
+  // These simple shapes stand in until the model arrives.
+  const lander = new THREE.Group(); lander.position.set(-6, 0, -17); lander.rotation.y = Math.atan2(6, 17); lander.scale.setScalar(LANDER_SCALE); lander.name = 'lander';
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.2, 7, 48), white), 0, 4.5, 0));
+  lander.add(at(new THREE.Mesh(new THREE.ConeGeometry(1.6, 3, 48), white), 0, 9.5, 0));
   for (let i = 0; i < 4; i++) {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 0.25), dark);
     leg.position.set(Math.cos(i * Math.PI / 2) * 2.3, 1.2, Math.sin(i * Math.PI / 2) * 2.3); leg.rotation.z = Math.cos(i * Math.PI / 2) * 0.35; leg.rotation.x = -Math.sin(i * Math.PI / 2) * 0.35; lander.add(leg);
   }
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 12), stripe), 0, 6.5, 0));
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 48), stripe), 0, 6.5, 0));
+  // a glowing green strip at the foot of the ladder: walk here and press E to climb up to the door
+  const foot = new THREE.Group(); foot.position.copy(lander.position); foot.rotation.y = lander.rotation.y; g.add(foot);
+  foot.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.5), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 0.05, 2.2 * LANDER_SCALE + 0.9));
   g.add(lander);
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.6 }, { x: 9, z: 9, r: 0.6 }] };
+  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.3 * LANDER_SCALE }, { x: 9, z: 9, r: 0.6 }] };
 }
 
 // Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
@@ -171,13 +258,15 @@ function makeSkyLights(scene) {
   const tex = new THREE.CanvasTexture(c);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#fff1dc', transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
   glow.scale.setScalar(260); scene.add(glow);
-  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 20), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
   scene.add(disc);
   // thousands of stars and the Milky Way; the thin, dry air of Mars makes the night sky very clear
   const stars = makeStars(850, 3500, true); scene.add(stars);
   // the planets as seen from Mars tonight (NASA JPL formulas) - Earth is the blue "star"
   const planets = makePlanets(840, { from: 'mars', centre: 'earth', yaw: 0.25, pitch: 0.42, hide: ['sun'] }); scene.add(planets);
-  return { glow, disc, stars, planets };
+  const moons = makeMoons(); scene.add(moons);
+  const motes = makeMotes(); scene.add(motes);
+  return { glow, disc, stars, planets, moons, motes };
 }
 
 function makeSolarField() {
@@ -189,7 +278,7 @@ function makeSolarField() {
   for (let i = 0; i < 12; i++) {
     const p = new THREE.Group();
     const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 2), panelMat); board.rotation.x = -0.45; board.position.y = 1.3; p.add(board);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 6), frame); post.position.y = 0.65; p.add(post);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 12), frame); post.position.y = 0.65; p.add(post);
     p.position.set((i % 4) * 3.8, 0, Math.floor(i / 4) * 3.2);
     p.traverse(o => { if (o.isMesh) o.castShadow = true; });
     p.visible = false; g.add(p); panels.push(p);
@@ -203,7 +292,7 @@ function makePickup(kind) {
   const looks = {
     ice:   { geo: new THREE.IcosahedronGeometry(0.7, 0), color: '#9fe7ff', beam: '#9fe7ff' },
     metal: { geo: new THREE.OctahedronGeometry(0.6, 0),  color: '#c9ced6', beam: '#ffd27a' },
-    pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 10), color: '#f2f2f2', beam: '#ff7a3d' },
+    pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 24), color: '#f2f2f2', beam: '#ff7a3d' },
   }[kind];
   const body = new THREE.Mesh(looks.geo, new THREE.MeshLambertMaterial({ color: looks.color, emissive: looks.color, emissiveIntensity: 0.35, flatShading: true }));
   body.castShadow = true; body.position.y = 0.9; g.add(body);
@@ -220,7 +309,7 @@ function makeAstronaut() {
   const suit = mat('#f3f1ec'), orange = mat('#e2622f'), visor = new THREE.MeshPhongMaterial({ color: '#1b2a3a', shininess: 90, specular: '#ffcf9a' });
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.75, 4, 10), suit); body.position.y = 0.95; rig.add(body);
   const head = new THREE.Group(); head.position.y = 1.62; rig.add(head);                     // the helmet nods a little as you walk
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), suit); helmet.position.y = 0.16; head.add(helmet);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.38, 24, 16), suit); helmet.position.y = 0.16; head.add(helmet);
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, -Math.PI / 2.4, Math.PI / 1.2, Math.PI / 4, Math.PI / 2.4), visor); face.position.set(0, 0.18, 0.1); head.add(face);
   const pack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), suit); pack.position.set(0, 1.05, -0.42); rig.add(pack);
   const band = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.12, 0.86), orange); band.position.y = 1.3; rig.add(band);
@@ -317,10 +406,10 @@ export class World {
     this.scene.add(this.player);
 
     // regolith (Mars soil) mound, shown once you bury the outpost - with a gap left for the door
-    const soil = new THREE.MeshLambertMaterial({ color: '#9a5a36', flatShading: true });
+    const soil = new THREE.MeshLambertMaterial({ color: '#9a5a36' });
     this.regolith = new THREE.Group();
-    this.regolith.add(at(new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.4, 4.8, 20, 1, false, Math.PI * 0.12, Math.PI * 1.76), soil), 0, 2.4, 0));
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.6, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), soil); cap.position.y = 4.6; cap.scale.y = 0.75;
+    this.regolith.add(at(new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.4, 4.8, 56, 1, false, Math.PI * 0.12, Math.PI * 1.76), soil), 0, 2.4, 0));
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.6, 56, 16, 0, Math.PI * 2, 0, Math.PI / 2), soil); cap.position.y = 4.6; cap.scale.y = 0.75;
     this.regolith.add(cap);
     this.regolith.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     this.regolith.visible = false; this.scene.add(this.regolith);
@@ -334,14 +423,29 @@ export class World {
       const rig = this.player.userData.rig;
       rig.children.forEach(c => (c.visible = false));
       rig.add(a.root); this.suit = a;
+      a.elbows[1].add(this.handSlot); this.handSlot.position.set(0.15, 0, 0); this.handSlot.visible = true;   // into the right glove (it was hidden with the placeholder body above)
     }).catch(err => { console.warn('NASA astronaut failed', err); this.swapModel('astronaut.glb', this.player.userData.rig, 1.85); });
-    this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
-    this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
+    // The mission settlement loads the supplied connected habitat modules. // main hab parts
+    this.useLander();
+    // the tool in your hands: on the suit's right forearm in third person, and in front of the camera in first person
+    this.toolSwing = -1;                   // 0..1 while swinging the pickaxe, -1 otherwise
+    this.handSlot = new THREE.Group(); this.player.userData.rig.add(this.handSlot);   // moved onto the forearm once the suit loads
+    this.handSlot.position.set(0.55, 0.85, 0.12);
+    this.viewSlot = new THREE.Group(); this.camera.add(this.viewSlot); this.scene.add(this.camera);
+    this.placeViewSlot();
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
     this.move = new THREE.Vector3(); this.gait = 0; this.swing = 0; this.squash = 0; this.lean = { x: 0, z: 0 };   // animation state
     this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
     this.keys = {}; this.time = 0; this.panelsDirty = false;
     this.setTime(this.phase);
+  }
+
+  // The team's lander model, scaled up (LANDER_SCALE). Its door and ladder face local +z.
+  useLander() {
+    const lander = this.outpost.group.getObjectByName('lander');
+    lander.updateWorldMatrix(true, false);
+    this.shipDoor = lander.localToWorld(new THREE.Vector3(0, 0, 2.2 + 0.9 / LANDER_SCALE)); this.shipDoor.y = 0;   // the foot of the ladder
+    this.swapModel('lander.glb', lander, 11);
   }
 
   swapModel(file, target, height, onlyChildren) {
@@ -393,8 +497,9 @@ export class World {
 
   setPanels(n) { this.solar.panels.forEach((p, i) => (p.visible = i < n)); }
   setPanelDust(clean) { this.solar.group.userData.panelMat.color.set('#1d3a6e').lerp(new THREE.Color('#b06a43'), (1 - clean) * 1.2); }
-  setWall(level) { this.outpost.wall.visible = level > 0; }
+  setWall(level) { if(this.settlement)return this.settlement.setWall(level);this.outpost.wall.visible = level > 0; }
   setRegolith(on) {
+    if(this.settlement)return this.settlement.setRegolith(on);
     this.regolith.visible = on;
     const hab = this.colliders.find(c => c.x === 0 && c.z === 0); if (hab) hab.r = on ? 8.2 : 7;
   }
@@ -412,7 +517,15 @@ export class World {
     this.sun.intensity = (this.dustOn ? 0.6 : 1.9) * day;
     this.sun.color.set('#fff1dc').lerp(new THREE.Color('#ffc08a'), dusk);
     this.hemi.intensity = 0.22 + 0.93 * day * (this.dustOn ? 0.7 : 1);
-    this.sky.material.color.set('#ffffff').lerp(new THREE.Color('#141a2e'), 1 - day);
+    const u = this.sky.material.uniforms, C = c => new THREE.Color(c);
+    u.zenith.value.copy(C(this.dustOn ? '#8a5232' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#020308'), 1 - day);
+    u.horizon.value.copy(C(this.dustOn ? '#b5744c' : '#dcb08a')).lerp(C('#b07a5a'), dusk * 0.5).lerp(C('#0d0b12'), 1 - day);
+    u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
+    u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
+    u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
+    this.skyLights.motes.material.opacity = (0.12 + 0.45 * day) * (this.dustOn ? 2 : 1);
+    this.skyLights.motes.material.size = this.dustOn ? 0.1 : 0.07;
+    this.nightness = 1 - day;
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
     this.scene.fog.near = this.dustOn ? 18 : 70; this.scene.fog.far = this.dustOn ? 140 : 460 - 180 * (1 - day);
@@ -452,11 +565,13 @@ export class World {
     this.squash *= Math.exp(-dt * 8);
     let bob = 0, sway = 0;
     if (this.suit) {
-      ({ bob, sway } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time }));
-    } else {   // simple shapes: legs and arms swing, no knees
-      const s = Math.sin(this.gait);
-      u.legs[0].rotation.x = s * this.swing * 0.5; u.legs[1].rotation.x = -s * this.swing * 0.5;
-      if (u.arms) { u.arms[0].rotation.x = -s * this.swing * 0.4; u.arms[1].rotation.x = s * this.swing * 0.4; }
+      ({ bob, sway } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time, vy: this.vel.y, swing: this.toolSwing }));
+    } else {   // simple shapes: legs and arms swing, no knees; in the air the legs tuck and reach
+      const s = Math.sin(this.gait), rise = THREE.MathUtils.clamp(this.vel.y / 3.2, -1, 1), air = this.airMix;
+      u.legs[0].rotation.x = s * this.swing * 0.5 * (1 - air) - air * (0.5 - 0.3 * Math.max(0, -rise));
+      u.legs[1].rotation.x = -s * this.swing * 0.5 * (1 - air) - air * (0.2 + 0.2 * Math.max(0, rise));
+      if (u.arms) { u.arms[0].rotation.x = -s * this.swing * 0.4; u.arms[1].rotation.x = s * this.swing * 0.4; u.arms[0].rotation.z = -0.12 - air * 0.5; u.arms[1].rotation.z = 0.12 + air * 0.5; }
+      if (this.toolSwing >= 0 && u.arms) { const l = Math.sin(this.toolSwing * Math.PI); u.arms[1].rotation.x = u.arms[0].rotation.x = -0.5 - 2 * l; }
       bob = ((Math.cos(this.gait * 2) + 1) / 2) * 0.04 * this.swing;
     }
     rig.position.set(sway, bob + breathe - this.squash * 0.08, 0);
@@ -477,9 +592,33 @@ export class World {
     }
   }
 
+  // Show a tool in your hands. `hand` is the copy the astronaut holds, `view` the one you see in first person.
+  holdTool(hand, view) {
+    this.handSlot.clear(); this.viewSlot.clear();
+    if (hand) this.handSlot.add(hand);
+    if (view) { view.traverse(o => { if (o.material) { o.material = o.material.clone(); o.material.depthTest = false; o.material.fog = false; } o.renderOrder = 10; }); this.viewSlot.add(view); }
+  }
+  // One pickaxe swing. `onStrike` is called at the moment the point hits the rock.
+  swingTool(onStrike) {
+    if (this.toolSwing >= 0) return false;
+    this.toolSwing = 0; this.onStrike = onStrike; return true;
+  }
+  updateSwing(dt) {
+    if (this.toolSwing < 0) { this.viewSlot.rotation.set(0, 0, 0); return; }
+    const before = this.toolSwing;
+    this.toolSwing += dt / 0.75;
+    if (before < 0.55 && this.toolSwing >= 0.55) { this.onStrike?.(); this.onStrike = null; }
+    const k = this.toolSwing, lift = k < 0.45 ? Math.sin(k / 0.45 * Math.PI / 2) : k < 0.6 ? 1 - (k - 0.45) / 0.15 * 1.3 : -0.3 * (1 - (k - 0.6) / 0.4);
+    this.viewSlot.rotation.set(lift * 1.1, 0, -lift * 0.25);       // first person: the pickaxe comes up and chops down
+    if (this.toolSwing >= 1) this.toolSwing = -1;
+  }
+
+  groundHeightAt(x,z){return this.settlement?.walkHeight(x,z,heightAt(x,z))??heightAt(x,z);}
+
   // Simple circle collisions so you can't walk through the base or big boulders.
   collide(pos) {
     for (const c of this.colliders) {
+      if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
     }
@@ -496,21 +635,23 @@ export class World {
   }
 
   update(dt, controlsActive) {
-    this.time += dt;
+    this.time += dt; this.frameDt = dt;
     const nearHome = Math.hypot(this.sev.pos.x, this.sev.pos.z) < 32;
     this.sev.update(dt, controlsActive ? this.keys : {}, this.driving, nearHome, this.night);
     this.sevCollider.x = this.sev.pos.x; this.sevCollider.z = this.sev.pos.z;
     if (this.driving) return this.updateDriving(dt);
     const p = this.player.position, g = this.facts.gravity.value;
     const k = this.keys, running = k.ShiftLeft || k.ShiftRight;
-    const want = new THREE.Vector3();
+    const want = this.wantMove??=new THREE.Vector3();want.set(0,0,0);
     if (controlsActive) {
       const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
       want.set(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
       if (want.lengthSq() > 0) want.normalize().multiplyScalar(running ? RUN : WALK);
-      if (k.Space && this.onGround) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
+      if (this.toolSwing >= 0) want.multiplyScalar(0.15);                          // you plant your feet to swing
+      if (k.Space && this.onGround && this.toolSwing < 0) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
     }
+    this.updateSwing(dt);
     // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
     const grip = this.onGround ? (want.lengthSq() ? 7 : 9) : 1.5;
     this.move.lerp(want, 1 - Math.exp(-grip * dt));
@@ -518,8 +659,8 @@ export class World {
     this.vel.y -= g * dt;                                                           // ...but real Mars gravity pulls back slower
     p.y += this.vel.y * dt;
     this.collide(p);
-    const ground = heightAt(p.x, p.z), wasInAir = !this.onGround;
-    if (p.y <= ground) {
+    const ground = this.groundHeightAt(p.x, p.z), wasInAir = !this.onGround;
+    if (p.y <= ground || (this.onGround&&Math.abs(p.y-ground)<.45)) {
       if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);   // land with a little squash
       p.y = ground; this.vel.y = 0; this.onGround = true;
     }
@@ -527,7 +668,7 @@ export class World {
 
     if (this.firstPerson) {
       // first person: eyes inside the helmet, body hidden so it doesn't block the view
-      this.player.visible = false;
+      this.player.visible = false; this.viewSlot.visible = true;
       const hb = this.headBob || { x: 0, y: 0 };
       const eyeFP = new THREE.Vector3(p.x + Math.cos(this.yaw) * hb.x, p.y + 1.7 + hb.y, p.z - Math.sin(this.yaw) * hb.x);
       this.camera.position.copy(eyeFP);
@@ -537,7 +678,7 @@ export class World {
       if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
       return;
     }
-    this.player.visible = true;
+    this.player.visible = true; this.viewSlot.visible = false;
     // third-person camera
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
     for (const c of this.colliders) {                      // keep the camera out of buildings and boulders
@@ -547,7 +688,11 @@ export class World {
     }
     eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
     this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
-    this.camera.lookAt(p.x, p.y + 1.6, p.z);
+    this.cameraTarget??=new THREE.Vector3(p.x,p.y+1.6,p.z);
+    if(this.cameraTarget.distanceToSquared(p)>400)this.cameraTarget.set(p.x,p.y+1.6,p.z);
+    this.cameraAim??=new THREE.Vector3();this.cameraAim.set(p.x,p.y+1.6,p.z);
+    this.cameraTarget.lerp(this.cameraAim,1-Math.exp(-dt*14));
+    this.camera.lookAt(this.cameraTarget);
     this.placeSky(p);
     
     for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
@@ -557,7 +702,7 @@ export class World {
   // In the rover: you ride inside; the camera follows behind (or sits in the cockpit in first person).
   updateDriving(dt) {
     const r = this.sev, p = this.player.position;
-    this.player.visible = false;
+    this.player.visible = false; this.viewSlot.visible = false;
     p.copy(r.pos);
     this.move.set(0, 0, 0); this.swing = 0;
     if (this.firstPerson) {
@@ -585,6 +730,8 @@ export class World {
     this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
     this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
+    this.skyLights.moons.userData.place(this.phase, cam, (this.nightness ?? 0) * (this.dustOn ? 0.2 : 1));
+    this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);
     const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
     this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);
   }
@@ -594,14 +741,20 @@ export class World {
     if (this.driving) return { type: 'sev-exit', d: 0 };
     const p = this.player.position, list = [];
     if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
-    list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
-    if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
+    if(this.settlement)for(const entrance of this.settlement.entrances)list.push({type:'door',entrance,range:1.8,d:Math.hypot(p.x-entrance.x,p.y-entrance.y,p.z-entrance.z)});
+    else list.push({type:'door',d:Math.hypot(p.x-this.door.x,p.z-this.door.z)});
+    list.push({type:'ghdoor',d:Math.hypot(p.x-(GH.x-GH.r-2.6),p.z-GH.z)});
+    if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start
+    if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - (this.solar.group.position.x + 5.7), p.z - (this.solar.group.position.z + 3.2)) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
     if (this.heli.model && !this.heli.seen) list.push({ type: 'heli', d: Math.hypot(p.x - this.heli.x, p.z - this.heli.z) });
     for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });
+    if (this.extraTargets) list.push(...this.extraTargets(p));   // ore rocks and greenhouses (colony.js)
     list.sort((a, b) => a.d - b.d);
-    return list[0] && list[0].d < 3.2 ? list[0] : null;
+    return list.find(n=>n.d<(n.range??3.2))||null;
   }
 
-  resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
+  resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); this.placeViewSlot(); }
+  // the first-person tool sits in the bottom-right corner - closer to the middle on tall, narrow screens
+  placeViewSlot() { this.viewSlot.position.set(Math.min(0.36, 0.25 * this.camera.aspect), -0.34, -0.7); }
 }

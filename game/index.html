@@ -17,11 +17,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="menu.css?v=phone-ready-9">
   <link rel="stylesheet" href="loading-screen.css">
+  <link rel="stylesheet" href="phone.css">
+  <link rel="stylesheet" href="briefing.css?v=phone-ready-9">
+  <link rel="stylesheet" href="mobile.css?v=phone-ready-9">
   <script type="importmap">
     { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "./src/ui.js": "./src/ui.js?v=phone-ready-9",
+        "./src/world.js": "./src/world.js?v=phone-ready-9",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
     } }
   </script>
@@ -33,7 +38,7 @@
   <section id="title" class="screen">
     <div class="mission-shell">
       <header class="mission-header">
-        <a class="mission-brand" href="../" aria-label="Zhetalis home"><img src="assets/zhetalis-badge.png" alt="Zhetalis" width="64" height="64"><span>Zhetalis<small>Space exploration, in your hands.</small></span></a>
+        <a class="mission-brand" href="./" aria-label="Zhetalis home"><img src="assets/zhetalis-badge.png" alt="Zhetalis" width="64" height="64"><span>Zhetalis<small>Space exploration, in your hands.</small></span></a>
         <nav aria-label="Game information"><button id="howto">How to play</button><button id="data-btn-title">NASA data &amp; credits <span aria-hidden="true">↗</span></button></nav>
       </header>
       <main class="mission-main">
@@ -56,14 +61,14 @@
             <canvas id="menu-globes" aria-label="Three-dimensional Earth, Moon and Mars. Drag directly on any planet to rotate it independently."></canvas>
             <span class="planet-annotation" data-body="earth">Earth · Home</span>
             <span class="planet-annotation" data-body="moon">The Moon</span>
-            <span class="planet-annotation mission-annotation" data-body="mars"><b>Mars</b> <small>Mission selected</small></span>
+            <span class="planet-annotation" data-body="mars">Mars</span>
             <span class="planet-scale"><a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/" target="_blank" rel="noopener">Diameters to scale</a> · Orbit compressed &amp; sped up</span>
           </div>
           <div class="planet-caption"><div><h2 id="planet-name">Mars</h2><p id="planet-description">A small step for you. A new home for your crew.</p></div><span class="planet-spin" id="planet-spin">Drag any planet ↔</span></div>
           <div class="planet-tabs" role="group" aria-label="Choose a globe to explore">
             <button data-planet="earth" aria-pressed="false"><span>Earth</span><small>Our home</small></button>
             <button data-planet="moon" aria-pressed="false"><span>The Moon</span><small>Future mission</small></button>
-            <button data-planet="mars" data-mission="true" aria-pressed="true"><span>Mars</span><small>Mission selected</small></button>
+            <button data-planet="mars" aria-pressed="true"><span>Mars</span><small>Your destination</small></button>
           </div>
           <p class="planet-credit" id="planet-credit">Surface map: NASA 3D Resources · Rendered globe</p>
           <a id="menu-earth-photo" class="hidden" target="_blank" rel="noopener">View the archived NASA EPIC Earth photo ↗</a>
@@ -100,6 +105,7 @@
         <button id="power-btn">⚡ Power (P)</button>
         <button id="view-btn">👁 View (V)</button>
         <button id="speed-btn">Speed ×1</button>
+        <button id="map-btn">Surface map (G)</button>
         <button id="log-btn">📒 Logbook (L)</button>
         <button id="sound-btn">🔊 Sound (M)</button>
         <button id="data-btn">NASA data</button>
@@ -122,6 +128,7 @@
   <div id="loading">Loading Mars…</div>
 
   <script type="module" src="src/loading-screen.js"></script>
-  <script type="module" src="src/main.js"></script>
+  <script type="module" src="src/main.js?v=phone-ready-9"></script>
+  <script type="module" src="src/phone-layout.js?v=phone-ready-9"></script>
 </body>
 </html>

@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import { loadModel } from './nasamodels.js';
 import { splitGeometry } from './suit.js';
 
-const MAX = 8, REVERSE = 3, ACCEL = 4.5, BRAKE = 9;      // m/s and m/s² (faster than the real concept vehicle, so trips are short)
+const MAX = 15, REVERSE = 4, ACCEL = 6.5, BRAKE = 11;    // m/s and m/s²: about 54 km/h, much faster than running (6 m/s). The real concept
+                                                          // vehicle tops out near 10 km/h - the game speeds it up so trips are short
 const DRAIN = 1 / 150, CHARGE = 1 / 25;                   // battery per second: about 2.5 min of driving, 25 s to fill up
 
 export class Rover {

@@ -50,7 +50,8 @@ export function initTouch({ keys, look, press }) {
     if (stickId === null && e.clientX < innerWidth * 0.45) {
       stickId = e.pointerId; sx = e.clientX; sy = e.clientY;
       stick.classList.add('active');
-      stick.style.left = sx + 'px'; stick.style.top = sy + 'px';
+      const radius=stick.offsetWidth/2,buttonsLeft=root.querySelector('.t-buttons').getBoundingClientRect().left;
+      stick.style.left = Math.max(radius+8,Math.min(sx,buttonsLeft-radius-8))+'px';stick.style.top=Math.max(radius+8,Math.min(sy,innerHeight-radius-8))+'px';
     } else if (lookId === null) { lookId = e.pointerId; lx = e.clientX; ly = e.clientY; }
     else return;
     try { view.setPointerCapture(e.pointerId); } catch { /* fine without it */ }
@@ -67,14 +68,18 @@ export function initTouch({ keys, look, press }) {
     }
   });
   const up = e => { if (e.pointerId === stickId) releaseStick(); if (e.pointerId === lookId) lookId = null; };
-  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);view.addEventListener('lostpointercapture',up);
+  const resetTouches=()=>{const ids=[stickId,lookId];releaseStick();lookId=null;const k=keys();if(k)k.Space=false;root.querySelectorAll('.down').forEach(b=>b.classList.remove('down'));for(const id of ids)if(id!==null&&view.hasPointerCapture(id))view.releasePointerCapture(id);};
+  addEventListener('blur',resetTouches);addEventListener('resize',resetTouches);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouches();});
 
   // ---- buttons: Jump is held like the space bar, the rest are one tap = one key press ----
   const btn = (id, down, upFn) => {
     const b = root.querySelector(id);
-    b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('down'); down(); });
+    b.addEventListener('pointerdown', e => { e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch{} b.classList.add('down'); down(); });
     const lift = () => { b.classList.remove('down'); upFn?.(); };
     b.addEventListener('pointerup', lift); b.addEventListener('pointercancel', lift); b.addEventListener('pointerleave', lift);
+    b.addEventListener('lostpointercapture',lift);
+    b.addEventListener('click',e=>{if(e.detail===0){down();upFn?.();}});
     b.addEventListener('contextmenu', e => e.preventDefault());
   };
   btn('#t-use', () => press('KeyE'));

@@ -341,3 +341,116 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* the full-screen button only appears where the browser supports it */
 .fs-btn { display: none; }
 body.can-fullscreen.touch .fs-btn { display: inline-block; }
+
+/* ---------- First person: a calm helmet view ----------
+   The big meters and panels step aside; a few quiet numbers sit along the bottom of the visor,
+   and only the most urgent warning shows, at the top of the glass. */
+#visor { display: none; position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); gap: 18px; align-items: baseline;
+  font: 500 .78rem/1 Poppins, system-ui, sans-serif; letter-spacing: .06em; color: rgba(225,240,255,.72); text-shadow: 0 0 6px rgba(120,200,255,.35); white-space: nowrap; }
+#visor span { display: inline-flex; gap: 6px; align-items: baseline; }
+#visor b { font-weight: 600; color: rgba(240,248,255,.92); font-variant-numeric: tabular-nums; }
+#visor .warn b { color: #ffcf6b; } #visor .bad b { color: #ff7a6b; }
+#visor small { font-size: .62rem; opacity: .7; text-transform: uppercase; }
+body.fp #visor { display: flex; }
+body.fp .meters, body.fp #sol, body.fp #tod, body.fp #credits, body.fp #link { display: none; }
+body.fp .status { background: none; border: none; padding: 0; }
+body.fp .status-buttons { opacity: 0; transition: opacity .4s; }
+body.fp #hud.menu-open .status-buttons, body.fp .status:hover .status-buttons { opacity: 1; }
+body.fp #menu-btn { display: inline-block; opacity: .55; }
+body.fp #alerts { top: 18px; right: auto; left: 50%; transform: translateX(-50%); max-width: 60vw; }
+body.fp #alerts .alert { background: rgba(60,20,10,.35); border: 1px solid rgba(255,140,100,.35); backdrop-filter: none; font-size: .8rem; padding: 5px 12px; }
+body.fp #alerts .alert:not(:first-child) { display: none; }
+body.fp #hint { background: none; border: none; font-weight: 500; font-size: .82rem; color: rgba(235,245,255,.82); text-shadow: 0 1px 4px rgba(0,0,0,.6); bottom: 30px; }
+/* the inside of the helmet: a soft dark rim and a faint gold reflection, like a real visor */
+#helmet { position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(ellipse 120% 105% at 50% 46%, transparent 62%, rgba(10,8,12,.35) 78%, rgba(4,3,6,.85) 100%),
+    linear-gradient(125deg, rgba(255,214,150,.07) 0%, transparent 28%, transparent 72%, rgba(150,200,255,.05) 100%); }
+
+/* ---------- Tool belt and sample bag ---------- */
+#toolbar { position: absolute; left: 14px; bottom: 18px; display: flex; gap: 6px; align-items: stretch; pointer-events: auto; }
+#toolbar button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 54px; padding: 6px 8px; font-size: 1.15rem; line-height: 1.1; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+#toolbar button small { font-size: .62rem; opacity: .75; margin-top: 2px; }
+#toolbar button.held { border-color: #ffd27a; box-shadow: 0 0 0 1px #ffd27a inset; }
+#toolbar .bag { display: flex; flex-direction: column; justify-content: center; padding: 4px 10px; font-size: .72rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+#toolbar .ore-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+body.fp #toolbar button, body.fp #toolbar .bag { background: rgba(10,14,20,.28); border-color: rgba(255,255,255,.12); }
+body.fp #toolbar { opacity: .8; }
+body.touch #toolbar { bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.layout-phone #toolbar { left: 8px; bottom: 60px; }
+body.layout-phone #toolbar button { min-width: 44px; padding: 4px 6px; font-size: 1rem; }
+body.layout-phone #visor { bottom: 48px; gap: 10px; font-size: .68rem; }
+
+/* ---------- Spinnable Earth and Moon (slides and power console) ---------- */
+.mp-globes { display: flex; gap: 18px; justify-content: center; align-items: flex-end; flex-wrap: wrap; margin: 8px 0; }
+.mp-globes figure { margin: 0; text-align: center; }
+.mp-globes canvas { width: 150px; height: 150px; display: block; }
+.mp-globes .moon canvas { width: 96px; height: 96px; margin: 0 auto; }   /* the Moon is about a quarter of Earth's width */
+.mp-globes figcaption { font-size: .8rem; opacity: .85; } .mp-globes figcaption small { display: block; opacity: .7; }
+.mp-globes .spin-tip { flex-basis: 100%; text-align: center; font-size: .75rem; opacity: .6; margin: 0; }
+.earth-globe .moon-globe { position: absolute; left: -10px; top: -6px; width: 44px; height: 44px; }
+
+/* ---------- Locker, hazard monitor, greenhouse panels ---------- */
+.inv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+.inv-grid > div { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: .85rem; }
+.inv-grid h5 { margin: 0 0 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; opacity: .75; }
+.inv-grid button { margin: 4px 4px 0 0; font-size: .8rem; padding: 5px 9px; }
+.hazard { border-left: 3px solid #ffb84d; padding: 6px 10px; margin: 6px 0; background: rgba(255,184,77,.08); border-radius: 6px; }
+.hazard.solar { border-color: #ff7a5b; background: rgba(255,122,91,.08); }
+.readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.readings div { background: rgba(125,255,178,.06); border: 1px solid rgba(125,255,178,.2); border-radius: 8px; padding: 6px 8px; font-size: .8rem; }
+.readings b { display: block; font-size: 1rem; }
+/* first person: no empty panel behind the menu button, and messages float above the visor numbers */
+body.fp #hud .status { background: transparent !important; border-color: transparent !important; box-shadow: none !important; backdrop-filter: none !important; }
+body.fp #hud:not(.menu-open) .status-buttons { display: none; }
+body.fp #hud.menu-open .status-buttons { opacity: 1; }
+body.fp #toast { bottom: 118px; }
+
+/* Mouse capture note (desktop): says whether the mouse steers the view, and how to free it */
+#mouse-note { position: absolute; right: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line); padding: 5px 14px; font-size: .82rem; opacity: .85; pointer-events: none; max-width: 230px; border-radius: 12px; }
+#mouse-note.locked { opacity: .6; }
+body.touch #mouse-note { display: none; }
+
+/* ---------- Compact HUD (every screen size) ----------
+   Small chips instead of big cards; one short status line; parts, science, the Earth link and the
+   buttons sit behind ☰ Menu; only the most urgent warning shows. Hover a chip for the full sentence. */
+#hud .meters { top: 10px; left: 10px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; width: auto; max-width: calc(100vw - 210px); grid-template-columns: none; }
+#hud .meter { padding: 4px 10px 4px 5px; gap: 7px; border-radius: 999px; background: rgba(28,16,11,.6); flex: none; }
+#hud .meter .icon { width: 22px; height: 22px; font-size: .7rem; border-radius: 50%; }
+#hud .meter label { display: none; }
+#hud .meter > div { flex: none; display: flex; flex-direction: column; }
+#hud .meter .bar { width: 46px; height: 4px; margin: 1px 0 2px; }
+#hud .meter small { display: block; font-size: .7rem; color: var(--ink); }
+#hud .status { top: 10px; right: 10px; padding: 6px 10px; gap: 2px; background: rgba(28,16,11,.6); border-radius: 12px; max-width: 200px; width: auto; }
+#hud #sol { font-size: .85rem; } #hud #tod { font-size: .68rem; }
+#hud #credits, #hud #link { display: none; font-size: .72rem; }
+#hud.menu-open #credits, #hud.menu-open #link { display: block; }
+#hud:not(.menu-open) .status-buttons { display: none; }
+#hud.menu-open .status-buttons { display: flex; flex-direction: column; align-items: stretch; opacity: 1; }
+#hud #menu-btn { display: inline-block; padding: 4px 10px; font-size: .78rem; margin-top: 2px; }
+#hud #alerts { top: auto; bottom: 64px; right: 10px; left: auto; transform: none; max-width: min(320px, 60vw); }
+#hud #alerts .alert { font-size: .78rem; padding: 6px 10px; }
+#hud #alerts .alert:not(:first-child) { display: none; }
+#hud #hint { font-size: .8rem; padding: 7px 14px; max-width: min(520px, calc(100vw - 280px)); }
+body:not(.touch) #hud #hint { bottom: 14px; }
+#hud #toolbar { bottom: 12px; left: 10px; }
+body.touch #hud #toolbar { bottom: calc(150px + env(safe-area-inset-bottom)); }
+#hud #toolbar button { min-width: 46px; padding: 4px 7px; font-size: 1rem; }
+#hud #visor { bottom: 52px; }
+/* narrow windows: chips get even smaller and the hint can use the full width above the tools */
+@media (max-width: 760px) {
+  #hud .meters { max-width: calc(100vw - 150px); gap: 4px; }
+  #hud .meter .bar { width: 30px; }
+  #hud .status { max-width: 130px; }
+  #hud #tod { display: none; }
+  #hud.menu-open #tod { display: block; }
+  body:not(.touch) #hud #hint { bottom: 66px; max-width: calc(100vw - 24px); }
+  #hud #visor { bottom: 108px; gap: 10px; font-size: .68rem; }
+  #hud #alerts { bottom: 110px; }
+  #mouse-note { top: 92px; bottom: auto !important; right: 10px; font-size: .72rem; padding: 4px 10px; max-width: 200px; }
+}
+/* first person: the hint sits at the very bottom, the visor numbers just above it - never on top of each other */
+body.fp:not(.touch) #hud #hint { bottom: 10px; }
+body.fp #hud #visor { bottom: 70px; }
+@media (max-width: 760px) { body.fp:not(.touch) #hud #hint { bottom: 66px; } body.fp #hud #visor { bottom: 124px; } }
+body.fp #hud .meters, body.fp #hud #sol, body.fp #hud #tod, body.fp #hud #credits, body.fp #hud #link { display: none; }

@@ -12,12 +12,11 @@ const BODIES = {
 // Orthographic projection keeps these ratios the same everywhere on screen.
 // Positions compress the distances for the menu, but never change body sizes.
 const DIAMETERS = { earth: 12756, moon: 3475, mars: 6792 };
-const POSITIONS = { earth: [-1.3, .25, 0], moon: [.2, -.95, 0], mars: [2.1, .25, 0] };
-const EARTH_RADIUS = 1.18;
-const MISSION = 'mars';
+const POSITIONS = { earth: [-1.35, .25, 0], moon: [.2, -.95, 0], mars: [2.75, .25, 0] };
+const EARTH_RADIUS = 1.32;
 // A tilted circular orbit: compressed distance and accelerated time for the
 // menu, while the Moon/Earth diameter ratio stays physically proportional.
-const MOON_ORBIT_RADIUS = 1.8;
+const MOON_ORBIT_RADIUS = 2.05;
 const ORBIT_SECONDS = 60;
 const ORBIT_TILT = Math.PI / 3;
 
@@ -43,9 +42,7 @@ export function initMissionMenu() {
     document.querySelector('#planet-credit').textContent = body.credit;
     document.querySelector('#planet-status').textContent = `${body.name}. ${body.description}`;
     tabs.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.planet === name)));
-    // Browsing a preview changes the information, never the physical scale or
-    // the mission marker. Only Mars is currently a playable destination.
-    stage.dataset.mission = MISSION;
+    // Browsing changes the information, never the physical diameter ratios.
     const fallback = stage.querySelector('.planet-fallback');
     fallback.style.backgroundImage = `url("assets/${body.map}")`;
     const photo = document.querySelector('#menu-earth-photo');
@@ -83,8 +80,11 @@ export function initMissionMenu() {
     const ratio = renderer.getPixelRatio();
     if (canvas.width !== Math.round(w * ratio) || canvas.height !== Math.round(h * ratio)) {
       renderer.setSize(w, h, false);
-      const aspect = w / h, vertical = Math.max(1.8, 3.55 / aspect);
-      camera.left = -vertical * aspect; camera.right = vertical * aspect;
+      // Extend the drawing area to the left without zooming or moving the globes.
+      // This gives the Moon room at the outer edge of its orbit.
+      const stageWidth=stage.clientWidth, gutter=w-stageWidth;
+      const aspect = stageWidth / h, vertical = Math.max(1.8, 3.55 / aspect);
+      camera.left = -vertical * aspect - gutter * (2 * vertical / h); camera.right = vertical * aspect;
       camera.top = vertical; camera.bottom = -vertical;
       camera.updateProjectionMatrix();
     }
@@ -94,7 +94,7 @@ export function initMissionMenu() {
       const radius = EARTH_RADIUS * DIAMETERS[key] / DIAMETERS.earth;
       const above = key === 'moon' && y > POSITIONS.earth[1];
       const point = new THREE.Vector3(x, y + (above ? radius + .13 : -radius - .18), z).project(camera);
-      label.style.left = `${(point.x + 1) / 2 * 100}%`;
+      label.style.left = `${(point.x + 1) / 2 * w - (w-stage.clientWidth)}px`;
       label.style.top = `${(1 - point.y) / 2 * 100}%`;
       label.style.transform = above ? 'translate(-50%, -100%)' : 'translateX(-50%)';
       // Do not label the Moon through Earth during the far half of its orbit.
@@ -136,14 +136,6 @@ export function initMissionMenu() {
     const orbitMaterial = new THREE.LineBasicMaterial({ color: '#89969f', transparent: true, opacity: .3 });
     scene.add(new THREE.LineLoop(orbitGeometry, orbitMaterial));
     resources.push(orbitGeometry, orbitMaterial);
-    // A fixed, camera-facing outline marks the actual mission destination.
-    // Keep it outside the rotating group so it never tilts with a drag.
-    const missionRadius = groups[MISSION].scale.x;
-    const ringGeometry = new THREE.RingGeometry(missionRadius + .08, missionRadius + .095, 128);
-    const ringMaterial = new THREE.MeshBasicMaterial({ color: '#f4c485', transparent: true, opacity: .95, side: THREE.DoubleSide });
-    const missionRing = new THREE.Mesh(ringGeometry, ringMaterial);
-    missionRing.position.set(...POSITIONS[MISSION]); scene.add(missionRing);
-    resources.push(ringGeometry, ringMaterial);
     // Hit-test the actual spheres, independently of the information tabs. Lock
     // a drag to its starting globe, even if the cursor crosses another one.
     const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
@@ -211,7 +203,8 @@ export function initMissionMenu() {
           velocity.vx *= decay; velocity.vy *= decay;
           group.rotation.y += velocity.vx * dt;
           group.rotation.x = THREE.MathUtils.clamp(group.rotation.x + velocity.vy * dt, -.65, .65);
-          if (key === selected && performance.now() - velocity.last > 4000) group.rotation.y += dt * .045;
+          // Earth and Mars spin independently of the selected information tab.
+          if ((key === 'earth' || key === 'mars' || key === selected) && performance.now() - velocity.last > 4000) group.rotation.y += dt * .075;
         }
         draw();
       }

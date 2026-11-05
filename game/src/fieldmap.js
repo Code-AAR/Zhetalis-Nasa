@@ -1,0 +1,7 @@
+export function fieldMapHTML(world){
+  const sites=world.settlement.layout.locations,names=world.settlement.layout.names,p=world.player.position;
+  const project=([x,z])=>[160+x*.85,160+z*.85];
+  const markers=Object.entries(sites).map(([key,position])=>{const[x,y]=project(position);return `<g><circle cx="${x}" cy="${y}" r="5" fill="${world.settlement.surveys.has(key)?'#8ee6ad':'#e1b885'}"/><text x="${x+8}" y="${y-7}" fill="#eee" font-size="10">${names[key]}</text></g>`;}).join('');
+  const[x,y]=project([p.x,p.z]);
+  return `<p>Your surface operations area. North is up; the sites are spaced across the existing terrain.</p><svg viewBox="0 0 340 320" role="img" aria-label="Map showing the habitat, three survey sites and your position" style="display:block;width:min(100%,520px);margin:auto;background:#151c20;border-radius:8px"><text x="16" y="22" fill="#c6c9c4" font-size="12">N ↑</text>${markers}<circle cx="${x}" cy="${y}" r="4" fill="#9edcff"/><text x="${x+7}" y="${y+12}" fill="#9edcff" font-size="10">You</text></svg><p>Each first survey stores <b>8 science</b> for transmission to Earth. Take the <b>crew rover</b> for the more distant sites; suit oxygen and the return trip matter.</p><div class="forecast">${Object.entries(sites).filter(([key])=>key!=='base').map(([key,[x,z]])=>{const d=Math.round(Math.hypot(x-p.x,z-p.z));return `<div><b>${names[key]}</b><br>${d} m away · ${world.settlement.surveys.has(key)?'Logged':'Awaiting survey'}</div>`;}).join('')}</div>`;
+}
