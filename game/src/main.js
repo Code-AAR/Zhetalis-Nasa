@@ -12,12 +12,16 @@ import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
 import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
 import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
+import { initTouch, isTouch } from './touch.js';
+import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
-const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+// Phones and tablets: draw fewer pixels, and skip shadows on small screens, so the game stays smooth
+const coarse = matchMedia('(pointer: coarse)').matches, smallScreen = Math.min(screen.width, screen.height) < 600;
+const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: !(coarse && smallScreen) });
+renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.25 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !(coarse && smallScreen);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -59,10 +63,16 @@ function showSun() {
     : `${tag}Couldn't reach the space-weather satellites right now - the game will use saved real data.`;
 }
 
+// "Press E" on a keyboard, "tap Use" on a phone or tablet
+const keyWord = (key, tap) => (isTouch() ? tap : key);
+
 $('#howto').onclick = () => modal({ title: 'How to play', html: `
-  <p><b>Move</b> with WASD or the arrow keys. <b>Look around</b>: click the game, then move the mouse (Esc frees the mouse). <b>Run</b>: Shift. <b>Jump</b>: Space - Mars gravity is weak, so you float!</p>
+  ${isTouch() ? `<p><b>Move</b>: put your left thumb on the screen and slide it - push all the way to <b>run</b>. <b>Look around</b>: drag with your right thumb. <b>Jump</b>: the Jump button - Mars gravity is weak, so you float!</p>
+  <p><b>View</b> switches between first-person (through your helmet) and third-person view.</p>
+  <p><b>Use</b> (it lights up when something is close): collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`
+  : `<p><b>Move</b> with WASD or the arrow keys. <b>Look around</b>: click the game, then move the mouse (Esc frees the mouse). <b>Run</b>: Shift. <b>Jump</b>: Space - Mars gravity is weak, so you float!</p>
   <p><b>V</b> switches between first-person (through your helmet) and third-person view.</p>
-  <p><b>E</b> uses things: collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>
+  <p><b>E</b> uses things: collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`}
   <p>Inside the outpost, walk to the <b>power console</b> to split your power between:</p>
   <p>🫁 <b>Life support</b> - makes oxygen and grows food.<br>📡 <b>Talk to Earth</b> - sends your science home and brings supply pods.<br>🔬 <b>Science</b> - when Earth receives enough, its engineers radio you new <b>upgrade designs</b>.<br>🛡 <b>Shielding</b> - protects you from radiation, especially during solar storms.</p>
   <p>Build the designs at the <b>workbench</b> using <b>parts</b> you salvage outside. There is never enough power for everything - that is the real puzzle astronauts and NASA mission planners solve!</p>` });
@@ -140,8 +150,8 @@ async function arrive() {
     ${factHTML(F.sol)}
     <p>In this game <b>1 second = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
     <p>Your mission: keep the crew alive for <b>${outpost.d.sols} sols</b>, or grow your camp into a <b>self-sustaining settlement</b>. Watch your <b>oxygen</b>, <b>food</b> and <b>radiation badge</b>.</p>
-    <p>Walk to the glowing green door and press <b>E</b> to go inside. Press <b>V</b> any time to see through your own helmet.</p>
-    <p>🎧 <b>Listen:</b> the wind you hear outside is a <b>real recording from Mars</b>, made by the Perseverance rover's microphone. Press <b>M</b> to turn sound on or off.</p>
+    <p>Walk to the glowing green door and ${keyWord('press <b>E</b>', 'tap <b>Use</b>')} to go inside. ${keyWord('Press <b>V</b>', 'Tap <b>View</b>')} any time to see through your own helmet.</p>
+    <p>🎧 <b>Listen:</b> the wind you hear outside is a <b>real recording from Mars</b>, made by the Perseverance rover's microphone. ${keyWord('Press <b>M</b>', 'Use the <b>Sound</b> button')} to turn sound on or off.</p>
     ${factHTML(F.marsSound)}`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
@@ -149,7 +159,7 @@ async function arrive() {
 // ---------------- inside the outpost ----------------
 function goInside() {
   inside = true; interior.enter(); document.exitPointerLock?.();
-  toast('🏠 Inside the outpost: you are shielded and your suit refills. Walk to the stations and press E.', 4500);
+  toast(`🏠 Inside the outpost: you are shielded and your suit refills. Walk to the stations and ${keyWord('press E', 'tap Use')}.`, 4500);
 }
 function goOutside() {
   inside = false;
@@ -373,31 +383,52 @@ function endMission() {
 }
 
 // ---------------- input ----------------
-addEventListener('keydown', e => {
-  if (world) world.keys[e.code] = true;
+// One place for the game's actions - the keyboard and the touch buttons both come here
+function pressKey(code) {
   if (state.phase !== 'mars' || isModalOpen()) return;
-  if (e.code === 'KeyE') {
+  if (code === 'KeyE') {
     if (inside) { const s = interior.nearest(); if (s) stationAction(s); }
     else { const n = world.nearest(); if (n) collect(n); }
   }
-  if (e.code === 'KeyP') openPower();
-  if (e.code === 'KeyL') openLogbook();
-  if (e.code === 'KeyM') muteButton();
-  if (e.code === 'KeyV' && !inside) { world.firstPerson = !world.firstPerson; toast(world.firstPerson ? '👁 First-person view (V to switch back)' : '🎥 Third-person view'); }
-});
+  if (code === 'KeyP') openPower();
+  if (code === 'KeyL') openLogbook();
+  if (code === 'KeyM') muteButton();
+  if (code === 'KeyV' && !inside) { world.firstPerson = !world.firstPerson; toast(world.firstPerson ? `👁 First-person view (${keyWord('V', 'tap View')} to switch back)` : '🎥 Third-person view'); }
+}
+addEventListener('keydown', e => { if (world) world.keys[e.code] = true; pressKey(e.code); });
 addEventListener('keyup', e => { if (world) world.keys[e.code] = false; });
-$('#view').addEventListener('click', () => { if (state.phase === 'mars' && !isModalOpen()) $('#view').requestPointerLock?.(); });
-addEventListener('mousemove', e => {
-  if (!world || document.pointerLockElement !== $('#view')) return;
-  if (inside) {
-    interior.yaw -= e.movementX * 0.0032;
-    interior.pitch = Math.max(-1.2, Math.min(1.2, interior.pitch - e.movementY * 0.0028));
-  } else {
-    world.yaw -= e.movementX * 0.0032;
-    if (world.firstPerson) world.lookPitch = Math.max(-1.2, Math.min(1.2, world.lookPitch - e.movementY * 0.0028));
-    else world.pitch = Math.max(-0.15, Math.min(1.2, world.pitch + e.movementY * 0.0025));
-  }
+// Mouse look needs pointer lock (desktop only). Phones have no pointer lock - they use the touch drag below.
+let lastPointer = 'mouse';
+$('#view').addEventListener('pointerdown', e => { lastPointer = e.pointerType; });
+$('#view').addEventListener('click', () => {
+  if (state.phase !== 'mars' || isModalOpen() || lastPointer === 'touch') return;
+  try { $('#view').requestPointerLock?.()?.catch?.(() => {}); } catch { /* no pointer lock here */ }
 });
+// Turning the camera: the mouse and the touch drag share the same math
+function look(dx, dy) {
+  if (!world) return;
+  if (inside) {
+    interior.yaw -= dx * 0.0032;
+    interior.pitch = Math.max(-1.2, Math.min(1.2, interior.pitch - dy * 0.0028));
+  } else {
+    world.yaw -= dx * 0.0032;
+    if (world.firstPerson) world.lookPitch = Math.max(-1.2, Math.min(1.2, world.lookPitch - dy * 0.0028));
+    else world.pitch = Math.max(-0.15, Math.min(1.2, world.pitch + dy * 0.0025));
+  }
+}
+addEventListener('mousemove', e => { if (document.pointerLockElement === $('#view')) look(e.movementX, e.movementY); });
+const touch = initTouch({ keys: () => world?.keys, look, press: pressKey });
+
+// Screen size: Auto / Phone / Tablet / Desktop (title screen row + a HUD button)
+const pick = $('#screen-pick');
+pick.insertAdjacentHTML('beforeend', SCREEN_MODES.map(m => `<button data-screen="${m}">${screenName(m)}</button>`).join(''));
+pick.querySelectorAll('button').forEach(b => b.onclick = () => setScreenMode(b.dataset.screen));
+$('#screen-btn').onclick = () => { nextScreenMode(); toast(`📱 Screen: ${screenName(screenMode())}`); };
+onLayout((mode, used) => {
+  pick.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.screen === mode));
+  $('#screen-btn').textContent = `📱 Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
+});
+$('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
 function muteButton() { const m = toggleMute(); $('#sound-btn').textContent = m ? '🔇 Sound (M)' : '🔊 Sound (M)'; toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
@@ -434,18 +465,20 @@ function drawHUD() {
   if (o.relayDown) list.push({ text: `📡 Relay orbiter lost: ${o.relayDown} sols` });
   alerts(list);
   $('#crosshair').classList.toggle('hidden', !(inside || world.firstPerson) || isModalOpen());
-  let hint = '';
+  let hint = '', near = null;
+  const useWord = keyWord('Press E', 'Tap Use');
   if (!isModalOpen()) {
     if (inside) {
-      const s = interior.nearest();
-      hint = s ? `Press E to ${s.label}` : 'Walk to a station · click to look around';
+      near = interior.nearest();
+      hint = near ? `${useWord} to ${near.label}` : `Walk to a station · ${keyWord('click', 'drag')} to look around`;
     } else {
-      const n = world.nearest();
+      near = world.nearest();
       const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      hint = n ? `Press E to ${names[n.type]}` : (tutorialStep === 0 ? 'Walk to the outpost door (green light) · click the game to look around · V for first person' : '');
+      hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
     }
   }
   $('#hint').textContent = hint;
+  touch.sync({ active: !isModalOpen() && !o.over, canUse: !!near, inside });
 }
 
 // Testing helper for the team: open the game with #debug in the address, then use

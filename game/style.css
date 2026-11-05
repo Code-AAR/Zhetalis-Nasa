@@ -159,7 +159,120 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 #toast.show { opacity: 1; transform: translateX(-50%); }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1a0f0b; font-size: 1.3rem; z-index: 50; }
 
-@media (max-width: 640px) {
-  .meters { width: 56vw; } .meter { padding: 6px 8px; } .meter .icon { width: 26px; height: 26px; }
-  .split-row { grid-template-columns: 96px 1fr 44px; }
-}
+/* screen-size choice (title screen) and the phone menu button */
+.screen-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; font-size: .9rem; color: var(--muted); }
+.screen-pick button { padding: 6px 12px; font-size: .85rem; }
+.screen-pick button.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; background: rgba(255,122,61,0.14); color: var(--ink); }
+#menu-btn { display: none; }
+
+/* ---------- touch controls (only on phones / tablets: body.touch) ---------- */
+html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+button { touch-action: manipulation; }
+#touch { position: absolute; inset: 0; pointer-events: none; -webkit-user-select: none; user-select: none; }
+.t-stick { position: absolute; left: calc(76px + env(safe-area-inset-left)); top: calc(100% - 96px - env(safe-area-inset-bottom)); width: 120px; height: 120px; margin: -60px 0 0 -60px;
+  border-radius: 50%; border: 2px solid rgba(255,247,238,.35); background: rgba(24,14,10,.25); pointer-events: none; opacity: .7; }
+.t-stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,247,238,.55); box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.t-stick.active { opacity: 1; }
+.t-buttons { position: absolute; right: calc(12px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: 58px 58px; gap: 8px; pointer-events: none; }
+.t-buttons button { pointer-events: auto; width: 58px; height: 58px; min-height: 0; padding: 0; border-radius: 50%; display: grid; place-content: center; justify-items: center; line-height: 1; font-size: 1.3rem;
+  background: rgba(24,14,10,.62); border: 2px solid rgba(255,247,238,.3); touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.t-buttons button span { display: block; font-size: .62rem; font-weight: 600; margin-top: 3px; }
+.t-buttons button.down { background: rgba(255,122,61,.55); }
+.t-buttons .t-big { grid-column: 3; grid-row: 1 / 3; width: 58px; height: 124px; border-radius: 30px; font-size: 1.6rem; }
+.t-buttons .t-big.ready { background: var(--accent); border-color: #ffd2b8; color: #1a0f0b; box-shadow: 0 0 18px rgba(255,122,61,.7); }
+#t-jump { grid-column: 2; grid-row: 2; } #t-view { grid-column: 1; grid-row: 2; } #t-power { grid-column: 1; grid-row: 1; } #t-log { grid-column: 2; grid-row: 1; }
+/* on touch, the hint and toasts sit above the thumbs; Power / Logbook / View live on the thumb buttons instead */
+body.touch #hint { bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.touch #toast { bottom: calc(230px + env(safe-area-inset-bottom)); }
+body.touch .status-buttons #power-btn, body.touch .status-buttons #log-btn, body.touch .status-buttons #view-btn { display: none; }
+
+/* ---------- shared: bigger touch targets on phone and tablet ---------- */
+body.layout-phone button, body.layout-tablet button { min-height: 44px; }
+.modal-box { max-height: 90dvh; }
+
+/* ---------- tablet (about 768x1024 and 1024x768) ---------- */
+body.layout-tablet .meters { width: min(280px, 40vw); }
+body.layout-tablet .status { max-width: 52vw; }
+body.layout-tablet .status-buttons button { padding: 8px 12px; font-size: .85rem; }
+body.layout-tablet .modal-box { width: min(700px, 100%); }
+body.layout-tablet .modal-box .choices button, body.layout-tablet .quiz-q button { min-height: 48px; }
+body.layout-tablet .quiz-q button { padding: 10px 16px; }
+body.layout-tablet .split-row input { height: 32px; }
+body.layout-tablet.portrait #alerts { top: auto; bottom: 170px; }
+
+/* ---------- phone (about 375x812, either way round) ---------- */
+body.layout-phone .title-card { padding: 18px 16px; border-radius: 18px; }
+body.layout-phone h1 { font-size: 2rem; }
+body.layout-phone .story { font-size: .95rem; }
+body.layout-phone .cards { grid-template-columns: 1fr; }
+body.layout-phone .actions { gap: 8px; }
+body.layout-phone .actions button { flex: 1 1 calc(50% - 8px); padding: 10px 12px; }
+body.layout-phone .actions #start { flex-basis: 100%; }
+body.layout-phone .screen-pick button { flex: 1 1 0; padding: 6px 4px; }
+body.layout-phone .screen { padding: max(10px, env(safe-area-inset-top)) 10px 10px; place-items: start center; }
+
+body.layout-phone .meters { top: 8px; left: 8px; width: calc(100% - 16px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+body.layout-phone .meter { padding: 4px 6px; gap: 6px; border-radius: 10px; }
+body.layout-phone .meter .icon { width: 22px; height: 22px; font-size: .75rem; border-radius: 6px; }
+body.layout-phone .meter label { font-size: .66rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.layout-phone .meter small { font-size: .58rem; }
+body.layout-phone .bar { height: 6px; margin: 2px 0; }
+body.layout-phone .status { top: 116px; right: 8px; max-width: 62vw; padding: 6px 10px; gap: 2px; border-radius: 10px; }
+body.layout-phone #sol { font-size: .9rem; }
+body.layout-phone #tod, body.layout-phone #link { font-size: .66rem; }
+body.layout-phone #credits { font-size: .72rem; }
+body.layout-phone #menu-btn { display: block; align-self: flex-end; padding: 4px 12px; font-size: .8rem; margin-top: 2px; pointer-events: auto; }
+body.layout-phone .status-buttons { display: none; flex-direction: column; align-items: stretch; }
+body.layout-phone #hud.menu-open .status-buttons { display: flex; }
+body.layout-phone .status-buttons button { font-size: .85rem; }
+body.layout-phone #alerts { top: 116px; left: 8px; right: auto; max-width: 34vw; }
+body.layout-phone .alert { font-size: .7rem; padding: 5px 8px; border-radius: 8px; }
+body.layout-phone #hint { font-size: .8rem; padding: 8px 14px; max-width: calc(100vw - 24px); bottom: 14px; }
+body.layout-phone #toast { font-size: .85rem; bottom: 70px; }
+body.layout-phone.touch #hint { bottom: calc(150px + env(safe-area-inset-bottom)); }
+body.layout-phone.touch #toast { bottom: calc(230px + env(safe-area-inset-bottom)); }
+
+body.layout-phone #modal { padding: 8px; }
+body.layout-phone .modal-box { padding: 16px 14px; border-radius: 16px; max-height: calc(100dvh - 16px); }
+body.layout-phone .modal-box h3 { font-size: 1.12rem; }
+body.layout-phone .modal-box p { font-size: .92rem; line-height: 1.5; }
+body.layout-phone .fact { font-size: .85rem; }
+body.layout-phone .fact .fact-art { width: 80px; }
+body.layout-phone .split-row { grid-template-columns: 1fr 44px; gap: 4px 8px; }
+body.layout-phone .split-row span { grid-column: 1 / -1; font-size: .9rem; }
+body.layout-phone .split-row input { height: 30px; }
+body.layout-phone .forecast { grid-template-columns: 1fr 1fr; gap: 6px; }
+body.layout-phone .forecast div { font-size: .76rem; padding: 6px 8px; }
+body.layout-phone .earth-card { grid-template-columns: 64px 1fr; }
+body.layout-phone .earth-card img { width: 64px; height: 64px; }
+body.layout-phone .shop button { flex-direction: column; }
+body.layout-phone .quiz-q .opts { flex-direction: column; }
+body.layout-phone .quiz-q button { text-align: left; }
+
+body.layout-phone #countdown { top: 9%; }
+body.layout-phone #countdown small { font-size: .9rem; padding: 0 12px; }
+body.layout-phone #fade { font-size: 1rem; padding: 18px; }
+body.layout-phone #mission-path, body.layout-phone #arrival { padding: max(10px, env(safe-area-inset-top)) 10px 0; place-items: start center; }
+body.layout-phone #mp-title { font-size: 1.2rem; margin-top: 8px; }
+body.layout-phone #mp-text { font-size: .95rem; line-height: 1.5; }
+body.layout-phone .mp-nav { position: sticky; bottom: 0; z-index: 2; background: #05060c; box-shadow: 0 -10px 14px #05060c; padding: 8px 0 10px; gap: 8px; }
+body.layout-phone .mp-nav button { padding: 8px 14px; }
+body.layout-phone #mp-next { font-size: 1rem; padding: 8px 18px; }
+body.layout-phone #ar-globe { height: min(30vh, 260px); }
+body.layout-phone .mp-photo img { max-height: 26vh; }
+
+/* phone held sideways: very little height, so the meters go in one row and things stay short */
+body.layout-phone:not(.portrait) .meters { grid-template-columns: repeat(5, 1fr); width: calc(100% - 16px - 220px); }
+body.layout-phone:not(.portrait) .meter small { display: none; }
+body.layout-phone:not(.portrait) .status { top: 8px; max-width: 210px; width: 210px; }
+body.layout-phone:not(.portrait) #link { display: none; }
+body.layout-phone:not(.portrait) #alerts { top: 64px; max-width: 30vw; }
+body.layout-phone:not(.portrait) .t-stick { top: calc(100% - 80px - env(safe-area-inset-bottom)); }
+body.layout-phone:not(.portrait) .t-buttons { grid-template-columns: repeat(3, 52px); grid-template-rows: 52px 52px; }
+body.layout-phone:not(.portrait) .t-buttons button { width: 52px; height: 52px; }
+body.layout-phone:not(.portrait) .t-buttons .t-big { width: 52px; height: 112px; }
+body.layout-phone:not(.portrait).touch #hint { bottom: calc(10px + env(safe-area-inset-bottom)); max-width: calc(100vw - 420px); min-width: 180px; }
+body.layout-phone:not(.portrait).touch #toast { bottom: calc(60px + env(safe-area-inset-bottom)); max-width: calc(100vw - 420px); }
+body.layout-phone:not(.portrait) #countdown { top: 4%; font-size: 4.5rem; }
+body.layout-phone:not(.portrait) #ar-globe { height: 38vh; }
+body.layout-phone:not(.portrait) .mp-svg { max-height: 40vh; }

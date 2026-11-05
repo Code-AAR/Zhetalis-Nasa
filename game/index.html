@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Junior Astronaut: Mars Outpost · Zhetalis</title>
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +39,7 @@
         <button id="path-btn">🚀 How do we get to Mars?</button>
         <button id="data-btn-title">Real NASA data used</button>
       </div>
+      <div class="screen-pick" id="screen-pick"><span>📱 Screen:</span></div>
       <p id="sun-line" class="sun-line">Checking what the Sun is doing right now…</p>
     </div>
   </section>
@@ -61,6 +62,7 @@
       <div id="tod"></div>
       <div id="credits"></div>
       <div id="link"></div>
+      <button id="menu-btn" aria-label="Menu">☰ Menu</button>
       <div class="status-buttons">
         <button id="power-btn">⚡ Power (P)</button>
         <button id="view-btn">👁 View (V)</button>
@@ -68,6 +70,7 @@
         <button id="log-btn">📒 Logbook (L)</button>
         <button id="sound-btn">🔊 Sound (M)</button>
         <button id="data-btn">NASA data</button>
+        <button id="screen-btn">📱 Screen</button>
       </div>
     </div>
     <div id="hint"></div>
