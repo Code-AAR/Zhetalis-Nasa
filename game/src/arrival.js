@@ -21,7 +21,7 @@ const ICONS = {
 
 function steps(F, delay) {
   return [
-    { icon: 'globe', zoom: 0, title: 'Arriving at Mars', text: "This is the real Mars - a map NASA made from thousands of photos taken by the Viking orbiters. The orange dot is Jezero Crater, an ancient lake bed where the Perseverance rover is exploring. That is where your outpost is! The spacecraft circling the planet is NASA's Mars Reconnaissance Orbiter - one of the relay orbiters that will carry your messages to Earth.", fact: F.marsMap, fact2: F.mro },
+    { icon: 'globe', zoom: 0, title: 'Arriving at Mars', text: "This is the real Mars - a map NASA made from thousands of photos taken by the Viking orbiters. The orange dot is Jezero Crater, an ancient lake bed where the Perseverance rover is exploring. That is where your outpost is! The spacecraft circling the planet are NASA's Mars Reconnaissance Orbiter and Mars Odyssey - relay orbiters that will carry your messages to Earth.", fact: F.marsMap, fact2: F.mro },
     { icon: 'heat', zoom: 1, title: '1. Entry: the heat shield', text: "The lander hits the top of the Martian air at nearly 20,000 km/h. Rubbing through the air makes the heat shield glow hotter than 1,260 °C - but the crew inside stays cool. The air does most of the braking.", fact: F.edl },
     { icon: 'chute', zoom: 2, title: '2. Descent: a supersonic parachute', text: "Still going faster than sound, a giant parachute opens - Perseverance's was 21.5 metres wide, about as wide as a tennis court is long. Then the heat shield drops off so the radar can see the ground.", fact: F.edl },
     { icon: 'rockets', zoom: 3, title: '3. Landing: rocket engines', text: "Mars's air is so thin that a parachute can't slow you down enough. For the last part, rocket engines fire downwards to land gently. Perseverance's descent stage used eight rockets and lowered the rover on ropes - a 'sky crane'!", fact: F.edl },
@@ -71,6 +71,15 @@ export function showArrival(F, delayMinutes = 10) {
       const holder = new THREE.Group(); holder.position.set(1.42, 0, 0); holder.add(m); orbit.add(holder);
       orbit.userData.mro = holder;
     });
+    // NASA's Mars Odyssey (NASA 3D Resources): in orbit since 2001, and also a relay for rovers' messages
+    const orbit2 = new THREE.Group(); orbit2.rotation.set(-0.35, 0, -0.5); scene.add(orbit2);
+    loadModel('odyssey.glb').then(g => {
+      if (!g) return;
+      const m = g.scene.clone(), size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+      m.scale.setScalar(0.32 / Math.max(size.x, size.y, size.z));
+      m.traverse(o => { if (o.isMesh) for (const mt of [].concat(o.material)) mt.metalness = Math.min(mt.metalness, 0.3); });
+      const holder = new THREE.Group(); holder.position.set(0, 0, 1.6); holder.add(m); orbit2.add(holder);
+    });
     // turn the globe so Jezero starts facing us
     const faceJezero = Math.atan2(dir.x, dir.z);
     globe.rotation.y = -faceJezero - 0.9; globe.rotation.x = 0.25;
@@ -108,7 +117,8 @@ export function showArrival(F, delayMinutes = 10) {
       if (s.zoom) globe.rotation.y += ((-faceJezero) - globe.rotation.y) * Math.min(1, dt * 1.2);   // swing Jezero to the front
       camera.position.set(0, 0, camZ); camera.lookAt(0, 0, 0);
       ring.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.2);
-      orbit.rotation.y += dt * 0.35; orbit.visible = s.zoom < 2;   // out of the way once we are diving into the air
+      orbit.rotation.y += dt * 0.35; orbit.visible = s.zoom < 2;
+      orbit2.rotation.y -= dt * 0.22; orbit2.visible = s.zoom < 2;   // out of the way once we are diving into the air
       orbit.userData.mro?.rotation.set(0, clock.elapsedTime * 0.2, 0);
       renderer.render(scene, camera);
       raf = requestAnimationFrame(loop);

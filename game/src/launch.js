@@ -1,9 +1,10 @@
 // Opening scene: Earth launch pad, countdown, lift-off.
 import * as THREE from 'three';
-import { loadModel } from './nasamodels.js';
+import { loadModel, replaceLogos } from './nasamodels.js';
+import { makeStars, makePlanets } from './sky.js';
 
 // Seconds after lift-off for each part of the flight (slowed down; the real times are in the captions)
-const T = { maxQ: 7, boosters: 14, karman: 22, tower: 31, core: 37, orbit: 44, end: 52 };
+const T = { maxQ: 6, boosters: 12, karman: 17, tower: 25, core: 31, orbit: 38, end: 47 };
 const rocketY = lift => (lift < 6 ? 2.2 * lift * lift : 79 + (lift - 6) * 26.4 + (lift - 6) ** 2 * 0.5);
 // Height above the ground in km, following the real Artemis I climb in squeezed time
 // (about 47 km when the boosters drop, 100 km at the Kármán line, about 160 km when the core stage stops).
@@ -40,7 +41,7 @@ export class Launch {
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#7fb2e5');
-    this.scene.fog = new THREE.Fog('#a9cdef', 80, 520);
+    this.scene.fog = new THREE.Fog('#a9cdef', 120, 900);
     this.camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 60000);
     this.scene.add(new THREE.HemisphereLight('#dcefff', '#4b6b3a', 1.2));
     const sun = new THREE.DirectionalLight('#fff6e8', 1.8); sun.position.set(60, 120, 40); this.scene.add(sun);
@@ -69,6 +70,21 @@ export class Launch {
     water.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 30, 10), padWhite), 0, 15, 0));
     water.add(at(new THREE.Mesh(new THREE.SphereGeometry(5, 16, 10), padWhite), 0, 33, 0));
     this.scene.add(water);
+    // NASA's Vehicle Assembly Building (NASA 3D Resources) in the distance, where SLS is stacked before it rolls out.
+    // Really about 5 km from the pad - moved closer so it shows through the haze. Its NASA logo becomes our badge.
+    loadModel('vab.glb').then(async g => {
+      if (!g) return;
+      const m = g.scene.clone(), size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+      m.scale.setScalar(160 * (82 / 98) / size.y);                    // 160 m tall
+      const b = new THREE.Box3().setFromObject(m); m.position.set(-420 - (b.min.x + b.max.x) / 2, -b.min.y, -380 - (b.min.z + b.max.z) / 2);
+      m.rotation.y = 0.5;
+      const mats = []; m.traverse(o => { if (o.isMesh) mats.push(...[].concat(o.material)); });
+      for (const mt of mats) {
+        mt.transmission = 0; mt.metalness = 0; mt.roughness = 0.8;
+        if (mt.map?.image?.width >= 512) mt.map = await replaceLogos(mt.map, [{ x: 0.886, y: 0.933, r: 0.05 }]);
+      }
+      this.scene.add(m);
+    });
 
     // Simple mobile launcher tower - replaced by NASA's own 3D model as soon as it loads
     const steel = L('#5b6068');
@@ -129,11 +145,9 @@ export class Launch {
     this.halo.scale.set(40, 40, 1); this.halo.position.set(0, -10, 0); r.add(this.halo);
 
     // high up: stars, the curved edge of the Earth, and the Kármán line (100 km - where space begins)
-    const starGeo = new THREE.BufferGeometry(), sp = [];
-    for (let i = 0; i < 1500; i++) { const v = new THREE.Vector3().randomDirection().multiplyScalar(20000); v.y = Math.abs(v.y); sp.push(v.x, v.y, v.z); }
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-    this.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-    this.scene.add(this.stars);
+    this.stars = makeStars(20000, 5000); this.scene.add(this.stars);
+    // the Sun, Moon and planets where they really are today (NASA JPL formulas) - Mars ahead of the camera in space
+    this.planets = makePlanets(19000, { centre: 'mars', yaw: -2.95, pitch: 0.3 }); this.scene.add(this.planets);
     this.earthR = 30000;
     this.earth = new THREE.Group();
     this.earth.add(new THREE.Mesh(new THREE.SphereGeometry(this.earthR, 96, 64), new THREE.MeshStandardMaterial({ color: '#2f6fb3', roughness: 0.9, emissive: '#0b2a55', emissiveIntensity: 0.6, fog: false })));
@@ -225,8 +239,9 @@ export class Launch {
     // the sky goes black as the air thins, stars come out, and the Earth's curved edge appears below
     this.scene.background.copy(this.sky).lerp(this.space, Math.min(1, km / 70));
     this.scene.fog.color.copy(this.scene.background);
-    this.scene.fog.far = 520 + km * 3;   // the launch pad far below fades into the dark
-    this.stars.material.opacity = THREE.MathUtils.smoothstep(km, 35, 90);
+    this.scene.fog.far = Math.max(520, 900 - km * 20);   // the launch pad far below fades into the dark
+    this.stars.setOpacity(THREE.MathUtils.smoothstep(km, 30, 85));
+    this.planets.userData.setOpacity(THREE.MathUtils.smoothstep(km, 70, 110));
     const p = this.rocket.position;
     this.earth.visible = km > 25;
     this.earth.position.set(p.x - 600, p.y - this.earthR - 900 - km * 30, -4000);
@@ -253,6 +268,7 @@ export class Launch {
     const back = THREE.MathUtils.smoothstep(lift, 10, 30);
     this.camera.position.set(62 + shake + p.x + back * 40, 16 + p.y * 0.92 + back * (p.y * 0.08 + 10), 92 + shake + back * 110);
     this.camera.lookAt(p.x, 34 + p.y - back * 30, 0);
+    this.stars.position.copy(this.camera.position); this.planets.position.copy(this.camera.position);   // the sky is "infinitely" far away
     if (lift > T.end) this.done = true;
     // what the commentator explains at each moment (real Artemis I times)
     const [title, caption] = left > 6 ? [null, `This is SLS, NASA's Space Launch System - 98 m tall, on its 116 m Mobile Launcher${this.nasa ? " (NASA's own 3D models)" : ''}`]
@@ -260,12 +276,13 @@ export class Launch {
       : left > 0 ? [null, 'The 4 main engines start first - they burn liquid hydrogen and liquid oxygen']
       : lift < T.maxQ ? ['LIFT-OFF!', 'The 2 solid-fuel boosters light: they give over 75% of the 8.8 million pounds of thrust']
       : lift < T.boosters ? ['MAX-Q', 'About 1 minute in: the air pushes hardest - the rocket must survive its biggest loads and shaking']
-      : lift < T.karman - 3 ? ['BOOSTERS OFF', '2 min 12 s: the solid boosters burn until they are empty, then drop away into the ocean']
-      : lift < T.tower ? ['KÁRMÁN LINE - 100 km', "About 3 minutes in, you pass 100 km up: most scientists say SPACE starts here. 99.99997% of Earth's air is now below you - that's why the sky is black!"]
+      : lift < T.karman - 2.5 ? ['BOOSTERS OFF', '2 min 12 s: the solid boosters burn until they are empty, then drop away into the ocean']
+      : km < 100 ? ['KÁRMÁN LINE AHEAD', 'Space starts at the Kármán line, 100 km up. Watch the height...']
+      : lift < T.tower ? ['YOU ARE IN SPACE!', "You just crossed the Kármán line, 100 km up - about 3 minutes after lift-off. 99.99997% of Earth's air is below you now, so the sky is black and you can see the stars!"]
       : lift < T.core ? ['TOWER OFF', 'About 3 minutes: the escape tower (it could pull the capsule to safety) is no longer needed']
       : lift < T.orbit ? ['CORE STAGE OFF', 'About 8 minutes: the orange core stage has used up its fuel and falls away']
-      : ['ORBIT!', 'Orion now flies around Earth at about 28,000 km/h - next stop, the Moon'];
-    return { left: Math.ceil(left), lifted: lift > 0, title, caption, km, karman: lift >= T.karman - 3 && lift < T.tower };
+      : ['ORBIT!', 'Orion now flies around Earth at about 28,000 km/h. Can you spot Mars? The planets are shown where they really are in the sky today.'];
+    return { left: Math.ceil(left), lifted: lift > 0, title, caption, km, karman: km >= 100 && lift < T.tower, nearKarman: lift >= T.karman - 2.5 && km < 100 };
   }
 
   resize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }

@@ -98,7 +98,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -134,10 +134,12 @@ async function arrive() {
   $('#countdown').classList.add('hidden'); $('#skip')?.remove();
   setSound({ scene: 'cruise' });
   await showMissionPath(F);
-  const fade = $('#fade'); fade.classList.remove('hidden');
+  const fade = $('#fade'), wait = ms => new Promise(r => setTimeout(r, ms));
   fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
-  await new Promise(r => setTimeout(r, 6500));
-  fade.classList.add('hidden');
+  fade.style.opacity = 0; fade.classList.remove('hidden'); void fade.offsetWidth; fade.style.opacity = 1;   // fade in
+  await wait(7000);
+  fade.style.opacity = 0; await wait(900);                                                                // fade out slowly
+  fade.classList.add('hidden'); fade.style.opacity = '';
   setSound({ scene: 'arrival' });
   await showArrival(F, outpost.delayMinutes());
   setSound({ scene: 'mars' });
@@ -334,6 +336,13 @@ function handle(ev) {
 
 function collect(n) {
   if (n.type === 'door') return goInside();
+  if (n.type === 'sev') {
+    world.enterRover();
+    if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Use')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it near the outpost to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
+    else toast(`🚙 In the rover - battery ${Math.round(world.sev.battery * 100)}%. ${keyWord('E', 'Use')} to get out.`);
+    return;
+  }
+  if (n.type === 'sev-exit') { world.exitRover(); toast('🧑‍🚀 Out through the suitport at the back of the rover.'); return; }
   if (n.type === 'panels') {
     outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false;
     modal({ title: '🧽 Solar panels cleaned!', html: `<p>Back to full power. Dust settles on them a little every sol - and a lot during dust storms - so check them often.</p>${factHTML(F.dustPanels)}` });
@@ -461,7 +470,8 @@ function drawHUD() {
   if (o.storm) list.push({ text: `☀️ Solar storm! ${o.shelter ? (inside ? 'Sheltering - stay inside' : 'Get back inside!') : 'Get inside or shield up!'}` });
   if (o.dust) list.push({ text: `🌪 Dust storm: ${o.dust} sols left` });
   if (f.o2Net < 0 && o.o2 / -f.o2Net < 8) list.push({ text: '🫁 Oxygen running low - more power to life support!' });
-  if (!inside && suit < 0.3) list.push({ text: '🧑‍🚀 Suit air low - go back inside!' });
+  if (world.driving && world.sev.battery < 0.25) list.push({ text: world.sev.battery > 0 ? '🔋 Rover battery low - drive back to the outpost to charge' : '🔋 Rover battery flat - crawling home slowly' });
+  if (!inside && !world.driving && suit < 0.3) list.push({ text: '🧑‍🚀 Suit air low - go back inside!' });
   if (o.clean < 0.7) list.push({ text: '🧽 Solar panels are dusty - go and clean them!' });
   if (f.cold) list.push({ text: '🥶 Batteries too small for the night heater' });
   if (o.relayDown) list.push({ text: `📡 Relay orbiter lost: ${o.relayDown} sols` });
@@ -476,17 +486,38 @@ function drawHUD() {
     } else {
       near = world.nearest();
       const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
+      names.sev = 'get in the rover and drive'; names['sev-exit'] = 'climb out';
+      if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out`;
+      else hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
     }
   }
-  $('#hint').textContent = hint;
+  const hintEl = $('#hint');                       // a hint that is no longer needed fades away slowly
+  if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
+  else hintEl.classList.add('gone');
   touch.sync({ active: !isModalOpen() && !o.over, canUse: !!near, inside });
 }
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false;
+
+// Launch captions: when the words change, the old ones fade out slowly while the new ones fade in,
+// so there is time to finish reading. The countdown number and the height gauge update in place.
+let cdKey = null, cdLine = null;
+const cdAlt = document.createElement('em'); cdAlt.className = 'cd-alt hidden'; $('#countdown').appendChild(cdAlt);
+function showCaption(big, bigClass, caption) {
+  if (caption !== cdKey) {
+    cdKey = caption;
+    if (cdLine) { const old = cdLine; old.classList.add('leaving'); setTimeout(() => old.remove(), 1200); }
+    cdLine = document.createElement('div'); cdLine.className = 'cd-line entering';
+    cdLine.innerHTML = '<span></span><small></small>';
+    cdLine.querySelector('small').textContent = caption;
+    $('#countdown').insertBefore(cdLine, cdAlt);
+    void cdLine.offsetWidth; cdLine.classList.remove('entering');   // start the fade-in
+  }
+  const sp = cdLine.querySelector('span'); sp.className = bigClass; if (sp.textContent !== big) sp.textContent = big;
+}
 
 // ---------------- main loop ----------------
 const clock = new THREE.Clock();
@@ -516,8 +547,9 @@ renderer.setAnimationLoop(() => {
     const { left, lifted, title, caption, km, karman } = launch.update(dt);
     const lift = -left;   // seconds since lift-off: engines start at T-1.5, full power after lift-off, quieter once the core stage is gone
     setSound({ thrust: left > 1.5 ? 0 : lift < 0 ? 0.5 : lift < 37 ? 1 : 0.25 }); tickSound(dt);
-    const height = lifted ? `<em class="cd-alt${karman ? ' space' : ''}">Height: ${Math.round(km)} km${km >= 100 ? ' · in space!' : ''}</em>` : '';
-    $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>${height}`;
+    showCaption(lifted ? title : String(Math.max(0, left)), lifted ? 'cd-phase' : '', caption);
+    cdAlt.classList.toggle('hidden', !lifted); cdAlt.classList.toggle('space', !!karman);
+    cdAlt.textContent = `Height: ${Math.round(km)} km${km >= 100 ? ' · in space!' : ''}`;
     if (karman) logFact(F.karman);
     if (lifted && !launch.logged) { launch.logged = true; [F.sls, F.mobileLauncher, F.boosters, F.ascent, F.orbitSpeed].forEach(logFact); }
     renderer.render(launch.scene, launch.camera);
@@ -533,7 +565,13 @@ renderer.setAnimationLoop(() => {
       const step = dt * state.speed;
       solClock += step;
       if (world.nearest()?.type === 'door') tutorialStep = 1;
-      if (!inside) {
+      if (!inside && world.driving) {
+        // in the pressurised rover: the suit refills from the cabin air, and its walls block some radiation (game value)
+        suit = Math.min(1, suit + step * 0.15);
+        const f = outpost.today, perSol = step / TUNED.solSeconds;
+        outpost.dose += F.surfaceDose.value * f.protection * perSol * 0.6;
+        if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection * 0.6;
+      } else if (!inside) {
         // Outside, the suit uses air (faster in the freezing night) and the outpost's shielding isn't protecting you.
         suit -= step / outpost.suitSeconds() * (world.night ? TUNED.coldSuit : 1);
         const f = outpost.today, perSol = step / TUNED.solSeconds;

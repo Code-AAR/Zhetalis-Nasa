@@ -1,31 +1,20 @@
-// The player's astronaut: NASA's own "Astronaut" 3D model (NASA 3D Resources), cut into body parts
-// so it can really walk. The file is one solid mesh standing with its arms out, so when it loads we sort
-// every triangle into torso, thighs, shins and arms by where it sits, and hang each part from a joint
-// (hips, knees, shoulders). Then the walk below moves the joints like a person in a stiff suit.
+// The player's astronaut: NASA's own "Astronaut" 3D model (NASA 3D Resources), given a skeleton so it can walk.
+// NASA's file is one solid statue standing with its arms out. When it loads we add bones (pelvis, spine,
+// thighs, shins, upper arms, forearms) and "skin" the surface to them: every point of the suit follows the
+// bones near it, blending smoothly around each joint, so the suit bends like fabric instead of breaking
+// into pieces. We also colour it like a real spacewalk suit (grey boots and gloves,
+// a little Mars dust low down, darker creases) and add our team patch.
 import * as THREE from 'three';
 import { loadModel } from './nasamodels.js';
 
 const H = 1.85;   // suit height in metres (game units)
-// joint heights as a share of the suit's height, measured from NASA's model
-const HIP = 0.385, KNEE = 0.205, SHOULDER = 0.715, ARM_X = 0.19;
-
-// Space Apps rules: no NASA logo in the game. Paint plain suit fabric over the logo and mission patch
-// on the backpack texture (positions measured on NASA's 1024 px texture).
-function coverLogos(tex) {
-  const img = tex?.image; if (!img?.width) return tex;
-  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
-  const k = img.width / 1024, px = g.getImageData(Math.round(865 * k), Math.round(300 * k), 1, 1).data;
-  g.fillStyle = `rgb(${px[0]},${px[1]},${px[2]})`;
-  g.beginPath(); g.arc(920 * k, 211 * k, 34 * k, 0, Math.PI * 2); g.fill();        // logo on the backpack
-  g.fillRect(790 * k, 380 * k, 78 * k, 66 * k);                                       // mission patch
-  const t = new THREE.CanvasTexture(c);
-  t.flipY = tex.flipY; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.anisotropy = 4;
-  return t;
-}
+// joint positions as a share of the suit's height, measured from NASA's model
+const HIP = 0.385, KNEE = 0.205, WAIST = 0.52, SHOULDER = 0.715, ARM_X = 0.19, ELBOW_X = 0.325, HAND_X = 0.37;
+const smooth = (a, b, v) => THREE.MathUtils.smoothstep(v, Math.min(a, b), Math.max(a, b)) * (a < b ? 1 : -1) + (a < b ? 0 : 1);
 
 // Split one geometry's triangles into named parts. `pick(cx, cy, cz)` returns the part name for a triangle centre.
-function splitGeometry(geo, pick) {
+// (Used by the rover to cut out its wheels.)
+export function splitGeometry(geo, pick) {
   const g = geo.index ? geo.toNonIndexed() : geo, names = Object.keys(g.attributes), out = {};
   const pos = g.attributes.position, tri = pos.count / 3;
   const lists = {};
@@ -46,79 +35,140 @@ function splitGeometry(geo, pick) {
   return out;
 }
 
-// Builds the jointed NASA astronaut. Resolves to { root, torso, hips:[L,R], knees:[L,R], arms:[L,R] } or null.
+// Which bones move a point of the suit, and how much (up to 4). Bones: 0 pelvis, 1 spine, 2/3 thigh L/R,
+// 4/5 shin L/R, 6/7 upper arm L/R, 8/9 forearm L/R. Bands of a few cm around each joint blend smoothly.
+function weights(x, y, z) {
+  const ax = Math.abs(x), R = x > 0 ? 1 : 0, hipY = HIP * H, kneeY = KNEE * H, sh = SHOULDER * H;
+  const armIn = ARM_X * H, el = ELBOW_X * H;
+  const isArm = smooth(0.47 * H, 0.53 * H, y) * smooth(armIn - 0.05, armIn + 0.07, ax);
+  if (isArm > 0) {
+    const fore = smooth(el - 0.06, el + 0.06, ax);
+    const spine = 1 - isArm;
+    return [[1, spine], [6 + R, isArm * (1 - fore)], [8 + R, isArm * fore]];
+  }
+  if (y < hipY + 0.09 && z > -0.16) {                                 // (the backpack hangs low behind: it stays with the body)
+    const leg = 1 - smooth(hipY - 0.07, hipY + 0.09, y);             // pelvis -> thigh
+    const shin = 1 - smooth(kneeY - 0.06, kneeY + 0.06, y);           // thigh -> shin
+    const left = 1 - smooth(-0.035, 0.035, x);                        // the middle of the crotch follows both legs
+    const out = [[0, 1 - leg]];
+    for (const [side, w] of [[0, left], [1, 1 - left]]) if (w > 0) { out.push([2 + side, leg * w * (1 - shin)], [4 + side, leg * w * shin]); }
+    return out.filter(([, w]) => w > 0.001).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  }
+  const spine = smooth(WAIST * H - 0.08, WAIST * H + 0.08, y);         // the waist bends between pelvis and chest
+  return [[0, 1 - spine], [1, spine]];
+}
+
+// A colour for each point of the suit (multiplied with NASA's texture): realistic details, not cartoon ones.
+function tint(x, y, z) {
+  const c = new THREE.Color(1, 1, 1), ax = Math.abs(x), hipY = HIP * H, sh = SHOULDER * H;
+  if (y < 0.075 * H) c.setRGB(0.6, 0.61, 0.63);                                     // boots: grey
+  if (y < 0.012 * H) c.setRGB(0.28, 0.28, 0.3);                                     // soles
+  if (ax > HAND_X * H && y > 0.6 * H) c.setRGB(0.74, 0.76, 0.8);                    // gloves: light grey-blue
+  // soft shading in creases: between the legs, under the arms, behind the knees, at the waist
+  let ao = 1;
+  if (ax < 0.09 && y > hipY - 0.12 && y < hipY + 0.03) ao *= 0.8;
+  if (ax > ARM_X * H - 0.05 && ax < ARM_X * H + 0.06 && y > sh - 0.2 && y < sh - 0.02) ao *= 0.82;
+  if (Math.abs(y - KNEE * H) < 0.05 && z < 0) ao *= 0.86;
+  if (Math.abs(y - WAIST * H) < 0.03) ao *= 0.9;
+  c.multiplyScalar(ao);
+  // Mars dust: the lower legs pick up a light orange-brown coat
+  const dust = Math.max(0, 1 - y / (0.3 * H)) * 0.32;
+  c.lerp(new THREE.Color(0.78, 0.55, 0.42).multiply(c), dust);
+  return c;
+}
+
+// Builds the skinned NASA astronaut. Resolves to { root, torso, hips, knees, arms, elbows, pelvis } or null.
 export async function loadNasaAstronaut() {
   const gltf = await loadModel('nasa-astronaut.glb'); if (!gltf) return null;
   const src = gltf.scene; src.updateMatrixWorld(true);
   const meshes = []; src.traverse(o => { if (o.isMesh) meshes.push(o); });
   const box = new THREE.Box3().setFromObject(src), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
   const s = H / size.y;
-  // put the feet on the ground at (0,0,0) and scale to real size
   const fix = new THREE.Matrix4().makeScale(s, s, s).multiply(new THREE.Matrix4().makeTranslation(-mid.x, -box.min.y, -mid.z));
-  const joints = {
-    torso: new THREE.Vector3(0, 0, 0),
-    hipL: new THREE.Vector3(-0.1, HIP * H, 0), hipR: new THREE.Vector3(0.1, HIP * H, 0),
-    shinL: new THREE.Vector3(-0.1, KNEE * H, 0.02), shinR: new THREE.Vector3(0.1, KNEE * H, 0.02),
-    armL: new THREE.Vector3(-ARM_X * H, SHOULDER * H, 0), armR: new THREE.Vector3(ARM_X * H, SHOULDER * H, 0),
-  };
-  const pick = (x, y) => {
-    if (y < KNEE * H) return x < 0 ? 'shinL' : 'shinR';
-    if (y < HIP * H) return x < 0 ? 'hipL' : 'hipR';
-    if (Math.abs(x) > ARM_X * H && y > 0.5 * H) return x < 0 ? 'armL' : 'armR';
-    return 'torso';
-  };
-  const parts = {};
+
+  // the skeleton, in the model's standing pose (bones start unturned)
+  const bone = (parent, x, y, z) => { const b = new THREE.Bone(); b.position.set(x, y, z); parent?.add(b); return b; };
+  const hipY = HIP * H, kneeY = KNEE * H, waistY = WAIST * H, sh = SHOULDER * H, armIn = ARM_X * H, el = ELBOW_X * H;
+  const pelvis = bone(null, 0, hipY, 0), spine = bone(pelvis, 0, waistY - hipY, 0);
+  const thighs = [-1, 1].map(sx => bone(pelvis, sx * 0.1, 0, 0));
+  const shins = thighs.map(t => bone(t, 0, kneeY - hipY, 0.02));
+  const uppers = [-1, 1].map(sx => bone(spine, sx * armIn, sh - waistY, 0));
+  const fores = uppers.map((u, i) => bone(u, (i ? 1 : -1) * (el - armIn), -0.03, 0));
+  const bones = [pelvis, spine, ...thighs, ...shins, ...uppers, ...fores];
+  const root = new THREE.Group(); root.add(pelvis); root.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(bones);
+
   for (const m of meshes) {
     const geo = m.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(fix, m.matrixWorld));
+    const p = geo.attributes.position, n = p.count;
+    const idx = new Uint16Array(n * 4), wt = new Float32Array(n * 4), col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const w = weights(x, y, z), sum = w.reduce((a, [, v]) => a + v, 0) || 1;
+      w.forEach(([b, v], k) => { idx[i * 4 + k] = b; wt[i * 4 + k] = v / sum; });
+      const c = tint(x, y, z); col.set([c.r, c.g, c.b], i * 3);
+    }
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+    geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wt, 4));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     const mats = [].concat(m.material).map(mt => {
-      const c = mt.clone(); c.map = coverLogos(mt.map); c.roughness = 0.85; c.metalness = 0;
+      const c = mt.clone(); c.vertexColors = true; c.roughness = 0.82; c.metalness = 0;
       c.color.setScalar(1);   // the file darkens the white fabric to grey - real suits are bright white
       return c;
     });
-    for (const [part, g] of Object.entries(splitGeometry(geo, pick))) {
-      g.translate(-joints[part].x, -joints[part].y, -joints[part].z);   // so the part turns around its joint
-      g.computeBoundingSphere();
-      const mesh = new THREE.Mesh(g, mats.length > 1 ? mats : mats[0]);
-      if (mats.length > 1) g.groups = m.geometry.groups;   // (NASA's file uses one material per mesh)
-      mesh.castShadow = true;
-      (parts[part] ??= []).push(mesh);
-    }
+    const sm = new THREE.SkinnedMesh(geo, mats.length > 1 ? mats : mats[0]);
+    sm.castShadow = true; sm.receiveShadow = true;    // the suit shades itself (arms on the body, backpack on the back)
+    sm.frustumCulled = false;
+    root.add(sm); sm.bind(skeleton);
   }
-  // soft white "joint" balls hide the seams where the model was cut (real suits have bulky joints there too)
-  const fabric = new THREE.MeshStandardMaterial({ color: '#ecebe7', roughness: 0.9 });
-  const cap = { hipL: 0.12, hipR: 0.12, shinL: 0.095, shinR: 0.095, armL: 0.115, armR: 0.115 };
-  const node = name => {
-    const n = new THREE.Group(); n.position.copy(joints[name]); (parts[name] || []).forEach(m => n.add(m));
-    if (cap[name]) { const b = new THREE.Mesh(new THREE.SphereGeometry(cap[name], 14, 10), fabric); b.castShadow = true; n.add(b); }
-    return n;
-  };
-  const root = new THREE.Group(), torso = node('torso'); root.add(torso);
-  const hips = ['hipL', 'hipR'].map(node), shins = ['shinL', 'shinR'].map(node), arms = ['armL', 'armR'].map(node);
-  hips.forEach((h, i) => { root.add(h); h.add(shins[i]); shins[i].position.sub(joints[i ? 'hipR' : 'hipL']); });
-  arms.forEach(a => root.add(a));
-  return { root, torso, hips, knees: shins, arms };
+  addPatch(root, spine);
+  return { root, pelvis, torso: spine, hips: thighs, knees: shins, arms: uppers, elbows: fores };
 }
 
-// One step of the walk. phase grows with distance walked (one full cycle = left step + right step).
-// pace 0..1 = walking, run 0..1 = running on top, air = in the air after a jump.
+// Our team's patch, sewn on the left side of the chest (like a mission patch).
+function addPatch(root, spine) {
+  new THREE.TextureLoader().load('assets/zhetalis-badge.png', tex => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    root.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(0.15, 1.42, 2), new THREE.Vector3(0, 0, -1));
+    const hit = ray.intersectObjects(root.children.filter(o => o.isSkinnedMesh), false)[0];
+    if (!hit) return;
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const at = hit.point.clone().add(new THREE.Vector3(0, 0, 0.004));
+    patch.position.copy(spine.worldToLocal(at));
+    spine.add(patch);
+  });
+}
+
+// One frame of the walk. phase grows with distance walked (one full cycle = left step + right step).
+// pace 0..1 = walking, run 0..1 = running on top, air 0..1 = in the air after a jump.
+// Built from how people walk: the swinging leg bends at the knee, the standing leg stays nearly straight,
+// each arm swings with the opposite leg with a soft elbow, the chest turns a little against the hips,
+// the hips tilt over the standing leg, and the body is highest when passing over the standing foot.
+// Mars has 38% of Earth's gravity, so running is a long, floaty lope.
 export function poseAstronaut(a, { phase, pace, run, air, t }) {
   const s = Math.sin(phase), c = Math.cos(phase);
-  const hipAmp = 0.42 * pace + 0.2 * run, kneeAmp = 0.65 * pace + 0.35 * run, armAmp = 0.3 * pace + 0.25 * run;
+  const hipAmp = 0.48 * pace + 0.15 * run, kneeAmp = 0.75 * pace + 0.3 * run, armAmp = 0.3 * pace + 0.18 * run;
   const tuck = air * (1 - pace * 0.3);
-  // legs: forward swing is a negative x turn. The knee bends most in the middle of each leg's swing.
-  a.hips[0].rotation.x = -hipAmp * s - tuck * 0.45;
-  a.hips[1].rotation.x = hipAmp * s - tuck * 0.25;
-  a.knees[0].rotation.x = kneeAmp * Math.max(0, c) ** 1.5 + 0.06 * pace + tuck * 0.8;
-  a.knees[1].rotation.x = kneeAmp * Math.max(0, -c) ** 1.5 + 0.06 * pace + tuck * 0.6;
-  // arms hang at the sides (NASA's model holds them out) and swing with the opposite leg
-  const breathe = Math.sin(t * 1.6) * 0.02 * (1 - pace);
-  const hang = 1.22 - 0.1 * run;
-  a.arms[0].rotation.set(armAmp * s + 0.08 * run, 0, hang + breathe);
-  a.arms[1].rotation.set(-armAmp * s + 0.08 * run, 0, -hang - breathe);
-  // the body rises over each foot (twice per cycle) - a smooth wave, never a hop - and sways a little
+  // legs: forward swing is a negative x turn; each knee bends most in the middle of that leg's swing
+  a.hips[0].rotation.x = -hipAmp * s - tuck * 0.45 - 0.04 * run;
+  a.hips[1].rotation.x = hipAmp * s - tuck * 0.25 - 0.04 * run;
+  a.knees[0].rotation.x = kneeAmp * Math.max(0, c) ** 1.4 + 0.06 * pace + tuck * 0.8;
+  a.knees[1].rotation.x = kneeAmp * Math.max(0, -c) ** 1.4 + 0.06 * pace + tuck * 0.6;
+  // arms come down to the sides (NASA's model holds them out) and swing with the opposite leg
+  const breathe = Math.sin(t * 1.5) * 0.02 * (1 - pace);
+  const idle = Math.sin(t * 0.7) * (1 - pace);                        // standing still: shift weight a little
+  const hang = 1.36 - 0.1 * run - 0.2 * tuck;
+  a.arms[0].rotation.set(armAmp * s + 0.12 * run, 0, hang + breathe);
+  a.arms[1].rotation.set(-armAmp * s + 0.12 * run, 0, -hang - breathe);
+  // elbows: always a little bent (a pressurised suit's arms don't hang straight), more on the forward swing
+  a.elbows[0].rotation.y = 0.28 + 0.35 * run + 0.3 * Math.max(0, s) * pace;
+  a.elbows[1].rotation.y = -(0.28 + 0.35 * run + 0.3 * Math.max(0, -s) * pace);
+  // chest turns against the hips; hips tilt over the standing leg; a slight forward lean when running
+  a.torso.rotation.set(0.04 * run + breathe * 0.5, -s * 0.07 * pace + idle * 0.02, 0);
+  a.pelvis.rotation.set(0, s * 0.05 * pace, -s * 0.03 * pace + idle * 0.015);
   return {
-    bob: ((Math.cos(phase * 2) + 1) / 2) * (0.035 * pace + 0.06 * run) - (0.02 * pace),
-    sway: s * 0.025 * pace,
-    twist: -s * 0.08 * pace,
+    bob: ((Math.cos(phase * 2) + 1) / 2) * (0.03 * pace + 0.07 * run) - 0.025 * pace - 0.02 * tuck,
+    sway: s * 0.02 * pace + idle * 0.012,
   };
 }

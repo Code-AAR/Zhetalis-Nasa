@@ -50,7 +50,9 @@ export function say(name) {
 }
 
 let toastTimer;
+// Short messages: they fade in, stay long enough to read (longer messages stay longer), then fade out slowly.
 export function toast(text, ms = 3200) {
+  ms = Math.max(ms, 2600 + text.length * 55);
   const t = $('#toast'); t.textContent = text; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }

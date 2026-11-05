@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
+import { Rover } from './rover.js';
+import { makeStars, makePlanets } from './sky.js';
 
 // ---------- terrain shape (deterministic, so every player gets the same map) ----------
 function hash(x, z) { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); }
@@ -171,15 +173,11 @@ function makeSkyLights(scene) {
   glow.scale.setScalar(260); scene.add(glow);
   const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
   scene.add(disc);
-  const pts = [];
-  for (let i = 0; i < 900; i++) {
-    const u = Math.random(), v = Math.random() * 0.48 + 0.02, th = u * Math.PI * 2, ph = Math.acos(1 - v * 2) ;
-    pts.push(Math.sin(ph) * Math.cos(th) * 850, Math.cos(ph) * 850, Math.sin(ph) * Math.sin(th) * 850);
-  }
-  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-  scene.add(stars);
-  return { glow, disc, stars };
+  // thousands of stars and the Milky Way; the thin, dry air of Mars makes the night sky very clear
+  const stars = makeStars(850, 3500, true); scene.add(stars);
+  // the planets as seen from Mars tonight (NASA JPL formulas) - Earth is the blue "star"
+  const planets = makePlanets(840, { from: 'mars', centre: 'earth', yaw: 0.25, pitch: 0.42, hide: ['sun'] }); scene.add(planets);
+  return { glow, disc, stars, planets };
 }
 
 function makeSolarField() {
@@ -240,7 +238,7 @@ function makeAstronaut() {
 }
 
 // Turn by the shortest way round (so you never spin 350° to face 10° to the left).
-const WALK = 4.2, RUN = 7.5;   // m/s - brisk for a game, but slow enough that the steps look right
+const WALK = 3.2, RUN = 6.2;   // m/s - a brisk walk and a low-gravity lope (take the rover for long trips)
 const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
 export class World {
@@ -256,8 +254,10 @@ export class World {
     this.scene.add(this.headlamp, this.headlamp.target);
     this.phase = 0.3; this.dustOn = false;
     this.sun = new THREE.DirectionalLight('#fff1dc', 1.9);
-    this.sun.castShadow = true; this.sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(this.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
+    this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
+    // a tighter, sharper shadow area around you, so the suit and rover shade themselves
+    Object.assign(this.sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 260 });
+    this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
     this.terrain = makeTerrain(); this.scene.add(this.terrain);
 
@@ -304,6 +304,12 @@ export class World {
       m.traverse(o => { if (o.isMesh) { o.castShadow = true; for (const mt of [].concat(o.material)) { mt.metalness = Math.min(mt.metalness, 0.3); mt.color?.lerp(new THREE.Color('#c58a62'), 0.25); } } });
       this.scene.add(m); this.heli.model = m;
     });
+
+    // NASA's Space Exploration Vehicle: a pressurised crew rover you can drive (rover.js)
+    this.sev = new Rover(this.scene, heightAt, this.colliders);
+    this.sevCollider = { x: this.sev.pos.x, z: this.sev.pos.z, r: 2.4, self: true };
+    this.colliders.push(this.sevCollider);
+    this.driving = false;
 
     this.player = makeAstronaut();
     this.player.position.set(-1.5, 0, -11);                 // you climb out of your capsule (the lander)...
@@ -410,7 +416,8 @@ export class World {
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
     this.scene.fog.near = this.dustOn ? 18 : 70; this.scene.fog.far = this.dustOn ? 140 : 460 - 180 * (1 - day);
-    this.skyLights.stars.material.opacity = (1 - day) * (this.dustOn ? 0.2 : 0.95);
+    this.skyLights.stars.setOpacity((1 - day) * (this.dustOn ? 0.2 : 1));
+    this.skyLights.planets.userData.setOpacity((1 - day) * (this.dustOn ? 0.15 : 0.9));
     this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset
     this.skyLights.glow.material.opacity = THREE.MathUtils.clamp((elev + 0.3) / 0.2, 0, 0.95);
     this.skyLights.glow.scale.setScalar(260 + dusk * 520);
@@ -433,8 +440,8 @@ export class World {
       this.player.rotation.y += turn * ease(7);
       this.lean.z += (THREE.MathUtils.clamp(-turn * 0.35, -0.12, 0.12) * pace - this.lean.z) * ease(5);
     } else this.lean.z *= Math.exp(-dt * 5);
-    // one full cycle (left + right step) per 2.7 m walking, 4.2 m running
-    const cycle = THREE.MathUtils.lerp(2.7, 4.2, run), before = this.gait;
+    // one full cycle (left + right step) per 2.2 m walking, 3.8 m running
+    const cycle = THREE.MathUtils.lerp(2.2, 3.8, run), before = this.gait;
     if (this.onGround) this.gait += speed * dt / cycle * Math.PI * 2;
     else this.gait += (Math.round(this.gait / Math.PI) * Math.PI - this.gait) * ease(3);   // in the air: legs drift to neutral
     if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3 && this.onGround) this.onStep?.(run);
@@ -443,10 +450,9 @@ export class World {
     this.airMix = (this.airMix ?? 0) + ((this.onGround ? 0 : 1) - (this.airMix ?? 0)) * ease(8);
     const breathe = Math.sin(this.time * 1.6) * 0.008 * (1 - this.swing);
     this.squash *= Math.exp(-dt * 8);
-    let bob = 0, sway = 0, twist = 0;
+    let bob = 0, sway = 0;
     if (this.suit) {
-      ({ bob, sway, twist } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time }));
-      this.suit.torso.rotation.y = twist;
+      ({ bob, sway } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time }));
     } else {   // simple shapes: legs and arms swing, no knees
       const s = Math.sin(this.gait);
       u.legs[0].rotation.x = s * this.swing * 0.5; u.legs[1].rotation.x = -s * this.swing * 0.5;
@@ -481,8 +487,20 @@ export class World {
     if (r > lim) { pos.x *= lim / r; pos.z *= lim / r; }
   }
 
+  enterRover() { this.driving = true; this.firstPerson = false; this.move.set(0, 0, 0); this.yaw = this.sev.yaw; this.pitch = 0.35; }
+  exitRover() {
+    const e = this.sev.exitPoint();
+    this.driving = false; this.sev.speed = 0;
+    this.player.position.set(e.x, heightAt(e.x, e.z), e.z); this.player.rotation.y = this.sev.yaw + Math.PI;
+    this.yaw = this.sev.yaw + Math.PI; this.pitch = 0.25;
+  }
+
   update(dt, controlsActive) {
     this.time += dt;
+    const nearHome = Math.hypot(this.sev.pos.x, this.sev.pos.z) < 32;
+    this.sev.update(dt, controlsActive ? this.keys : {}, this.driving, nearHome, this.night);
+    this.sevCollider.x = this.sev.pos.x; this.sevCollider.z = this.sev.pos.z;
+    if (this.driving) return this.updateDriving(dt);
     const p = this.player.position, g = this.facts.gravity.value;
     const k = this.keys, running = k.ShiftLeft || k.ShiftRight;
     const want = new THREE.Vector3();
@@ -536,6 +554,29 @@ export class World {
     if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
   }
 
+  // In the rover: you ride inside; the camera follows behind (or sits in the cockpit in first person).
+  updateDriving(dt) {
+    const r = this.sev, p = this.player.position;
+    this.player.visible = false;
+    p.copy(r.pos);
+    this.move.set(0, 0, 0); this.swing = 0;
+    if (this.firstPerson) {
+      const f = 1.4, eye = new THREE.Vector3(r.pos.x + Math.sin(r.yaw) * f, r.pos.y + 2.3, r.pos.z + Math.cos(r.yaw) * f);
+      this.camera.position.copy(eye);
+      const yaw = r.yaw;   // look ahead through the windows
+      this.camera.lookAt(eye.x + Math.sin(yaw), eye.y - 0.12 + Math.sin(this.lookPitch), eye.z + Math.cos(yaw));
+    } else {
+      if (Math.abs(r.speed) > 0.5) this.yaw += angleTo(this.yaw, r.yaw) * (1 - Math.exp(-dt * 2.5));   // swing round behind as you drive
+      const dist = 12, eye = new THREE.Vector3(r.pos.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), r.pos.y + 3 + Math.sin(this.pitch) * dist, r.pos.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
+      eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 1);
+      this.camera.position.lerp(eye, 1 - Math.exp(-dt * 6));
+      this.camera.lookAt(r.pos.x, r.pos.y + 2, r.pos.z);
+    }
+    this.placeSky(r.pos);
+    for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+    if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+  }
+
   // Sun, glow, stars, sky and headlamp follow the camera; the sun's direction follows the time of day.
   placeSky(p) {
     const cam = this.camera.position, dir = this.sunDir || new THREE.Vector3(0.5, 0.8, 0.3);
@@ -543,14 +584,16 @@ export class World {
     this.sky.position.copy(cam);
     this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
-    this.skyLights.stars.position.copy(cam);
+    this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
     const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
     this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);
   }
 
   // What the player is close enough to use with E.
   nearest() {
+    if (this.driving) return { type: 'sev-exit', d: 0 };
     const p = this.player.position, list = [];
+    if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
     list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
     if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
