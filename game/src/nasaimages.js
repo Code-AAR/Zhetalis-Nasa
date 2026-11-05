@@ -85,4 +85,25 @@ export function loadMarsMap() {
   return globe;
 }
 
-export const dateWords = iso => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+// A real NASA photo of an SLS launch, with its details, from the NASA Image and Video Library (no key needed).
+let launchPhoto;
+export function loadLaunchPhoto() {
+  launchPhoto ??= (async () => {
+    try {
+      const d = await (await fetch('https://images-api.nasa.gov/search?q=Artemis%20II%20launch&center=KSC&media_type=image&page_size=20', { signal: timeout(12000) })).json();
+      const items = (d.collection?.items || []).filter(it => /launch$/i.test(it.data?.[0]?.title?.trim() || '') && it.links?.length);
+      const it = items.find(i => /Launch-1$/.test(i.data[0].nasa_id)) || items[0];
+      if (it) return { mode: 'live', ...libraryPhoto(it) };
+    } catch { /* fall back */ }
+    const s = await getSnapshot();
+    return s.launch ? { mode: 'archived', ...s.launch } : null;
+  })();
+  return launchPhoto;
+}
+export function libraryPhoto(it) {
+  const m = it.data[0], thumb = it.links.find(l => l.rel === 'preview')?.href || it.links[0].href;
+  return { src: thumb.replace('~thumb.', '~medium.').replace(/ /g, '%20'), title: m.title.trim(), when: m.date_created, credit: m.photographer || m.secondary_creator || 'NASA',
+    text: (m.description || '').split('. ')[0] + '.', link: `https://images.nasa.gov/details/${encodeURIComponent(m.nasa_id)}` };
+}
+
+export const dateWords = iso => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });

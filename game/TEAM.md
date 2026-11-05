@@ -49,6 +49,21 @@ Then open http://localhost:8123/game/ . (Opening `index.html` directly does not 
 - **Landing at Mars**: heat shield → parachute → rockets → "seven minutes of terror" (radio is slower than the landing).
 - **Logbook (L)**: every fact you meet becomes a card. **End-of-mission quiz** (3 questions from your cards) → Gold/Silver/Bronze Junior Astronaut badge.
 
+## NASA's own 3D models (from NASA 3D Resources - free, no copyright)
+
+| File | What | Where it appears |
+|---|---|---|
+| `assets/sls.glb` | SLS Block 1, made from NASA's 3D-printing model by `scripts/build-sls-model.py` (split into core / boosters / upper stage / Orion / escape tower so they drop off in flight) | Launch |
+| `assets/mobile-launcher.glb` | Mobile Launcher (116 m) | Launch pad |
+| `assets/mro.glb` | Mars Reconnaissance Orbiter, a relay orbiter | Circling the arrival globe |
+| `assets/ingenuity.glb` | Ingenuity helicopter, real size | Near the old rover (press E) |
+
+They use Draco compression, loaded by `src/nasamodels.js`. If one fails to load, the game keeps its simple shapes.
+To rebuild SLS: download `3D Printing/Space Launch System (SLS) Block 1` from https://github.com/nasa/NASA-3D-Resources and run
+`python scripts/build-sls-model.py "Space Launch System (SLS) Block 1.stl"` (needs numpy).
+The launch pad layout (lightning towers, water tower, mound) follows NASA's Artemis II launch photos; step 1 of
+"How do we get there?" shows a real Artemis II launch photo from the NASA Image and Video Library.
+
 Debug for testers: open the game with `#debug` at the end of the address, then in the browser console use `game.phase(0.75)` (sunset), `game.event('relay-lost')`, `game.outpost.parts = 30`, `game.goInside()`.
 
 ## Who does what

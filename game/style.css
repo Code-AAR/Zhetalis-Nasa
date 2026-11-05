@@ -119,6 +119,7 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 .slide figcaption { font-size: .78rem; color: var(--muted); margin-top: 6px; }
 .slide figcaption a { color: var(--muted); }
 .slide-nav { display: flex; gap: 8px; justify-content: center; }
+.mp-photo img { aspect-ratio: 3 / 2; max-height: 34vh; object-fit: cover; }
 .earth-card { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; background: rgba(143,212,255,0.08); border-radius: 12px; padding: 8px 10px; margin: 10px 0; }
 .earth-card img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: #000; }
 .earth-card p { margin: 0; font-size: .85rem; }

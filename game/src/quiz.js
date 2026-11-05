@@ -16,6 +16,9 @@ export const QUESTIONS = [
   { fact: 'oxygen', q: 'About how much oxygen does one astronaut breathe each day?', a: ['0.82 kg', '82 kg', 'None - Mars air is fine'] },
   { fact: 'moxie', q: 'What did MOXIE on Perseverance make out of Mars air?', a: ['Oxygen', 'Water', 'Gold'] },
   { fact: 'ascent', q: 'What happens to SLS\'s two white boosters about 2 minutes after lift-off?', a: ['They drop off into the ocean', 'They fly to the Moon', 'They turn into solar panels'] },
+  { fact: 'boosters', q: 'What do the 4 main engines on SLS\'s orange core stage burn?', a: ['Liquid hydrogen and liquid oxygen', 'Petrol', 'Coal'] },
+  { fact: 'ingenuity', q: 'What was special about NASA\'s Ingenuity helicopter?', a: ['First powered flight on another planet', 'First rover on the Moon', 'Biggest rocket ever'] },
+  { fact: 'mro', q: 'How do messages from rovers on Mars usually reach Earth?', a: ['Through orbiters circling Mars, like MRO', 'By letter', 'Through a cable'] },
   { fact: 'fission', q: 'Why is a fission reactor useful on Mars?', a: ['It makes power at night and in dust storms', 'It makes the air breathable', 'It makes Mars warmer'] },
   { fact: 'cruiseDose', q: 'Where is space radiation worse for astronauts?', a: ['Travelling between planets', 'On the surface of Mars', 'Inside a buried outpost'] },
 ];

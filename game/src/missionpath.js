@@ -1,6 +1,7 @@
 // "How do we get there?" - an animated, step-by-step diagram of NASA's Artemis system
 // (SLS -> Orion -> lunar orbit -> HLS lander -> Moon) and NASA's Moon-to-Mars concept.
 import { factHTML } from './ui.js';
+import { loadLaunchPhoto, dateWords } from './nasaimages.js';
 
 const PATHS = {
   launch:   'M110,206 C112,170 128,150 160,140',
@@ -29,7 +30,7 @@ const HOHMANN = `
 function steps(F) {
   return [
     { path: null, title: 'First the Moon, then Mars', text: "NASA's Artemis missions go to the Moon to practise everything astronauts will need for Mars - like a training ground close to home. Here is how the system works, step by step.", fact: F.moonToMars },
-    { path: 'launch', title: '1. SLS launches Orion', text: 'The giant SLS rocket lifts off from Kennedy Space Center in Florida with the Orion capsule (and its crew) on top. The two white boosters drop off after about two minutes, then the orange core stage.', fact: F.sls },
+    { path: 'launch', title: '1. SLS launches Orion', text: 'The giant SLS rocket lifts off from Kennedy Space Center in Florida with the Orion capsule (and its crew) on top. The two white boosters drop off after about two minutes, then the orange core stage.', fact: F.boosters, photo: true },
     { path: 'toMoon', title: '2. Off to the Moon', text: "A smaller upper stage gives Orion one big push towards the Moon. The trip takes a few days. Orion is the crew's home for the journey.", fact: F.orion },
     { path: 'nrho', title: '3. A giant loop around the Moon', text: "Orion goes into a huge, stretched loop around the Moon. A lander is already waiting there.", fact: F.nrho },
     { path: 'landMoon', title: '4. Change spaceships: the HLS lander', text: 'Orion cannot land, so it docks with the Human Landing System (HLS). The astronauts float across into the lander, which flies them down to the surface - and later back up to Orion.', fact: F.hls },
@@ -73,7 +74,13 @@ export function showMissionPath(F, { from = 0 } = {}) {
       const s = list[i];
       root.querySelector('#mp-title').textContent = s.title;
       root.querySelector('#mp-text').textContent = s.text;
-      root.querySelector('#mp-fact').innerHTML = (s.extra || '') + (s.fact ? factHTML(s.fact) : '');
+      root.querySelector('#mp-fact').innerHTML = (s.photo ? '<figure class="slide mp-photo" id="mp-photo"><figcaption>Loading a real NASA photo…</figcaption></figure>' : '') + (s.extra || '') + (s.fact ? factHTML(s.fact) : '');
+      if (s.photo) loadLaunchPhoto().then(p => {
+        const fig = root.querySelector('#mp-photo'); if (!fig) return;
+        if (!p) return fig.remove();
+        const tag = p.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>';
+        fig.innerHTML = `<img src="${p.src}" alt="${p.title}"><figcaption>${tag}<b>This really happened:</b> ${p.title}, ${dateWords(p.when)}. ${p.text} Photo: <a href="${p.link}" target="_blank" rel="noopener">${p.credit}</a> (NASA Image and Video Library)</figcaption>`;
+      });
       root.querySelector('#mp-count').textContent = `${i + 1} / ${list.length}`;
       root.querySelector('#mp-back').disabled = i === 0;
       root.querySelector('#mp-next').textContent = i === list.length - 1 ? 'Go to Mars ›' : 'Next ›';

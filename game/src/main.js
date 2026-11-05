@@ -9,6 +9,8 @@ import { showArrival } from './arrival.js';
 import { loadRoverPhotos, loadEarthToday, loadMarsMap, dateWords } from './nasaimages.js';
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
+import { loadModel } from './nasamodels.js';
+loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
 const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
@@ -78,8 +80,9 @@ function showData() {
     <p class="source">• If a service is down, the game shows a saved list of the same real photos, labelled ARCHIVED.</p>
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
-    <h4>3D models</h4>
-    <p class="source">• Perseverance rover: <a href="https://science.nasa.gov/resource/mars-perseverance-rover-3d-model/" target="_blank" rel="noopener">NASA/JPL-Caltech</a>. Terrain colours based on Perseverance's photos of Jezero Crater. The SLS rocket is a simplified model made for this game.</p>
+    <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     <h4>Game balance (not real measurements)</h4>
     <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up.</p>` });
 }
@@ -310,6 +313,11 @@ function collect(n) {
     modal({ title: '🤖 You found an old rover!', html: `${factHTML(F.perseverance)}${factHTML(F.moxie)}<p>You carefully salvage <b>8 spare parts</b> for your workbench.</p>` });
     return;
   }
+  if (n.type === 'heli') {
+    world.heli.seen = true;
+    modal({ title: '🚁 Ingenuity - the first helicopter on another planet', html: `<p>This little helicopter weighs only 1.8 kg. It is made from NASA's own 3D model, at its real size.</p>${factHTML(F.ingenuity)}<p>The air on Mars is so thin that its blades had to spin thousands of times a minute - much faster than a helicopter's on Earth - just to lift off.</p>` });
+    return;
+  }
   const p = n.pickup; world.removePickup(p);
   if (p.kind === 'ice') { outpost.o2 += 6; toast('🧊 Ice! Splitting water makes oxygen: +6 kg oxygen'); }
   if (p.kind === 'metal') { outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
@@ -408,7 +416,7 @@ function drawHUD() {
       hint = s ? `Press E to ${s.label}` : 'Walk to a station · click to look around';
     } else {
       const n = world.nearest();
-      const names = { door: 'go inside the outpost', rover: 'salvage the old rover', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
+      const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
       hint = n ? `Press E to ${names[n.type]}` : (tutorialStep === 0 ? 'Walk to the outpost door (green light) · click the game to look around · V for first person' : '');
     }
   }
@@ -428,7 +436,7 @@ renderer.setAnimationLoop(() => {
   if (state.phase === 'launch') {
     const { left, lifted, title, caption } = launch.update(dt);
     $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>`;
-    if (lifted && !launch.logged) { launch.logged = true; logFact(F.ascent); logFact(F.orbitSpeed); logFact(F.sls); }
+    if (lifted && !launch.logged) { launch.logged = true; [F.sls, F.mobileLauncher, F.boosters, F.ascent, F.orbitSpeed].forEach(logFact); }
     renderer.render(launch.scene, launch.camera);
     if (launch.done) { state.phase = 'cruise'; arrive(); }
     return;

@@ -1,6 +1,7 @@
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadModel } from './nasamodels.js';
 
 // ---------- terrain shape (deterministic, so every player gets the same map) ----------
 function hash(x, z) { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); }
@@ -240,6 +241,18 @@ export class World {
       onLoaded?.();
     }, undefined, err => { console.warn('Perseverance model failed to load', err); onLoaded?.(); });
 
+    // NASA's Ingenuity helicopter (official NASA 3D model), resting near the old rover - real size, 49 cm tall
+    this.heli = { x: this.rover.x + 5, z: this.rover.z + 4, seen: false };
+    loadModel('ingenuity.glb').then(g => {
+      if (!g) return;
+      const m = g.scene, size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+      m.scale.setScalar(0.49 / size.y);
+      const b = new THREE.Box3().setFromObject(m);
+      m.position.set(this.heli.x, heightAt(this.heli.x, this.heli.z) - b.min.y, this.heli.z);
+      m.traverse(o => { if (o.isMesh) { o.castShadow = true; for (const mt of [].concat(o.material)) { mt.metalness = Math.min(mt.metalness, 0.3); mt.color?.lerp(new THREE.Color('#c58a62'), 0.25); } } });
+      this.scene.add(m); this.heli.model = m;
+    });
+
     this.player = makeAstronaut();
     this.player.position.set(-1.5, 0, -11);                 // you climb out of your capsule (the lander)...
     this.yaw = Math.atan2(1.5, 11);                          // ...and see the outpost waiting for you
@@ -408,6 +421,7 @@ export class World {
     list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
     if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
+    if (this.heli.model && !this.heli.seen) list.push({ type: 'heli', d: Math.hypot(p.x - this.heli.x, p.z - this.heli.z) });
     for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });
     list.sort((a, b) => a.d - b.d);
     return list[0] && list[0].d < 3.2 ? list[0] : null;

@@ -29,6 +29,8 @@ from a landing camp up to a self-sustaining settlement with a fission reactor.
 | NASA Mars facts, SVS blue sunset (Curiosity 2015), Spirit dusty panels, MAVEN/DSN relay | Day/night length and temperature swing, blue sunset, panel cleaning, relay orbiter failure | Built in, with sources |
 | Regolith shielding study (JGR Planets 2019), NASA Fission Surface Power (IAC 2024) | Burying the outpost; the 40 kW reactor in the last tier | Built in, with sources |
 | NASA/JPL-Caltech Perseverance 3D model | The old rover you salvage | Asset |
+| NASA 3D Resources: SLS Block 1, Mobile Launcher, Mars Reconnaissance Orbiter, Ingenuity | The launch (SLS really drops its stages), the relay orbiter at Mars, the helicopter near the rover | Assets (NASA's own models) |
+| NASA Image and Video Library | A real photo of the Artemis II launch (1 April 2026) in the "How do we get there?" explainer | **Live**, or saved (ARCHIVED) |
 | Perseverance raw images (NASA/JPL-Caltech/ASU) | The outpost window shows the rover's newest colour photos of Jezero Crater | **Live**, or a saved list (ARCHIVED) |
 | NASA EPIC camera on DSCOVR | Today's whole-Earth photo on the power console - the people you are radioing | **Live**, or saved (ARCHIVED) |
 | NASA Mars Trek (Viking colour mosaic) | The 3D Mars globe you arrive at, with Jezero Crater marked | **Live** map tiles |

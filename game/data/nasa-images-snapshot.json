@@ -1,6 +1,6 @@
 {
- "saved": "2026-11-05T01:36:51.482Z",
- "note": "Backup of real NASA photo links. Perseverance: mars.nasa.gov raw images feed. Earth: NASA EPIC on DSCOVR.",
+ "saved": "2026-11-05T02:08:16.862Z",
+ "note": "Backup of real NASA photo links. Perseverance: mars.nasa.gov raw images feed. Earth: NASA EPIC on DSCOVR. Launch: NASA Image and Video Library.",
  "rover": [
   {
    "src": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/02024/ids/edr/browse/zcam/ZL0_2024_0846622583_145EBY_N0930000ZCAM10058_1100LMJ01_1200.jpg",
@@ -55,5 +55,13 @@
  "earth": {
   "src": "https://epic.gsfc.nasa.gov/archive/natural/2026/11/01/jpg/epic_1b_20261101115250.jpg",
   "when": "2026-11-01 11:48:01"
+ },
+ "launch": {
+  "src": "https://images-assets.nasa.gov/image/KSC-04012026-Artemis%20II_Launch-1/KSC-04012026-Artemis%20II_Launch-1~medium.jpg",
+  "title": "Artemis II Launch",
+  "when": "2026-04-01T00:00:00Z",
+  "credit": "NASA/Brandon Hancock",
+  "text": "Four astronauts aboard NASA’s Orion spacecraft atop the SLS (Space Launch System) rocket launch on the agency’s Artemis II test flight, Wednesday, April 1 from Launch Complex 39B at NASA’s Kennedy Space Center in Florida.",
+  "link": "https://images.nasa.gov/details/KSC-04012026-Artemis%20II_Launch-1"
  }
 }
