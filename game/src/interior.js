@@ -146,14 +146,16 @@ export class Interior {
     add('workbench', 'build upgrades at the workbench', R - 0.9, 0, bench);
     this.loadTools();
 
-    // greenhouse shelves
+    // the round tunnel hatch to the base greenhouse (greenhouse.js), with a peek of pink grow lights through its window
     const green = new THREE.Group();
-    for (let s = 0; s < 3; s++) {
-      green.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.08, 0.8), lam('#bfbab2')), 0, 0.6 + s * 0.8, 0));
-      for (let p = 0; p < 6; p++) green.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.45, 8), lam('#4caf50')), -1 + p * 0.4, 0.86 + s * 0.8, 0));
-    }
-    const growLight = new THREE.PointLight('#d66bff', 6, 4, 1.5); growLight.position.set(0, 2.8, 0.3); green.add(growLight);
-    add('greenhouse', 'look at the greenhouse', -(R - 0.7), 0, green);
+    const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.14, 16, SEG), smooth('#d9d4cb')); ringMesh.position.y = 1.45; green.add(ringMesh);
+    const opening = new THREE.Mesh(new THREE.CircleGeometry(1.15, SEG), new THREE.MeshBasicMaterial({ color: '#2a1f30' })); opening.position.set(0, 1.45, -0.05); green.add(opening);
+    const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(0.75, SEG), new THREE.MeshBasicMaterial({ color: '#c75cff', transparent: true, opacity: 0.55 })); glowDisc.position.set(0, 1.45, -0.04); green.add(glowDisc);
+    for (let i = 0; i < 5; i++) green.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), smooth('#4f8f3a')), -0.5 + i * 0.25, 0.95 + (i % 2) * 0.08, -0.03));
+    green.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.1), new THREE.MeshBasicMaterial({ color: '#ffd27a' })), 0, 2.85, 0));
+    green.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.75), new THREE.MeshBasicMaterial({ map: screenTexture(['GREENHOUSE', 'through the', 'tunnel'], '#c9ff9a') })), 0, 3.45, 0.02));
+    const growLight = new THREE.PointLight('#d66bff', 4, 4, 1.5); growLight.position.set(0, 1.6, 0.6); green.add(growLight);
+    add('greenhouse', 'walk through the tunnel to the greenhouse', -(R - 0.15), 0, green);
 
     // storm shelter bunks
     const bunk = new THREE.Group();

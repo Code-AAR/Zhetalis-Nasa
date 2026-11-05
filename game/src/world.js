@@ -217,7 +217,7 @@ function makeOutpost() {
   // the base greenhouse: a glass dome 14 m across on the end of the tunnel, with 4 hydroponic grow beds inside
   // under pink LED bars. Walk in through its airlock (or through the tunnel from inside the outpost) - greenhouse.js
   const ghG = new THREE.Group(); ghG.position.set(GH.x, 0, GH.z); g.add(ghG);
-  ghG.add(new THREE.Mesh(new THREE.SphereGeometry(GH.r, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2), glass));
+  ghG.add(new THREE.Mesh(new THREE.SphereGeometry(GH.r, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#e8f4f6', transparent: true, opacity: 0.25, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false })));
   const frame = mat('#eceae4', { flatShading: false });
   for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(GH.r, 0.06, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; ghG.add(rib); }
   for (const a of [0.35, 0.7, 1.05]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(GH.r * Math.cos(a), 0.06, 8, 64), frame); ring.rotation.x = Math.PI / 2; ring.position.y = GH.r * Math.sin(a); ghG.add(ring); }
@@ -229,8 +229,8 @@ function makeOutpost() {
     ghG.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 5), ledMat), x, 2.4, 0));
   }
   const ghGlow = new THREE.PointLight('#e070ff', 4, 14, 1.5); ghGlow.position.y = 2.6; ghG.add(ghGlow);
-  // its airlock, facing the same way as the outpost door
-  const ghLock = new THREE.Group(); ghLock.position.set(0, 0, GH.r - 0.2); ghG.add(ghLock);
+  // its airlock, on the west side where nothing is parked
+  const ghLock = new THREE.Group(); ghLock.position.set(-(GH.r - 0.2), 0, 0); ghLock.rotation.y = -Math.PI / 2; ghG.add(ghLock);
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.9, 1.8), white), 0, 1.45, 0.6));
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.4, 0.1), dark), 0, 1.25, 1.52));
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, 0.15), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.6, 1.55));
@@ -260,7 +260,7 @@ function makeOutpost() {
   foot.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.5), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 0.05, 2.2 * LANDER_SCALE + 0.9));
   g.add(lander);
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: GH.x, z: GH.z, r: GH.r + 0.3 }, { x: GH.x, z: GH.z + GH.r + 0.4, r: 1.3 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.3 * LANDER_SCALE }, { x: 9, z: 9, r: 0.6 }] };
+  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: GH.x, z: GH.z, r: GH.r + 0.3 }, { x: GH.x - GH.r - 0.4, z: GH.z, r: 1.3 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.3 * LANDER_SCALE }, { x: 9, z: 9, r: 0.6 }] };
 }
 
 // Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
@@ -748,7 +748,7 @@ export class World {
     const p = this.player.position, list = [];
     if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
     list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
-    list.push({ type: 'ghdoor', d: Math.hypot(p.x - GH.x, p.z - (GH.z + GH.r + 2.6)) });   // the greenhouse airlock
+    list.push({ type: 'ghdoor', d: Math.hypot(p.x - (GH.x - GH.r - 2.6), p.z - GH.z) });   // the greenhouse airlock
     if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start
     if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });

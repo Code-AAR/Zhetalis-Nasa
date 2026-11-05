@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS } from './sim.js';
 import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords } from './spaceweather.js';
-import { World } from './world.js';
+import { World, GH } from './world.js';
 import { Launch } from './launch.js';
 import { Interior } from './interior.js';
 import { Capsule } from './capsule.js';
+import { Greenhouse } from './greenhouse.js';
 import { showMissionPath } from './missionpath.js';
 import { showArrival } from './arrival.js';
 import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
@@ -48,7 +49,7 @@ const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
 const state = { phase: 'title', difficulty: 'normal', speed: 1 };
 let colony, marsNow = null, monitorTipShown = false, toolbarKey = '', visorKey = '';
-let capsule, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
+let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
@@ -130,7 +131,7 @@ function saveGame() {
   const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
   const data = {
     v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
-    solClock, suit, inside, ship: inside && room === capsule, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
+    solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
     world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
     colony: colony?.s,
@@ -175,7 +176,7 @@ async function resume(d) {
   world.setPanels(outpost.panels); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
   world.setLink(outpost.today.link); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
   world.setDust(!!outpost.dust);
-  if (d.inside) (d.ship ? goInShip() : goInside()); else inside = false;
+  if (d.inside) (d.ship ? goInShip() : d.gh ? goInGreenhouse('hab') : goInside()); else inside = false;
   loadRoverPhotos(); loadEarthToday();
   setSound({ scene: 'mars' });
   await weatherReady;
@@ -206,6 +207,7 @@ function buildWorld() {
   world = new World(renderer, F, () => {});
   interior = new Interior(); capsule = new Capsule(); room = interior;
   capsule.onStep = () => footstep(0, true);
+  ghRoom = new Greenhouse(); ghRoom.onStep = () => footstep(0, true);
   if (hasArt('mars-ground')) world.useGroundArt(artUrl('mars-ground'));
   world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
   outpost = new Outpost(state.difficulty, F);
@@ -257,8 +259,24 @@ function goInShip() {
   inside = true; room = capsule; capsule.enter(); document.exitPointerLock?.();
   toast(`🚀 You climbed the ladder into your lander. 4 astronauts rode down to Mars in this cabin! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
 }
+// The base greenhouse (greenhouse.js): from the outpost through the tunnel ('hab'), or from outside through its airlock ('out')
+function goInGreenhouse(from) {
+  const wasOut = !inside;
+  inside = true; room = ghRoom; ghRoom.enter(from); ghRoom.draw(colony.s.base, GREENHOUSE.tank);
+  if (wasOut) document.exitPointerLock?.();
+  if (!ghTipShown) {
+    ghTipShown = true;
+    toast(`🌱 The greenhouse! Its 4 grow beds feed the crew. ${keyWord('Press E', 'Tap Use')} at the end of a bed to plant seeds, fill it from the water pipe and harvest food.`, 7000);
+  }
+}
 function goOutside() {
   inside = false;
+  if (room === ghRoom) {   // out through the greenhouse airlock
+    room = interior;
+    world.player.position.set(GH.x - GH.r - 3.2, 0, GH.z); world.yaw = -Math.PI / 2; world.lookPitch = 0;   // west of the dome, facing away
+    if (!world.firstPerson) world.yaw = Math.PI / 2;
+    return;
+  }
   if (room === capsule) {   // down the stairs from the capsule hatch
     room = interior; const d = world.shipDoor;
     world.player.position.set(d.x + 0.35, 0, d.z + 1.0); world.yaw = Math.atan2(-d.x, -d.z); world.lookPitch = 0;
@@ -277,7 +295,15 @@ function stationAction(s) {
   if (s.type === 'ship-panel') return modal({ pause: false, title: '🖥 The glass cockpit', html: `<p>Like NASA's Orion capsule, your lander is flown with <b>three big screens</b> instead of hundreds of dials and switches. The crew can swap what each screen shows - flight path, power, air and the heat shield.</p>${factHTML(F.orion)}<p>Orion's <b>heat shield</b> is on its bottom. Coming home it gets hotter than the surface of a lava flow, and it slowly burns away to carry the heat off.</p>` });
   if (s.type === 'console') return openPower();
   if (s.type === 'workbench') return openWorkbench();
-  if (s.type === 'greenhouse') return modal({ pause: false, title: '🌱 The greenhouse', html: `<p>Plants here grow your food. They need light and warmth, so they use <b>life-support power</b>. Right now they make <b>${outpost.today.food.toFixed(1)} meals</b> each sol and your crew eats <b>${outpost.crew}</b>.</p>${factHTML(F.farming)}` });
+  if (s.type === 'greenhouse') return goInGreenhouse('hab');
+  if (s.type === 'gh-hab') { goInside(); interior.pos.set(-2.8, 0, 0); interior.yaw = Math.PI / 2; return; }   // back through the tunnel
+  if (s.type === 'gh-out') return goOutside();
+  if (s.type === 'gh-bed') return openGreenhouse(colony.baseBeds[s.bed]);
+  if (s.type === 'gh-tap') {
+    if (!colony.has('jug')) return toast('💧 This tap fills the water jug for greenhouses you build outside. The jug is in the storage locker in the outpost.', 5000);
+    const l = colony.fillJug(); toolbarKey = '';
+    return toast(l ? `💧 Filled your jug with ${l} L (base tank: ${colony.s.tank.toFixed(0)} L left).` : colony.s.tank <= 0 ? '💧 The base water tank is empty - collect ice outside!' : '💧 Your jug is already full.');
+  }
   if (s.type === 'shelter') return modal({ pause: false, title: '🛏 Storm shelter', html: `<p>During a solar storm, the crew squeezes into this small room with the thickest walls. It blocks most of the radiation - but nobody can do science or go outside.</p><p>${outpost.storm ? (outpost.shelter ? `<b>Sheltering now:</b> ${outpost.shelter} sols left.` : '<b>A solar storm is happening!</b> Choosing "hide in the shelter" in the warning keeps you safe.') : 'No storm right now.'}</p>${factHTML(F.careerLimit)}` });
   if (s.type === 'window') return openWindow();
   if (s.type === 'monitor') return openMonitor();
@@ -524,14 +550,17 @@ function openGreenhouse(h) {
     : gh.ready ? `<p class="pos">${c.icon} <b>${c.name}</b> - ripe and ready to harvest (${c.meals} meals).</p>`
     : `<p>${c.icon} <b>${c.name}</b> - ${Math.round(gh.grown * 100)}% grown. Ready in about ${Math.ceil((1 - gh.grown) * c.sols - 1e-6)} sol(s) <small>(in real life: ${c.real})</small>.</p>`;
   const plantBtns = !c ? Object.entries(CROPS).map(([k, cr]) => `<button data-plant="${k}" ${s.seeds[k] ? '' : 'disabled'}><span><b>${cr.icon} ${cr.name}</b><small>${s.seeds[k]} seeds · grows in ${cr.sols} sols · drinks ${cr.water} L · ${cr.meals} meals</small></span></button>`).join('') : '';
-  modal({ pause: false, title: '🌱 Your greenhouse', html: `${status}
-    <p>💧 Water tank: <b>${gh.tank.toFixed(1)} / ${GREENHOUSE.tank} L</b>${c && !gh.ready ? ` · the plants drink ${(c.water / c.sols).toFixed(1)} L a sol` : ''}. ${colony.has('jug') ? `Your jug holds <b>${s.jug} L</b>.` : 'Bring the water jug from the locker to top it up.'}</p>
+  const how = h.base ? `This bed is plumbed into the outpost's water tank (<b>${s.tank.toFixed(0)} L</b> left - melt ice to refill it).` : colony.has('jug') ? `Your jug holds <b>${s.jug} L</b>.` : 'Bring the water jug from the locker to top it up.';
+  modal({ pause: false, title: h.base ? `🌱 Grow bed ${h.bed + 1}` : '🌱 Your greenhouse', html: `${status}
+    <p>💧 Water: <b>${gh.tank.toFixed(1)} / ${GREENHOUSE.tank} L</b>${c && !gh.ready ? ` · the plants drink ${(c.water / c.sols).toFixed(1)} L a sol` : ''}. ${how}</p>
     <div class="shop">${plantBtns}
-      ${colony.has('jug') && s.jug > 0 && gh.tank < GREENHOUSE.tank ? '<button data-water><span><b>💧 Pour in the water</b></span></button>' : ''}
+      ${h.base && s.tank > 0 && gh.tank < GREENHOUSE.tank ? '<button data-pipe><span><b>💧 Fill from the water pipe</b></span></button>' : ''}
+      ${!h.base && colony.has('jug') && s.jug > 0 && gh.tank < GREENHOUSE.tank ? '<button data-water><span><b>💧 Pour in the water</b></span></button>' : ''}
       ${gh.ready ? '<button data-harvest class="primary"><span><b>🧺 Harvest</b></span></button>' : ''}</div>
     ${factHTML(c ? F.veggie : F.perchlorate)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box'), again = () => { toolbarKey = ''; openGreenhouse(h); };
   box.querySelectorAll('[data-plant]').forEach(b => (b.onclick = () => { colony.plant(h, b.dataset.plant); toast(`🌱 Planted ${CROPS[b.dataset.plant].name.toLowerCase()}.`); again(); }));
+  box.querySelector('[data-pipe]')?.addEventListener('click', () => { const l = colony.waterFromPipe(h); toast(`💧 ${l.toFixed(0)} L of water flowed into the bed.`); again(); });
   box.querySelector('[data-water]')?.addEventListener('click', () => { const l = colony.water(h); toast(`💧 Poured ${l} L into the hydroponic tank.`); again(); });
   box.querySelector('[data-harvest]')?.addEventListener('click', () => { const m = colony.harvest(h, outpost); toast(`🧺 Harvested! +${m} meals for the crew.`); again(); });
 }
@@ -612,6 +641,7 @@ function handle(ev) {
 function collect(n) {
   if (n.type === 'door') return goInside();
   if (n.type === 'ship') return goInShip();
+  if (n.type === 'ghdoor') return goInGreenhouse('out');
   if (n.type === 'ore') return mine(n.deposit);
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
   if (n.type === 'sev') {
@@ -816,7 +846,7 @@ function drawHUD() {
     } else {
       near = world.nearest();
       const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names['sev-exit'] = 'climb out';
+      names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names.ghdoor = 'go into the greenhouse'; names['sev-exit'] = 'climb out';
       if (near?.type === 'ore') hint = `${useWord} to mine ${ORES[near.deposit.ore].name.toLowerCase()}${colony.tool === 'pickaxe' ? '' : ' with your pickaxe'}${colony.bagCount() >= BAG ? ' (bag full!)' : ''}`;
       else if (near?.type === 'greenhouse') hint = `${useWord} to tend the greenhouse${near.house.gh.ready ? ' - ready to harvest!' : ''}`;
       else if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out`;
@@ -833,7 +863,7 @@ function drawHUD() {
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false;
 
 // Launch captions: when the words change, the old ones fade out slowly while the new ones fade in,
@@ -888,6 +918,7 @@ renderer.setAnimationLoop(() => {
     const paused = isPaused();
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
     if (inside) room.update(dt, world.keys, !isModalOpen());
+    if (inside && room === ghRoom) ghRoom.draw(colony.s.base, GREENHOUSE.tank);
     else world.update(dt, !isModalOpen());
     if (!paused && !outpost.over) {
       const step = dt * state.speed;
