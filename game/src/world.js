@@ -118,6 +118,7 @@ function makeRocks(rng) {
   return { rocks, colliders };
 }
 
+const LANDER_SCALE = 1.6;   // the team lander model is 11 m tall; 1.6x makes it a roomy crew lander
 function mat(color, extra = {}) { return new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra }); }
 // Three.js positions can't be replaced, only changed - this places a mesh and returns it.
 function at(mesh, x, y, z) { mesh.position.set(x, y, z); return mesh; }
@@ -148,37 +149,23 @@ function makeOutpost() {
   // water-wall shielding ring, shown after the upgrade
   const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 64, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
   wall.position.y = 1.3; wall.visible = false; g.add(wall);
-  // the lander you arrived in: NASA's Orion crew capsule at its real size (loaded in World), on a landing stage.
-  // These simple shapes stand in until the model arrives. Its stairs face the outpost.
-  const lander = new THREE.Group(); lander.position.set(-6, 0, -17); lander.rotation.y = Math.atan2(6, 17);
-  const steel = mat('#8d939b', { flatShading: false }), gold = mat('#c9a248', { flatShading: false });
-  const simple = new THREE.Group(); lander.add(simple); lander.userData.simple = simple;
-  simple.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.5, 2.6, 40), white), 0, 2.7, 0));        // capsule-shaped stand-in
-  simple.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.4, 0.3, 40), mat('#6b5544')), 0, 1.25, 0));
-  // landing stage: a gold-foil deck on four legs, with engines underneath
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.55, 40), gold), 0, 0.95, 0));
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.75, 2.75, 0.08, 40), steel), 0, 1.24, 0));
+  // the lander you arrived in: the team's lander model (assets/lander.glb, loaded in World), made 1.6x bigger -
+  // about 17.6 m tall and 6.3 m wide, like the big crew landers NASA studies for Mars. Its ladder and door face the outpost.
+  // These simple shapes stand in until the model arrives.
+  const lander = new THREE.Group(); lander.position.set(-6, 0, -17); lander.rotation.y = Math.atan2(6, 17); lander.scale.setScalar(LANDER_SCALE); lander.name = 'lander';
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.2, 7, 48), white), 0, 4.5, 0));
+  lander.add(at(new THREE.Mesh(new THREE.ConeGeometry(1.6, 3, 48), white), 0, 9.5, 0));
   for (let i = 0; i < 4; i++) {
-    const a = i * Math.PI / 2 + Math.PI / 4, cx = Math.cos(a), cz = Math.sin(a);
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.9, 16), steel);
-    leg.position.set(cx * 2.9, 0.65, cz * 2.9); leg.lookAt(cx * 2.3, 1.2, cz * 2.3); leg.rotateX(Math.PI / 2); lander.add(leg);
-    lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.12, 24), steel), cx * 3.4, 0.06, cz * 3.4));   // footpad
-    const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.42, 0.6, 24, 1, true), mat('#3a3c42', { side: THREE.DoubleSide, flatShading: false }));
-    lander.add(at(bell, Math.cos(a) * 1.1, 0.45, Math.sin(a) * 1.1));   // engine bell
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 0.25), dark);
+    leg.position.set(Math.cos(i * Math.PI / 2) * 2.3, 1.2, Math.sin(i * Math.PI / 2) * 2.3); leg.rotation.z = Math.cos(i * Math.PI / 2) * 0.35; leg.rotation.x = -Math.sin(i * Math.PI / 2) * 0.35; lander.add(leg);
   }
-  // stairs up to Orion's side hatch
-  const stairs = new THREE.Group(); stairs.position.set(0, 0, 2.2); lander.add(stairs);
-  for (let i = 0; i < 7; i++) stairs.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.07, 0.34), steel), 0, 0.3 + i * 0.32, 2.3 - i * 0.33));
-  for (const x of [-0.6, 0.6]) {
-    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.8, 12), mat('#d9683a', { flatShading: false }));
-    rail.position.set(x, 2.1, 1.31); rail.rotation.x = -Math.atan2(1.98, 1.92); stairs.add(rail);
-    stairs.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.15, 12), steel), x, 0.57, 2.3));
-  }
-  const hatchLight = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: '#7dffb2' }));
-  hatchLight.position.set(0, 0.12, 2.75); stairs.add(hatchLight);   // a green strip at the foot of the stairs
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 48), stripe), 0, 6.5, 0));
+  // a glowing green strip at the foot of the ladder: walk here and press E to climb up to the door
+  const foot = new THREE.Group(); foot.position.copy(lander.position); foot.rotation.y = lander.rotation.y; g.add(foot);
+  foot.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.5), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 0.05, 2.2 * LANDER_SCALE + 0.9));
   g.add(lander);
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 3.1 }, { x: 9, z: 9, r: 0.6 }] };
+  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.3 * LANDER_SCALE }, { x: 9, z: 9, r: 0.6 }] };
 }
 
 // Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
@@ -257,7 +244,6 @@ function makeAstronaut() {
 }
 
 // Turn by the shortest way round (so you never spin 350° to face 10° to the left).
-const ORION_HATCH = 0;          // turns NASA's Orion model so its side hatch faces the stairs
 const WALK = 3.2, RUN = 6.2;   // m/s - a brisk walk and a low-gravity lope (take the rover for long trips)
 const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
@@ -356,7 +342,7 @@ export class World {
       rig.add(a.root); this.suit = a;
     }).catch(err => { console.warn('NASA astronaut failed', err); this.swapModel('astronaut.glb', this.player.userData.rig, 1.85); });
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
-    this.useOrion();
+    this.useLander();
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
     this.move = new THREE.Vector3(); this.gait = 0; this.swing = 0; this.squash = 0; this.lean = { x: 0, z: 0 };   // animation state
     this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
@@ -364,19 +350,12 @@ export class World {
     this.setTime(this.phase);
   }
 
-  // NASA's Orion crew capsule (assets/orion.glb, made by scripts/build-orion-model.py) at its real size: 5 m across, 3.3 m tall.
-  // If it can't load, the team's lander model (assets/lander.glb) or the simple shapes are used instead.
-  useOrion() {
-    const lander = this.outpost.group.children.find(c => c.isGroup && c.position.z === -17);
+  // The team's lander model, scaled up (LANDER_SCALE). Its door and ladder face local +z.
+  useLander() {
+    const lander = this.outpost.group.getObjectByName('lander');
     lander.updateWorldMatrix(true, false);
-    this.shipDoor = lander.localToWorld(new THREE.Vector3(0, 0, 5.3)); this.shipDoor.y = 0;
-    loadModel('orion.glb').then(g => {
-      if (!g) return this.swapModel('lander.glb', lander, 11);
-      const m = g.scene.clone();
-      m.position.y = 1.28; m.rotation.y = ORION_HATCH;       // sits on the landing stage, side hatch over the stairs
-      m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const mt of [].concat(o.material)) { mt.color?.lerp(new THREE.Color('#c58a62'), 0.08); } } });   // a little Mars dust
-      lander.userData.simple.visible = false; lander.add(m);
-    });
+    this.shipDoor = lander.localToWorld(new THREE.Vector3(0, 0, 2.2 + 0.9 / LANDER_SCALE)); this.shipDoor.y = 0;   // the foot of the ladder
+    this.swapModel('lander.glb', lander, 11);
   }
 
   swapModel(file, target, height, onlyChildren) {

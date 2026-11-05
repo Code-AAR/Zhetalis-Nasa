@@ -46,7 +46,7 @@ let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
 const state = { phase: 'title', difficulty: 'normal', speed: 1 };
-let capsule, room;   // room: the indoor place you are in - the outpost (interior) or your Orion capsule
+let capsule, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
@@ -110,7 +110,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Orion crew capsule (your landing capsule) - NASA's 3D-printing model, scaled to the real 5.02 m width and coloured like the real capsule; the cabin inside and the landing stage under it are made by the team, at Orion's real size. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -245,10 +245,10 @@ function goInside() {
   inside = true; room = interior; interior.enter(); document.exitPointerLock?.();
   toast(`🏠 Inside the outpost: you are shielded and your suit refills. Walk to the stations and ${keyWord('press E', 'tap Use')}.`, 4500);
 }
-// Your landing capsule: NASA's Orion crew cabin at its real size (capsule.js)
+// Your lander: climb the ladder into its crew cabin (capsule.js)
 function goInShip() {
   inside = true; room = capsule; capsule.enter(); document.exitPointerLock?.();
-  toast(`🚀 Inside your landing capsule. This is NASA's Orion cabin at its real size - 4 astronauts lived in here for the whole flight! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
+  toast(`🚀 You climbed the ladder into your lander. 4 astronauts rode down to Mars in this cabin! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
 }
 function goOutside() {
   inside = false;
@@ -266,8 +266,8 @@ function goOutside() {
 
 function stationAction(s) {
   if (s.type === 'exit' || s.type === 'ship-exit') return goOutside();
-  if (s.type === 'ship-seat') return modal({ pause: false, title: '💺 The crew seats', html: `<p>Orion has seats for <b>4 astronauts</b>. For launch and landing they lie on their backs with their knees up - that way the strong push of the rockets presses them into the seat instead of draining blood from their heads.</p>${factHTML(F.artemis2)}<p class="source">The cabin around you is built at the real size of NASA's Orion capsule (5 m across outside). Inside there is only about as much living space as a small camper van - for a whole crew!</p>` });
-  if (s.type === 'ship-panel') return modal({ pause: false, title: '🖥 The glass cockpit', html: `<p>Orion is flown with <b>three big screens</b> instead of hundreds of dials and switches. The crew can swap what each screen shows - flight path, power, air and the heat shield.</p>${factHTML(F.orion)}<p>Orion's <b>heat shield</b> is the brown bottom you saw outside. Coming home it gets hotter than the surface of a lava flow, and it slowly burns away to carry the heat off.</p>` });
+  if (s.type === 'ship-seat') return modal({ pause: false, title: '💺 The crew seats', html: `<p>Your lander has seats for <b>4 astronauts</b>, like NASA's Orion capsule. For launch and landing they lie on their backs with their knees up - that way the strong push of the rockets presses them into the seat instead of draining blood from their heads.</p>${factHTML(F.artemis2)}<p class="source">Orion, the capsule NASA astronauts fly in today, has only about as much living space as a small camper van - for a whole crew!</p>` });
+  if (s.type === 'ship-panel') return modal({ pause: false, title: '🖥 The glass cockpit', html: `<p>Like NASA's Orion capsule, your lander is flown with <b>three big screens</b> instead of hundreds of dials and switches. The crew can swap what each screen shows - flight path, power, air and the heat shield.</p>${factHTML(F.orion)}<p>Orion's <b>heat shield</b> is on its bottom. Coming home it gets hotter than the surface of a lava flow, and it slowly burns away to carry the heat off.</p>` });
   if (s.type === 'console') return openPower();
   if (s.type === 'workbench') return openWorkbench();
   if (s.type === 'greenhouse') return modal({ pause: false, title: '🌱 The greenhouse', html: `<p>Plants here grow your food. They need light and warmth, so they use <b>life-support power</b>. Right now they make <b>${outpost.today.food.toFixed(1)} meals</b> each sol and your crew eats <b>${outpost.crew}</b>.</p>${factHTML(F.farming)}` });
@@ -621,7 +621,7 @@ function drawHUD() {
     } else {
       near = world.nearest();
       const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      names.sev = 'get in the rover and drive'; names.ship = 'go inside your landing capsule (NASA Orion)'; names['sev-exit'] = 'climb out';
+      names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names['sev-exit'] = 'climb out';
       if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out`;
       else hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
     }

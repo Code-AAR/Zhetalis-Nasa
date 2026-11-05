@@ -1,11 +1,11 @@
-// Inside your landing capsule: the crew cabin of NASA's Orion, at its real size (5 m across outside).
-// Orion is small - about 9 cubic metres of living space for 4 astronauts - so the walk-in cabin is cramped on purpose.
+// Inside your lander: the crew cabin behind the door at the top of the ladder.
+// Its cockpit, seats and windows are laid out like NASA's Orion capsule (4 seats, 3 big screens).
 // Same shape of class as interior.js (scene, camera, stations, enter, update, nearest), so main.js can switch rooms.
 import * as THREE from 'three';
 
-const FLOOR_R = 2.4, TOP_R = 1.0, H = 3.0;            // cabin: a cone like Orion's walls (metres)
+const FLOOR_R = 2.8, TOP_R = 1.5, H = 3.2;            // cabin: a cone like the lander's nose (metres)
 const SLOPE = Math.atan((FLOOR_R - TOP_R) / H);
-const WALK_R = 1.4;                                    // how far from the middle you can walk
+const WALK_R = 1.75;                                    // how far from the middle you can walk
 const SEG = 48;                                        // smooth curves
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.05, ...extra });
@@ -90,7 +90,7 @@ export class Capsule {
       this.scene.add(at(ring, 0, h, 0));
     }
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + Math.PI / 6, p = onWall(a, 2.65); p.add(rbox(0.5, 0.16, 0.02, 0.05, glow('#f4f8ff'))); this.scene.add(p); }
-    // wall ribs, like the panels that line Orion's cabin
+    // wall ribs, like the panels that line a spacecraft cabin
     for (let i = 0; i < 16; i++) { const p = onWall(i / 16 * Math.PI * 2 + Math.PI / 16, 1.6, 0.01); p.add(box(0.04, 2.4, 0.03, std('#c3c8ce'))); this.scene.add(p); }
 
     this.stations = [];
@@ -111,7 +111,7 @@ export class Capsule {
 
     // ---- the crew seats: two in front, two behind, all facing the displays ----
     const blue = std('#2f5fae', { roughness: 0.9 });
-    this.seatBox = { x0: -1.75, x1: 1.75, z0: -2.4, z1: -0.7 };
+    this.seatBox = { x0: -1.8, x1: 1.8, z0: -2.8, z1: -0.75 };
     [[-0.45, -1.05], [0.45, -1.05], [-1.2, -0.85], [1.2, -0.85]].forEach(([x, z], i) => {
       const s = seat(blue); s.position.set(x, i > 1 ? 0.0 : 0.05, z); s.rotation.y = Math.PI + (i > 1 ? Math.sign(x) * 0.35 : 0); this.scene.add(s);
     });
@@ -135,7 +135,7 @@ export class Capsule {
     }
     add('ship-panel', 'look at the cockpit displays', Math.PI, dash);
 
-    // ---- windows: Orion has four side windows plus the one in the hatch ----
+    // ---- windows on both sides, plus the one in the hatch ----
     for (const a of [1.15, -1.15]) {
       const w = onWall(a, 1.75);
       w.add(rbox(0.5, 0.42, 0.05, 0.12, std('#2b2f36')));
