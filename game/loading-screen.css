@@ -1,0 +1,20 @@
+/* Zhetalis.com intro, adapted to game readiness rather than a timed page cover.
+   Kept separate from the HUD and the original #loading fallback. */
+@property --brand-sweep { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+#loading.zhetalis-loading { background: #0b0b0a; color: #f4f1e8; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 26px; z-index: 100; padding: 24px; font: 13px Poppins, system-ui, sans-serif; }
+.zhetalis-loading .brand-mark { width: min(150px, 38vw); height: auto; mask-image: conic-gradient(from -90deg, #000 var(--brand-sweep), transparent 0); animation: brand-sweep 700ms cubic-bezier(.77,0,.175,1) 50ms both; }
+.zhetalis-loading .brand-word { padding: 4px 0; overflow: hidden; line-height: 0; }
+.zhetalis-loading .brand-word img { width: min(170px, 44vw); height: auto; animation: brand-word 500ms cubic-bezier(.23,1,.32,1) 450ms both; }
+.zhetalis-loading .brand-line { width: min(180px, 46vw); height: 1px; background: #423e30; overflow: hidden; }
+.zhetalis-loading .brand-line i { display: block; height: 100%; background: #b5a77b; transform-origin: left; animation: brand-line 900ms cubic-bezier(.77,0,.175,1) 50ms both; }
+.zhetalis-loading .brand-status { margin: 0; max-width: 320px; text-align: center; line-height: 1.7; color: #bdb7a6; font-size: 12px; }
+#loading.zhetalis-loading.is-leaving { pointer-events: none; animation: brand-out 240ms cubic-bezier(.23,1,.32,1) forwards; }
+@keyframes brand-sweep { from { --brand-sweep: 0deg; } to { --brand-sweep: 360deg; } }
+@keyframes brand-word { from { transform: translateY(115%); } to { transform: translateY(0); } }
+@keyframes brand-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes brand-out { to { transform: translateY(-100%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .zhetalis-loading .brand-mark { animation: none; mask-image: none; }
+  .zhetalis-loading .brand-word img, .zhetalis-loading .brand-line i { animation: none; transform: none; }
+  #loading.zhetalis-loading.is-leaving { animation: none; }
+}

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark"><meta name="robots" content="noindex">
+  <title>Zhetalis loading screen · Internal preview</title>
+  <link rel="stylesheet" href="loading-screen.css">
+  <style>body{margin:0;background:#0b0b0a;color:#f4f1e8;font-family:system-ui,sans-serif}#loading{position:fixed;inset:0}.preview-controls{position:fixed;bottom:24px;left:24px;right:24px;display:flex;justify-content:center;gap:20px;z-index:101;font-size:12px}button,a{color:inherit;font:inherit;background:none;border:0;cursor:pointer;text-underline-offset:4px}button{text-decoration:underline}</style>
+</head>
+<body>
+  <div id="loading" data-brand-preview></div>
+  <nav class="preview-controls" aria-label="Preview controls"><button id="replay">Replay intro</button><a href="./">Back to game</a></nav>
+  <script type="module">
+    import { mountLoadingScreen } from './src/loading-screen.js';
+    const loading = document.querySelector('#loading');
+    const replay = () => { loading.className = ''; loading.replaceChildren(); void loading.offsetWidth; mountLoadingScreen(loading, { preview: true }); };
+    replay(); document.querySelector('#replay').onclick = replay;
+  </script>
+</body>
+</html>
