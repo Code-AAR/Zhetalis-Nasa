@@ -1,10 +1,22 @@
 // Inside the outpost: a round room you walk around in first person.
 // Each station does one job, so kids can see where each part of the trade-off "lives".
 import * as THREE from 'three';
+import { loadModel, replaceLogos } from './nasamodels.js';
 
 const R = 6;   // room radius in metres
 
+const SEG = 64;   // segments around the round walls and dome (smooth, still cheap: one room)
 function lam(color, extra = {}) { return new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra }); }
+function smooth(color, extra = {}) { return new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra }); }
+function rounded(w, h, d, r, mat) {   // a box with rounded edges (extruded rounded rectangle, depth along z)
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false, curveSegments: 8 }); g.translate(0, 0, -d / 2);
+  return new THREE.Mesh(g, mat);
+}
+function cyl(r, h, mat, seg = 24) { return new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat); }
 function glow(color) { return new THREE.MeshBasicMaterial({ color }); }
 function at(m, x, y, z) { m.position.set(x, y, z); return m; }
 
@@ -39,13 +51,13 @@ export class Interior {
     this.alarm = new THREE.PointLight('#ff3b2f', 0, 14, 1.4); this.alarm.position.set(0, 3.2, 0); this.scene.add(this.alarm);
 
     // shell
-    const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 4.2, 28, 1, true), lam('#e9e5dd', { side: THREE.BackSide }));
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 4.2, SEG, 1, true), lam('#e9e5dd', { side: THREE.BackSide }));
     this.scene.add(at(wall, 0, 2.1, 0));
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(R, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), lam('#f2efe9', { side: THREE.BackSide }));
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(R, SEG, 16, 0, Math.PI * 2, 0, Math.PI / 2), lam('#f2efe9', { side: THREE.BackSide }));
     this.scene.add(at(dome, 0, 4.2, 0));
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(R, 28), lam('#4a4d52')); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.6, 28), glow('#d9683a')); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01; this.scene.add(ring);
-    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.02, R - 0.02, 0.25, 28, 1, true), lam('#d9683a', { side: THREE.BackSide }));
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(R, SEG), lam('#4a4d52')); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.6, SEG), glow('#d9683a')); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01; this.scene.add(ring);
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.02, R - 0.02, 0.25, SEG, 1, true), lam('#d9683a', { side: THREE.BackSide }));
     this.scene.add(at(stripe, 0, 3.1, 0));
 
     this.stations = [];
@@ -57,25 +69,88 @@ export class Interior {
     lock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.25), glow('#7dffb2')), 0, 3.1, 0.02));
     add('exit', 'go outside (airlock)', 0, R - 0.25, lock);
 
-    // control console - the power split
+    // control console - the power split. A curved mission-control style desk: sloped keyboard shelf,
+    // three tilted screens on top, a status light bar and a chair.
     const desk = new THREE.Group();
-    desk.add(at(new THREE.Mesh(new THREE.BoxGeometry(3, 0.9, 1), lam('#6b7079')), 0, 0.45, 0));
-    this.consoleScreen = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.3), new THREE.MeshBasicMaterial({ map: screenTexture(['POWER CONTROL', 'Life  Comms', 'Science  Shield']) }));
-    desk.add(at(this.consoleScreen, 0, 1.75, 0.35)); this.consoleScreen.rotation.x = -0.2;
+    const grey = smooth('#59606a'), darkGrey = smooth('#2c3036', { roughness: 0.45 }), trim = smooth('#d9683a'), steel = smooth('#aab1ba', { metalness: 0.5, roughness: 0.35 });
+    desk.add(at(rounded(3.2, 0.82, 0.9, 0.12, grey), 0, 0.41, -0.05));                         // body
+    const shelf = rounded(3.3, 0.5, 0.06, 0.08, darkGrey); shelf.rotation.x = -Math.PI / 2 + 0.22; desk.add(at(shelf, 0, 0.86, 0.12));   // sloped work shelf
+    desk.add(at(new THREE.Mesh(new THREE.BoxGeometry(3.24, 0.05, 0.05), trim), 0, 0.84, 0.38));   // orange edge
+    for (const x of [-0.95, 0, 0.95]) {                                                         // keyboards and trackballs
+      const kb = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.025, 0.2), smooth('#1b1e22')); kb.rotation.x = 0.22; desk.add(at(kb, x, 0.9, 0.2));
+      desk.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.035, 20, 12), smooth('#3b7bd8')), x + 0.42, 0.91, 0.2));
+    }
+    const hood = rounded(3.3, 1.2, 0.18, 0.1, darkGrey); hood.rotation.x = -0.16; desk.add(at(hood, 0, 1.55, -0.38));   // screen frame
+    this.consoleScreen = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 0.95), new THREE.MeshBasicMaterial({ map: screenTexture(['POWER CONTROL', 'Life  Comms', 'Science  Shield']) }));
+    desk.add(at(this.consoleScreen, 0, 1.56, -0.27)); this.consoleScreen.rotation.x = -0.16;
+    const side = [['SOLAR', 'Panels  OK', 'Dust  low'], ['BATTERY', 'Charge', 'Night heat']];
+    [-1.0, 1.0].forEach((x, i) => {
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.7), new THREE.MeshBasicMaterial({ map: screenTexture(side[i], i ? '#ffd27a' : '#9fe7ff') }));
+      scr.rotation.set(-0.16, -Math.sign(x) * 0.12, 0, 'YXZ'); desk.add(at(scr, x * 1.02, 1.5, -0.16));
+    });
+    desk.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.18, -0.42));   // status light bar
+    for (let i = 0; i < 12; i++) {                                                             // two rows of switches
+      const sw = cyl(0.022, 0.05, smooth(i % 4 === 0 ? '#ffd27a' : '#c9ced6'), 12); sw.rotation.x = Math.PI / 2 - 0.22;
+      desk.add(at(sw, -1.5 + i * 0.07 + (i > 5 ? 2.58 : 0), 0.95, 0.03));
+    }
+    // a chair on a five-star base
+    const chair = new THREE.Group(), cushion = smooth('#3b7bd8', { roughness: 0.9 }); chair.position.set(0.4, 0, 1.05); chair.rotation.y = 0.25;
+    chair.add(at(cyl(0.05, 0.42, steel, 16), 0, 0.3, 0));
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.32), steel); leg.rotation.y = a; leg.position.set(Math.sin(a) * 0.16, 0.06, Math.cos(a) * 0.16); chair.add(leg); }
+    const seatPad = rounded(0.5, 0.5, 0.09, 0.12, cushion); seatPad.rotation.x = -Math.PI / 2; chair.add(at(seatPad, 0, 0.53, 0));
+    const backPad = rounded(0.46, 0.55, 0.08, 0.14, cushion); backPad.rotation.x = -0.12; chair.add(at(backPad, 0, 0.88, 0.24));
+    desk.add(chair);
     add('console', 'use the power console', 0, -(R - 0.9), desk);
 
-    // workbench - build upgrades from parts
+    // workbench - build upgrades from parts. A steel bench with drawers, a pegboard of tools, a vice,
+    // parts bins and a lamp - plus two real NASA tools from NASA 3D Resources (loadTools, below).
     const bench = new THREE.Group();
-    bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.9, 1.1), lam('#8a5a3c')), 0, 0.45, 0));
-    for (let i = 0; i < 4; i++) bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.25), lam(['#c9ced6', '#ffd27a', '#9fe7ff', '#d9683a'][i])), -0.9 + i * 0.6, 1.0, 0));
-    bench.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), new THREE.MeshBasicMaterial({ map: screenTexture(['WORKBENCH', 'Build upgrades'], '#ffd27a') })), 0, 2, -0.5));
+    bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.08, 1.0), smooth('#a0714f', { roughness: 0.8 })), 0, 0.92, 0));   // wooden top
+    for (const x of [-1.3, 1.3]) for (const z of [-0.42, 0.42]) bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.88, 0.07), steel), x, 0.44, z));
+    bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.05, 0.85), steel), 0, 0.18, 0));   // lower shelf
+    const drawers = new THREE.Group(); drawers.position.set(0.85, 0, 0); bench.add(drawers);
+    drawers.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.62, 0.9), smooth('#d9683a')), 0, 0.57, 0));
+    for (let i = 0; i < 3; i++) {
+      drawers.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.18, 0.02), smooth('#e57a4c')), 0, 0.37 + i * 0.2, 0.46));
+      drawers.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.04), steel), 0, 0.4 + i * 0.2, 0.48));
+    }
+    bench.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.3, 0.05), smooth('#cfc8bb', { roughness: 0.95 })), 0, 1.75, -0.5));   // pegboard
+    const holes = new THREE.InstancedMesh(new THREE.CircleGeometry(0.012, 6), smooth('#6b6459'), 22 * 10), mtx = new THREE.Matrix4();
+    for (let i = 0; i < 220; i++) holes.setMatrixAt(i, mtx.makeTranslation(-1.3 + (i % 22) * 0.124, 1.17 + Math.floor(i / 22) * 0.13, -0.474));
+    bench.add(holes);
+    const hang = (mesh, x, y, rz = 0) => { mesh.rotation.z = rz; bench.add(at(mesh, x, y, -0.45)); };
+    hang(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.3, 0.03), steel), -1.1, 1.85, 0.2);                 // screwdriver
+    hang(cyl(0.03, 0.14, smooth('#ffd27a'), 12), -1.12, 1.62, 0.2);
+    hang(new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 10, 32), smooth('#3b7bd8')), -0.7, 1.85);   // coil of cable
+    hang(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.03), steel), 0.6, 2.05);                       // ruler
+    for (let i = 0; i < 5; i++) hang(cyl(0.012 + i * 0.004, 0.18 + i * 0.03, steel, 10), 0.95 + i * 0.09, 1.65);   // drill bits
+    ['#c9ced6', '#ffd27a', '#9fe7ff', '#7dffb2'].forEach((c, i) => {                            // parts bins
+      const bin = new THREE.Group(); bin.position.set(-1.2 + i * 0.32, 0.96, -0.3);
+      bin.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.24), smooth('#3a3f46')), 0, 0.07, 0));
+      for (let k = 0; k < 4; k++) bin.add(at(new THREE.Mesh(new THREE.DodecahedronGeometry(0.035, 0), smooth(c, { metalness: 0.6, roughness: 0.3 })), -0.07 + k * 0.05, 0.15, (k % 2) * 0.05 - 0.02));
+      bench.add(bin);
+    });
+    const vice = new THREE.Group(); vice.position.set(1.15, 0.96, 0.35);                         // a bench vice
+    vice.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.18), smooth('#3b7bd8')), 0, 0.06, 0));
+    for (const z of [-0.06, 0.06]) vice.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.05), steel), 0, 0.17, z));
+    const screw = cyl(0.015, 0.3, steel, 12); screw.rotation.x = Math.PI / 2; vice.add(at(screw, 0, 0.1, 0.2));
+    bench.add(vice);
+    const lamp = new THREE.Group(); lamp.position.set(-1.25, 0.96, 0.3);                         // an arm lamp
+    lamp.add(cyl(0.1, 0.03, darkGrey, 24));
+    const arm = cyl(0.015, 0.7, steel, 10); arm.rotation.z = -0.5; lamp.add(at(arm, 0.17, 0.32, 0));
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.15, 24, 1, true), smooth('#ffd27a', { side: THREE.DoubleSide })); shade.rotation.z = 0.9; lamp.add(at(shade, 0.36, 0.62, 0));
+    const bulb = new THREE.PointLight('#fff1d6', 2.2, 2.5, 1.6); bulb.position.set(0.42, 0.55, 0); lamp.add(bulb);
+    bench.add(lamp);
+    bench.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.36), new THREE.MeshBasicMaterial({ map: screenTexture(['WORKBENCH', 'Build upgrades'], '#ffd27a') })), -0.85, 2.27, -0.47));
+    this.toolSpot = bench;
     add('workbench', 'build upgrades at the workbench', R - 0.9, 0, bench);
+    this.loadTools();
 
     // greenhouse shelves
     const green = new THREE.Group();
     for (let s = 0; s < 3; s++) {
       green.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.08, 0.8), lam('#bfbab2')), 0, 0.6 + s * 0.8, 0));
-      for (let p = 0; p < 6; p++) green.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.45, 5), lam('#4caf50')), -1 + p * 0.4, 0.86 + s * 0.8, 0));
+      for (let p = 0; p < 6; p++) green.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.45, 8), lam('#4caf50')), -1 + p * 0.4, 0.86 + s * 0.8, 0));
     }
     const growLight = new THREE.PointLight('#d66bff', 6, 4, 1.5); growLight.position.set(0, 2.8, 0.3); green.add(growLight);
     add('greenhouse', 'look at the greenhouse', -(R - 0.7), 0, green);
@@ -94,11 +169,37 @@ export class Interior {
 
     // crew table, off to the side so the walk from the airlock to the console stays clear
     this.table = { x: 2.6, z: 2.4 };
-    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 16), lam('#bfbab2')); this.scene.add(at(table, this.table.x, 0.8, this.table.z));
-    this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8), lam('#6b7079')), this.table.x, 0.4, this.table.z));
+    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 48), lam('#bfbab2')); this.scene.add(at(table, this.table.x, 0.8, this.table.z));
+    this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 16), lam('#6b7079')), this.table.x, 0.4, this.table.z));
 
     this.pos = new THREE.Vector3(0, 0, R - 1.6);
     this.yaw = Math.PI; this.pitch = 0;      // start just inside the airlock, facing the console
+  }
+
+  // Two real tools from NASA 3D Resources lie on the workbench, at about their real size:
+  // the Pistol Grip Tool astronauts use on spacewalks at the ISS, and a wrench.
+  loadTools() {
+    const place = (m, len, x, z, rot) => {
+      const sz = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+      m.scale.setScalar(len / Math.max(sz.x, sz.y, sz.z)); m.rotation.set(...rot); m.position.set(x, 0, z);
+      this.toolSpot.add(m); this.toolSpot.updateWorldMatrix(true, true);
+      const b = new THREE.Box3().setFromObject(m), base = this.toolSpot.localToWorld(new THREE.Vector3(0, 0.96, 0)).y;
+      m.position.y += base - b.min.y;   // rest it on the bench top
+    };
+    loadModel('pistol-grip-tool.glb').then(async g => {
+      if (!g) return;
+      const m = g.scene.clone(true);
+      for (const c of m.children.flatMap(ch => [ch, ...ch.children])) if (c.isMesh && c.material?.map) {   // no NASA logo in the game: cover the tiny one on its label
+        c.material = c.material.clone(); c.material.map = await replaceLogos(c.material.map, [{ x: 0.715, y: 0.697, r: 0.02, plain: true }]);
+      }
+      place(m, 0.38, -0.15, 0.18, [0, 0.6, Math.PI / 2]);
+    });
+    loadModel('wrench.glb').then(g => {
+      if (!g) return;
+      const m = g.scene.clone(true);
+      m.traverse(c => { if (c.isMesh) for (const mt of [].concat(c.material)) { mt.metalness = Math.min(mt.metalness ?? 0, 0.5); mt.roughness = Math.max(mt.roughness ?? 0.4, 0.35); } });
+      place(m, 0.3, 0.35, 0.2, [0, 0.4, 0]);
+    });
   }
 
   enter() { this.pos.set(0, 0, R - 1.6); this.yaw = Math.PI; this.pitch = 0; this.vel = { x: 0, z: 0 }; }

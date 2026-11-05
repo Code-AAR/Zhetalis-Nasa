@@ -4,6 +4,7 @@ import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords }
 import { World } from './world.js';
 import { Launch } from './launch.js';
 import { Interior } from './interior.js';
+import { Capsule } from './capsule.js';
 import { showMissionPath } from './missionpath.js';
 import { showArrival } from './arrival.js';
 import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
@@ -45,6 +46,7 @@ let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
 const state = { phase: 'title', difficulty: 'normal', speed: 1 };
+let capsule, room;   // room: the indoor place you are in - the outpost (interior) or your Orion capsule
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
@@ -108,7 +110,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Orion crew capsule (your landing capsule) - NASA's 3D-printing model, scaled to the real 5.02 m width and coloured like the real capsule; the cabin inside and the landing stage under it are made by the team, at Orion's real size. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -126,7 +128,7 @@ function saveGame() {
   const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
   const data = {
     v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
-    solClock, suit, inside, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
+    solClock, suit, inside, ship: inside && room === capsule, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
     world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
       pickups: world.pickups.map(k => [k.kind, k.x, k.z]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
   };
@@ -169,7 +171,7 @@ async function resume(d) {
   world.setPanels(outpost.panels); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
   world.setLink(outpost.today.link); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
   world.setDust(!!outpost.dust);
-  if (d.inside) goInside(); else inside = false;
+  if (d.inside) (d.ship ? goInShip() : goInside()); else inside = false;
   loadRoverPhotos(); loadEarthToday();
   setSound({ scene: 'mars' });
   await weatherReady;
@@ -198,7 +200,8 @@ $('#start').onclick = () => {
 
 function buildWorld() {
   world = new World(renderer, F, () => {});
-  interior = new Interior();
+  interior = new Interior(); capsule = new Capsule(); room = interior;
+  capsule.onStep = () => footstep(0, true);
   if (hasArt('mars-ground')) world.useGroundArt(artUrl('mars-ground'));
   world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
   outpost = new Outpost(state.difficulty, F);
@@ -239,18 +242,32 @@ async function arrive() {
 
 // ---------------- inside the outpost ----------------
 function goInside() {
-  inside = true; interior.enter(); document.exitPointerLock?.();
+  inside = true; room = interior; interior.enter(); document.exitPointerLock?.();
   toast(`🏠 Inside the outpost: you are shielded and your suit refills. Walk to the stations and ${keyWord('press E', 'tap Use')}.`, 4500);
+}
+// Your landing capsule: NASA's Orion crew cabin at its real size (capsule.js)
+function goInShip() {
+  inside = true; room = capsule; capsule.enter(); document.exitPointerLock?.();
+  toast(`🚀 Inside your landing capsule. This is NASA's Orion cabin at its real size - 4 astronauts lived in here for the whole flight! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
 }
 function goOutside() {
   inside = false;
+  if (room === capsule) {   // down the stairs from the capsule hatch
+    room = interior; const d = world.shipDoor;
+    world.player.position.set(d.x + 0.35, 0, d.z + 1.0); world.yaw = Math.atan2(-d.x, -d.z); world.lookPitch = 0;
+    if (!world.firstPerson) world.yaw += Math.PI;
+    return;
+  }
+  room = interior;
   world.player.position.set(0, 0, 10.5); world.yaw = 0; world.lookPitch = 0; // step out of the door, facing away from it
   if (!world.firstPerson) world.yaw = Math.PI;
   if (outpost.shelter) toast('⚠️ The solar storm is still going - you are not protected out here!', 4500);
 }
 
 function stationAction(s) {
-  if (s.type === 'exit') return goOutside();
+  if (s.type === 'exit' || s.type === 'ship-exit') return goOutside();
+  if (s.type === 'ship-seat') return modal({ pause: false, title: '💺 The crew seats', html: `<p>Orion has seats for <b>4 astronauts</b>. For launch and landing they lie on their backs with their knees up - that way the strong push of the rockets presses them into the seat instead of draining blood from their heads.</p>${factHTML(F.artemis2)}<p class="source">The cabin around you is built at the real size of NASA's Orion capsule (5 m across outside). Inside there is only about as much living space as a small camper van - for a whole crew!</p>` });
+  if (s.type === 'ship-panel') return modal({ pause: false, title: '🖥 The glass cockpit', html: `<p>Orion is flown with <b>three big screens</b> instead of hundreds of dials and switches. The crew can swap what each screen shows - flight path, power, air and the heat shield.</p>${factHTML(F.orion)}<p>Orion's <b>heat shield</b> is the brown bottom you saw outside. Coming home it gets hotter than the surface of a lava flow, and it slowly burns away to carry the heat off.</p>` });
   if (s.type === 'console') return openPower();
   if (s.type === 'workbench') return openWorkbench();
   if (s.type === 'greenhouse') return modal({ pause: false, title: '🌱 The greenhouse', html: `<p>Plants here grow your food. They need light and warmth, so they use <b>life-support power</b>. Right now they make <b>${outpost.today.food.toFixed(1)} meals</b> each sol and your crew eats <b>${outpost.crew}</b>.</p>${factHTML(F.farming)}` });
@@ -415,6 +432,7 @@ function handle(ev) {
 
 function collect(n) {
   if (n.type === 'door') return goInside();
+  if (n.type === 'ship') return goInShip();
   if (n.type === 'sev') {
     world.enterRover();
     if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Use')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it near the outpost to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
@@ -477,7 +495,7 @@ function endMission() {
 function pressKey(code) {
   if (state.phase !== 'mars' || isModalOpen()) return;
   if (code === 'KeyE') {
-    if (inside) { const s = interior.nearest(); if (s) stationAction(s); }
+    if (inside) { const s = room.nearest(); if (s) stationAction(s); }
     else { const n = world.nearest(); if (n) collect(n); }
   }
   if (code === 'KeyP') openPower();
@@ -490,16 +508,34 @@ addEventListener('keyup', e => { if (world) world.keys[e.code] = false; });
 // Mouse look needs pointer lock (desktop only). Phones have no pointer lock - they use the touch drag below.
 let lastPointer = 'mouse';
 $('#view').addEventListener('pointerdown', e => { lastPointer = e.pointerType; });
-$('#view').addEventListener('click', () => {
-  if (state.phase !== 'mars' || isModalOpen() || lastPointer === 'touch') return;
+const mouseLocked = () => document.pointerLockElement === $('#view');
+function captureMouse() {
+  if (state.phase !== 'mars' || isModalOpen() || isTouch()) return;
   try { $('#view').requestPointerLock?.()?.catch?.(() => {}); } catch { /* no pointer lock here */ }
+}
+$('#view').addEventListener('click', () => { if (lastPointer !== 'touch') captureMouse(); });
+// Free the mouse (Esc, which the browser always handles, or C) and capture it again (click the game, or C).
+addEventListener('keydown', e => {
+  if (e.code !== 'KeyC' || e.repeat || state.phase !== 'mars' || isModalOpen()) return;
+  if (mouseLocked()) document.exitPointerLock?.(); else captureMouse();
 });
+// A small note says which mode the mouse is in, so nobody gets "stuck" in the game.
+const mouseNote = document.createElement('div'); mouseNote.id = 'mouse-note'; mouseNote.className = 'hidden';
+$('#hud').appendChild(mouseNote);
+let mouseNoteKey = '';
+function drawMouseNote() {
+  const show = state.phase === 'mars' && !isTouch() && !isModalOpen() && !outpost?.over;
+  const text = !show ? '' : mouseLocked() ? '🖱 Mouse is steering the view · <b>Esc</b> or <b>C</b> frees the mouse' : '🖱 Mouse is free · <b>click the game</b> or press <b>C</b> to look around';
+  if (text === mouseNoteKey) return;
+  mouseNoteKey = text; mouseNote.innerHTML = text; mouseNote.classList.toggle('hidden', !text); mouseNote.classList.toggle('locked', mouseLocked());
+}
+document.addEventListener('pointerlockchange', drawMouseNote);
 // Turning the camera: the mouse and the touch drag share the same math
 function look(dx, dy) {
   if (!world) return;
   if (inside) {
-    interior.yaw -= dx * 0.0032;
-    interior.pitch = Math.max(-1.2, Math.min(1.2, interior.pitch - dy * 0.0028));
+    room.yaw -= dx * 0.0032;
+    room.pitch = Math.max(-1.2, Math.min(1.2, room.pitch - dy * 0.0028));
   } else {
     world.yaw -= dx * 0.0032;
     if (world.firstPerson) world.lookPitch = Math.max(-1.2, Math.min(1.2, world.lookPitch - dy * 0.0028));
@@ -546,7 +582,7 @@ $('#sound-btn').onclick = muteButton;
 soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: true });
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); world?.resize(); launch?.resize(); interior?.resize(); });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); world?.resize(); launch?.resize(); interior?.resize(); capsule?.resize(); });
 
 // ---------------- HUD ----------------
 function drawHUD() {
@@ -580,12 +616,12 @@ function drawHUD() {
   const useWord = keyWord('Press E', 'Tap Use');
   if (!isModalOpen()) {
     if (inside) {
-      near = interior.nearest();
+      near = room.nearest();
       hint = near ? `${useWord} to ${near.label}` : `Walk to a station · ${keyWord('click', 'drag')} to look around`;
     } else {
       near = world.nearest();
       const names = { door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      names.sev = 'get in the rover and drive'; names['sev-exit'] = 'climb out';
+      names.sev = 'get in the rover and drive'; names.ship = 'go inside your landing capsule (NASA Orion)'; names['sev-exit'] = 'climb out';
       if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out`;
       else hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
     }
@@ -593,12 +629,13 @@ function drawHUD() {
   const hintEl = $('#hint');                       // a hint that is no longer needed fades away slowly
   if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
   else hintEl.classList.add('gone');
+  drawMouseNote();
   touch.sync({ active: !isModalOpen() && !o.over, canUse: !!near, inside });
 }
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false;
 
 // Launch captions: when the words change, the old ones fade out slowly while the new ones fade in,
@@ -652,7 +689,7 @@ renderer.setAnimationLoop(() => {
   if (state.phase === 'mars' && world) {
     const paused = isPaused();
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
-    if (inside) interior.update(dt, world.keys, !isModalOpen());
+    if (inside) room.update(dt, world.keys, !isModalOpen());
     else world.update(dt, !isModalOpen());
     if (!paused && !outpost.over) {
       const step = dt * state.speed;
@@ -691,7 +728,7 @@ renderer.setAnimationLoop(() => {
     }
     interior.setStorm(!!outpost.storm, clock.elapsedTime);
     drawHUD();
-    if (inside) renderer.render(interior.scene, interior.camera);
+    if (inside) renderer.render(room.scene, room.camera);
     else renderer.render(world.scene, world.camera);
     return;
   }

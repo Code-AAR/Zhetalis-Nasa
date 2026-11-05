@@ -4,6 +4,9 @@
 //   assets/mobile-launcher.glb  - the Mobile Launcher tower SLS launches from (Kennedy Space Center)
 //   assets/mro.glb              - Mars Reconnaissance Orbiter, a real relay orbiter for Mars rovers
 //   assets/ingenuity.glb        - Ingenuity, the Mars helicopter
+//   assets/orion.glb            - Orion crew capsule, from NASA's 3D-printing model, real size (scripts/build-orion-model.py)
+//   assets/pistol-grip-tool.glb - Pistol Grip Tool, the ISS spacewalk power tool (on the outpost workbench)
+//   assets/wrench.glb           - Wrench (on the outpost workbench)
 //   assets/nasa-astronaut.glb   - NASA's "Astronaut" model: the player (logo painted over, cut into joints in suit.js)
 //   assets/gusev-height.bin     - heights sampled from NASA's 3D model of Spirit's landing site (Gusev Crater):
 //                                 https://science.nasa.gov/3d-resources/mars-spirit-landing-site/

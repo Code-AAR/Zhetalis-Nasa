@@ -341,3 +341,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* the full-screen button only appears where the browser supports it */
 .fs-btn { display: none; }
 body.can-fullscreen.touch .fs-btn { display: inline-block; }
+
+/* Mouse capture note (desktop): says whether the mouse steers the view, and how to free it */
+#mouse-note { position: absolute; right: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line); padding: 5px 14px; font-size: .82rem; opacity: .85; pointer-events: none; max-width: 230px; border-radius: 12px; }
+#mouse-note.locked { opacity: .6; }
+body.touch #mouse-note { display: none; }

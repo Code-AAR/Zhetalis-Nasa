@@ -125,41 +125,60 @@ function at(mesh, x, y, z) { mesh.position.set(x, y, z); return mesh; }
 // The outpost that is "already there" when you land.
 function makeOutpost() {
   const g = new THREE.Group();
-  const white = mat('#ece8e1'), stripe = mat('#d9683a'), dark = mat('#23262b'), glass = new THREE.MeshLambertMaterial({ color: '#9fd7c9', transparent: true, opacity: 0.45 });
-  const hab = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, 4.5, 16), white); hab.position.y = 2.25; g.add(hab);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), white); dome.position.y = 4.5; g.add(dome);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(6.45, 6.45, 0.5, 16), stripe); band.position.y = 3.6; g.add(band);
+  const white = mat('#ece8e1', { flatShading: false }), stripe = mat('#d9683a', { flatShading: false }), dark = mat('#23262b'), glass = new THREE.MeshLambertMaterial({ color: '#9fd7c9', transparent: true, opacity: 0.45 });
+  const hab = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, 4.5, 64), white); hab.position.y = 2.25; g.add(hab);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 64, 20, 0, Math.PI * 2, 0, Math.PI / 2), white); dome.position.y = 4.5; g.add(dome);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(6.45, 6.45, 0.5, 64), stripe); band.position.y = 3.6; g.add(band);
   const door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3, 0.6), dark); door.position.set(0, 1.5, 6.1); g.add(door);
   const doorLight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 0.7), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); doorLight.position.set(0, 3.1, 6.15); g.add(doorLight);
-  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 10), white); tunnel.rotation.z = Math.PI / 2; tunnel.position.set(-8.5, 1.4, 1); g.add(tunnel);
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 32), white); tunnel.rotation.z = Math.PI / 2; tunnel.position.set(-8.5, 1.4, 1); g.add(tunnel);
   // greenhouse
-  const gh = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), glass); gh.position.set(-14, 0, 1); g.add(gh);
+  const gh = new THREE.Mesh(new THREE.SphereGeometry(4.2, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), glass); gh.position.set(-14, 0, 1); g.add(gh);
   for (let i = 0; i < 14; i++) {
-    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1 + (i % 3) * 0.3, 5), mat('#4caf50'));
+    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1 + (i % 3) * 0.3, 8), mat('#4caf50'));
     plant.position.set(-14 + Math.cos(i) * 2.4 * ((i % 4) / 4 + 0.3), 0.6, 1 + Math.sin(i * 1.7) * 2.2 * ((i % 3) / 3 + 0.3)); g.add(plant);
   }
   // comms dish
   const comms = new THREE.Group(); comms.position.set(9, 0, 9);
-  comms.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 5, 8), white), 0, 2.5, 0));
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 14, 6, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshLambertMaterial({ color: '#ece8e1', side: THREE.DoubleSide }));
+  comms.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 5, 20), white), 0, 2.5, 0));
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(2, 40, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshLambertMaterial({ color: '#ece8e1', side: THREE.DoubleSide }));
   dish.rotation.x = -Math.PI / 2.6; dish.position.y = 5.2; comms.add(dish);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); beacon.position.y = 6.4; comms.add(beacon);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 14), new THREE.MeshBasicMaterial({ color: '#7dffb2' })); beacon.position.y = 6.4; comms.add(beacon);
   g.add(comms);
   // water-wall shielding ring, shown after the upgrade
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 18, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.9, 6.9, 2.6, 64, 1, true), new THREE.MeshLambertMaterial({ color: '#3b7bd8', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
   wall.position.y = 1.3; wall.visible = false; g.add(wall);
-  // the lander you arrived in
-  const lander = new THREE.Group(); lander.position.set(-6, 0, -17);
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.2, 7, 12), white), 0, 4.5, 0));
-  lander.add(at(new THREE.Mesh(new THREE.ConeGeometry(1.6, 3, 12), white), 0, 9.5, 0));
+  // the lander you arrived in: NASA's Orion crew capsule at its real size (loaded in World), on a landing stage.
+  // These simple shapes stand in until the model arrives. Its stairs face the outpost.
+  const lander = new THREE.Group(); lander.position.set(-6, 0, -17); lander.rotation.y = Math.atan2(6, 17);
+  const steel = mat('#8d939b', { flatShading: false }), gold = mat('#c9a248', { flatShading: false });
+  const simple = new THREE.Group(); lander.add(simple); lander.userData.simple = simple;
+  simple.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.1, 2.5, 2.6, 40), white), 0, 2.7, 0));        // capsule-shaped stand-in
+  simple.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.4, 0.3, 40), mat('#6b5544')), 0, 1.25, 0));
+  // landing stage: a gold-foil deck on four legs, with engines underneath
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.55, 40), gold), 0, 0.95, 0));
+  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(2.75, 2.75, 0.08, 40), steel), 0, 1.24, 0));
   for (let i = 0; i < 4; i++) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 0.25), dark);
-    leg.position.set(Math.cos(i * Math.PI / 2) * 2.3, 1.2, Math.sin(i * Math.PI / 2) * 2.3); leg.rotation.z = Math.cos(i * Math.PI / 2) * 0.35; leg.rotation.x = -Math.sin(i * Math.PI / 2) * 0.35; lander.add(leg);
+    const a = i * Math.PI / 2 + Math.PI / 4, cx = Math.cos(a), cz = Math.sin(a);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.9, 16), steel);
+    leg.position.set(cx * 2.9, 0.65, cz * 2.9); leg.lookAt(cx * 2.3, 1.2, cz * 2.3); leg.rotateX(Math.PI / 2); lander.add(leg);
+    lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.12, 24), steel), cx * 3.4, 0.06, cz * 3.4));   // footpad
+    const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.42, 0.6, 24, 1, true), mat('#3a3c42', { side: THREE.DoubleSide, flatShading: false }));
+    lander.add(at(bell, Math.cos(a) * 1.1, 0.45, Math.sin(a) * 1.1));   // engine bell
   }
-  lander.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 12), stripe), 0, 6.5, 0));
+  // stairs up to Orion's side hatch
+  const stairs = new THREE.Group(); stairs.position.set(0, 0, 2.2); lander.add(stairs);
+  for (let i = 0; i < 7; i++) stairs.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.07, 0.34), steel), 0, 0.3 + i * 0.32, 2.3 - i * 0.33));
+  for (const x of [-0.6, 0.6]) {
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.8, 12), mat('#d9683a', { flatShading: false }));
+    rail.position.set(x, 2.1, 1.31); rail.rotation.x = -Math.atan2(1.98, 1.92); stairs.add(rail);
+    stairs.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.15, 12), steel), x, 0.57, 2.3));
+  }
+  const hatchLight = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: '#7dffb2' }));
+  hatchLight.position.set(0, 0.12, 2.75); stairs.add(hatchLight);   // a green strip at the foot of the stairs
   g.add(lander);
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.6 }, { x: 9, z: 9, r: 0.6 }] };
+  return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 3.1 }, { x: 9, z: 9, r: 0.6 }] };
 }
 
 // Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
@@ -171,7 +190,7 @@ function makeSkyLights(scene) {
   const tex = new THREE.CanvasTexture(c);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#fff1dc', transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
   glow.scale.setScalar(260); scene.add(glow);
-  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 20), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
   scene.add(disc);
   // thousands of stars and the Milky Way; the thin, dry air of Mars makes the night sky very clear
   const stars = makeStars(850, 3500, true); scene.add(stars);
@@ -189,7 +208,7 @@ function makeSolarField() {
   for (let i = 0; i < 12; i++) {
     const p = new THREE.Group();
     const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 2), panelMat); board.rotation.x = -0.45; board.position.y = 1.3; p.add(board);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 6), frame); post.position.y = 0.65; p.add(post);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 12), frame); post.position.y = 0.65; p.add(post);
     p.position.set((i % 4) * 3.8, 0, Math.floor(i / 4) * 3.2);
     p.traverse(o => { if (o.isMesh) o.castShadow = true; });
     p.visible = false; g.add(p); panels.push(p);
@@ -203,7 +222,7 @@ function makePickup(kind) {
   const looks = {
     ice:   { geo: new THREE.IcosahedronGeometry(0.7, 0), color: '#9fe7ff', beam: '#9fe7ff' },
     metal: { geo: new THREE.OctahedronGeometry(0.6, 0),  color: '#c9ced6', beam: '#ffd27a' },
-    pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 10), color: '#f2f2f2', beam: '#ff7a3d' },
+    pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 24), color: '#f2f2f2', beam: '#ff7a3d' },
   }[kind];
   const body = new THREE.Mesh(looks.geo, new THREE.MeshLambertMaterial({ color: looks.color, emissive: looks.color, emissiveIntensity: 0.35, flatShading: true }));
   body.castShadow = true; body.position.y = 0.9; g.add(body);
@@ -220,7 +239,7 @@ function makeAstronaut() {
   const suit = mat('#f3f1ec'), orange = mat('#e2622f'), visor = new THREE.MeshPhongMaterial({ color: '#1b2a3a', shininess: 90, specular: '#ffcf9a' });
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.75, 4, 10), suit); body.position.y = 0.95; rig.add(body);
   const head = new THREE.Group(); head.position.y = 1.62; rig.add(head);                     // the helmet nods a little as you walk
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), suit); helmet.position.y = 0.16; head.add(helmet);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.38, 24, 16), suit); helmet.position.y = 0.16; head.add(helmet);
   const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, -Math.PI / 2.4, Math.PI / 1.2, Math.PI / 4, Math.PI / 2.4), visor); face.position.set(0, 0.18, 0.1); head.add(face);
   const pack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), suit); pack.position.set(0, 1.05, -0.42); rig.add(pack);
   const band = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.12, 0.86), orange); band.position.y = 1.3; rig.add(band);
@@ -238,6 +257,7 @@ function makeAstronaut() {
 }
 
 // Turn by the shortest way round (so you never spin 350° to face 10° to the left).
+const ORION_HATCH = 0;          // turns NASA's Orion model so its side hatch faces the stairs
 const WALK = 3.2, RUN = 6.2;   // m/s - a brisk walk and a low-gravity lope (take the rover for long trips)
 const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
@@ -317,10 +337,10 @@ export class World {
     this.scene.add(this.player);
 
     // regolith (Mars soil) mound, shown once you bury the outpost - with a gap left for the door
-    const soil = new THREE.MeshLambertMaterial({ color: '#9a5a36', flatShading: true });
+    const soil = new THREE.MeshLambertMaterial({ color: '#9a5a36' });
     this.regolith = new THREE.Group();
-    this.regolith.add(at(new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.4, 4.8, 20, 1, false, Math.PI * 0.12, Math.PI * 1.76), soil), 0, 2.4, 0));
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.6, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), soil); cap.position.y = 4.6; cap.scale.y = 0.75;
+    this.regolith.add(at(new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.4, 4.8, 56, 1, false, Math.PI * 0.12, Math.PI * 1.76), soil), 0, 2.4, 0));
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.6, 56, 16, 0, Math.PI * 2, 0, Math.PI / 2), soil); cap.position.y = 4.6; cap.scale.y = 0.75;
     this.regolith.add(cap);
     this.regolith.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     this.regolith.visible = false; this.scene.add(this.regolith);
@@ -336,12 +356,27 @@ export class World {
       rig.add(a.root); this.suit = a;
     }).catch(err => { console.warn('NASA astronaut failed', err); this.swapModel('astronaut.glb', this.player.userData.rig, 1.85); });
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
-    this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
+    this.useOrion();
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
     this.move = new THREE.Vector3(); this.gait = 0; this.swing = 0; this.squash = 0; this.lean = { x: 0, z: 0 };   // animation state
     this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
     this.keys = {}; this.time = 0; this.panelsDirty = false;
     this.setTime(this.phase);
+  }
+
+  // NASA's Orion crew capsule (assets/orion.glb, made by scripts/build-orion-model.py) at its real size: 5 m across, 3.3 m tall.
+  // If it can't load, the team's lander model (assets/lander.glb) or the simple shapes are used instead.
+  useOrion() {
+    const lander = this.outpost.group.children.find(c => c.isGroup && c.position.z === -17);
+    lander.updateWorldMatrix(true, false);
+    this.shipDoor = lander.localToWorld(new THREE.Vector3(0, 0, 5.3)); this.shipDoor.y = 0;
+    loadModel('orion.glb').then(g => {
+      if (!g) return this.swapModel('lander.glb', lander, 11);
+      const m = g.scene.clone();
+      m.position.y = 1.28; m.rotation.y = ORION_HATCH;       // sits on the landing stage, side hatch over the stairs
+      m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const mt of [].concat(o.material)) { mt.color?.lerp(new THREE.Color('#c58a62'), 0.08); } } });   // a little Mars dust
+      lander.userData.simple.visible = false; lander.add(m);
+    });
   }
 
   swapModel(file, target, height, onlyChildren) {
@@ -595,6 +630,7 @@ export class World {
     const p = this.player.position, list = [];
     if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
     list.push({ type: 'door', d: Math.hypot(p.x - this.door.x, p.z - this.door.z) });
+    if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start
     if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - 21.7, p.z + 4.8) - 4 });
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
     if (this.heli.model && !this.heli.seen) list.push({ type: 'heli', d: Math.hypot(p.x - this.heli.x, p.z - this.heli.z) });
