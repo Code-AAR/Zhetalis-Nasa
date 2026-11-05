@@ -27,6 +27,7 @@ export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause
   modalPauses = pause;
   const box = $('#modal .modal-box');
   box.innerHTML = `<h3>${title}</h3>${html || ''}<div class="choices"></div>`;
+  box.scrollTop = 0;   // every new pop-up starts at its title
   const list = box.querySelector('.choices');
   choices.forEach(c => {
     const b = document.createElement('button');

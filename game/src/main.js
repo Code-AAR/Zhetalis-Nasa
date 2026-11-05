@@ -431,9 +431,10 @@ onLayout((mode, used) => {
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
-function muteButton() { const m = toggleMute(); $('#sound-btn').textContent = m ? '🔇 Sound (M)' : '🔊 Sound (M)'; toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
+const soundLabel = () => { $('#sound-btn').textContent = `${isMuted() ? '🔇' : '🔊'} Sound${keyWord(' (M)', '')}`; };
+function muteButton() { const m = toggleMute(); soundLabel(); toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
 $('#sound-btn').onclick = muteButton;
-$('#sound-btn').textContent = isMuted() ? '🔇 Sound (M)' : '🔊 Sound (M)';
+soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: true });
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); world?.resize(); launch?.resize(); interior?.resize(); });
@@ -549,7 +550,7 @@ renderer.setAnimationLoop(() => {
         if (outpost.over) { queue.length = 0; endMission(); }
       }
     }
-    if (!isPaused() && queue.length && !outpost.over) handle(queue.shift());
+    if (!isModalOpen() && queue.length && !outpost.over) handle(queue.shift());   // wait until no pop-up is open, so events never replace one
     world.setTime(solClock / TUNED.solSeconds);
     if (!sunsetShown && !inside && solClock / TUNED.solSeconds > 0.72 && solClock / TUNED.solSeconds < 0.78) {
       sunsetShown = true; toast('🌅 Look at the sunset - on Mars sunsets are BLUE! Fine dust lets blue light through. (NASA Curiosity photographed one in 2015.)', 7000);

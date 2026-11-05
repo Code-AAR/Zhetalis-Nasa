@@ -276,3 +276,14 @@ body.layout-phone:not(.portrait).touch #toast { bottom: calc(60px + env(safe-are
 body.layout-phone:not(.portrait) #countdown { top: 4%; font-size: 4.5rem; }
 body.layout-phone:not(.portrait) #ar-globe { height: 38vh; }
 body.layout-phone:not(.portrait) .mp-svg { max-height: 40vh; }
+
+/* tester round 1: toast never covers a pop-up's buttons, and small text stays readable on phones */
+#modal:not(.hidden) ~ #toast { top: max(10px, env(safe-area-inset-top)); bottom: auto !important; }
+details summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+body.layout-phone.portrait .meter small { font-size: .64rem; }
+body.layout-phone .real-tag { font-size: .74rem; }
+body.layout-phone .source, body.layout-phone .forecast small, body.layout-phone .slide figcaption { font-size: .78rem; }
+body.layout-phone .forecast div { font-size: .82rem; }
+body.layout-phone .mp-label { font-size: 26px; }
+body.layout-phone .mp-tag { font-size: 24px; }
+body.layout-phone .mp-hohmann .lab { font-size: 11px; }
