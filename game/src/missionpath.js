@@ -2,6 +2,7 @@
 // (SLS -> Orion -> lunar orbit -> HLS lander -> Moon) and NASA's Moon-to-Mars concept.
 import { factHTML } from './ui.js';
 import { loadLaunchPhoto, dateWords } from './nasaimages.js';
+import { earthGlobe, moonGlobe } from './globe.js';
 
 const PATHS = {
   launch:   'M110,206 C112,170 128,150 160,140',
@@ -26,13 +27,19 @@ const HOHMANN = `
     <text x="198" y="30" class="lab hl">7 to 9 months</text>
   </svg>`;
 
+// Earth and the Moon as real 3D globes you can spin (NASA Blue Marble and LRO maps).
+const GLOBES = `<div class="mp-globes">
+  <figure><canvas aria-label="3D Earth - drag to spin"></canvas><figcaption>Earth</figcaption></figure>
+  <figure class="moon"><canvas aria-label="3D Moon - drag to spin"></canvas><figcaption>The Moon <small>about ¼ of Earth's width</small></figcaption></figure>
+  <p class="spin-tip">Drag either one to spin it</p></div>`;
+
 // Each step: which path animates, what kids read, and the real-source fact card.
 function steps(F) {
   // Five short slides (each one also draws the earlier legs of the trip, listed in "also").
   return [
     { path: null, title: 'First the Moon, then Mars', text: "NASA's Artemis missions practise at the Moon first - a training ground a few days from home - before the long trip to Mars.", fact: F.moonToMars },
     { path: 'toMoon', also: ['launch'], title: '1. SLS sends Orion to the Moon', text: 'The giant SLS rocket launches the Orion capsule from Florida. One last push sends the crew on a three-day trip to the Moon.', photo: true, fact: F.orion },
-    { path: 'landMoon', also: ['nrho', 'homeMoon'], title: '2. Practise at the Moon', text: 'Orion loops around the Moon, a lander takes the crew down and back up, then Orion flies them home. In April 2026 Artemis II flew four astronauts around the Moon!', fact: F.artemis2 },
+    { path: 'landMoon', also: ['nrho', 'homeMoon'], globes: true, title: '2. Practise at the Moon', text: 'Orion loops around the Moon, a lander takes the crew down and back up, then Orion flies them home. In April 2026 Artemis II flew four astronauts around the Moon!', fact: F.artemis2 },
     { path: null, title: '3. Wait for the launch window', text: "Mars is moving, so you aim for where it WILL be. Earth and Mars line up for this only about every 26 months.", fact: F.launchWindow, extra: HOHMANN },
     { path: 'toMars', also: ['landMars'], title: '4. The long trip to Mars', text: "About 7 months in a spaceship with its own engines, then a lander takes the crew down. In our story it is 2126 - and you are the junior astronaut!", fact: F.cruiseDose },
   ];
@@ -71,7 +78,8 @@ export function showMissionPath(F, { from = 0 } = {}) {
       const s = list[i];
       root.querySelector('#mp-title').textContent = s.title;
       root.querySelector('#mp-text').textContent = s.text;
-      root.querySelector('#mp-fact').innerHTML = (s.photo ? '<figure class="slide mp-photo" id="mp-photo"><figcaption>Loading a real NASA photo…</figcaption></figure>' : '') + (s.extra || '') + (s.fact ? factHTML(s.fact) : '');
+      root.querySelector('#mp-fact').innerHTML = (s.photo ? '<figure class="slide mp-photo" id="mp-photo"><figcaption>Loading a real NASA photo…</figcaption></figure>' : '') + (s.globes ? GLOBES : '') + (s.extra || '') + (s.fact ? factHTML(s.fact) : '');
+      if (s.globes) { const c = root.querySelectorAll('.mp-globes canvas'); earthGlobe(c[0]); moonGlobe(c[1]); }
       if (s.photo) loadLaunchPhoto().then(p => {
         const fig = root.querySelector('#mp-photo'); if (!fig) return;
         if (!p) return fig.remove();

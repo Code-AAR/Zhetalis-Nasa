@@ -155,3 +155,14 @@ node scripts/snapshot-nasa-images.mjs  # saves backup links to real Perseverance
 node scripts/snapshot-mars-data.mjs    # saves Curiosity's latest Mars weather + today's Earth-Mars distance (JPL Horizons)
 node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when DONKI is online)
 ```
+
+## Life outside the walls (colony.js)
+- **Tools:** the suit belt holds 2 tools (keys 1 and 2, or tap them at the bottom left). You start with the pickaxe; the builder and the water jug wait in the **storage locker** inside the base.
+- **Mining:** mineral rocks sparkle. Hold the pickaxe and press E next to one. Hematite ("blueberries", Opportunity 2004), gypsum veins (Opportunity 2011) and iron meteorites (Opportunity 2005). The sample bag holds 8; unload it at the locker.
+- **Trading:** at the locker, pay Earth with samples for seeds and parts (needs the Earth link). A cargo pod lands about 3 sols later. Earth also posts sample requests for bonus science.
+- **Greenhouses:** hold the builder and press E on flat ground within 75 m of the outpost. Plant lettuce, dwarf wheat or potatoes, carry water from the base tank in the jug, harvest for meals. Hydroponics, because Phoenix found perchlorate in Mars soil. Growing times are shortened (real times are shown in the game).
+- **Hazard monitor (inside):** storms are spotted 2 sols before they arrive. If nobody checks the monitor, a solar storm hits by surprise (extra dose) and a dust storm cakes the panels. Readings use real data: Curiosity RAD and REMS weather, NOAA flares.
+- **First person (V):** the big meters step aside for a slim helmet visor readout; the outside temperature follows Curiosity's real daily high and low.
+- **Sky:** sun halo that turns blue at sunset, floating dust, Phobos (rises in the west) and Deimos at night. Phobos is drawn about twice its real size.
+- **Rover:** top speed 15 m/s (the real concept vehicle is much slower). **Jumps:** legs push off, tuck and reach for the ground.
+- Debug: open with `#debug`, then `game.colony`, `game.outpost.hazards`, `game.station('monitor')`, `game.station('locker')`.

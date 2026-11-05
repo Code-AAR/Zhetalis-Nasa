@@ -30,6 +30,8 @@ export const TUNED = {
   stormDose: 110,          // extra mSv from an unshielded solar storm (stronger than reality - see facts)
   suitSeconds: 75,         // seconds of spacewalk on a full suit tank (in daylight)
   coldSuit: 1.4,           // at night the suit uses air 40% faster (its heater works harder)
+  hazardLead: 2,           // sols between a storm being spotted and it arriving
+  surpriseDose: 0.6,       // a solar storm nobody saw coming: the crew takes this share of a storm-sol's dose before reaching shelter
 };
 
 // Tiers from the storyboard: the base grows as Earth receives your science.
@@ -71,6 +73,7 @@ export class Outpost {
     this.split = { life: 0.4, comms: 0.15, science: 0.25, shield: 0.2 };
     this.dust = 0; this.shelter = 0; this.blackout = 0; this.relayDown = 0;
     this.storm = null; this.hungry = 0; this.coldLast = false;
+    this.hazards = [];   // storms the instruments have spotted but that haven't arrived yet
     this.nextSupply = TUNED.supplyEvery;
     this.over = null;
     this.today = this.forecast();
@@ -159,11 +162,22 @@ export class Outpost {
     if (this.blackout === 0 && this.distanceKm() > max * 1e6 * 0.995 && !this._conj) { this._conj = true; this.blackout = this.facts.conjunction.value; events.push({ type: 'conjunction' }); }
     if (this.distanceKm() < max * 1e6 * 0.9) this._conj = false;
 
+    // Hazards the instruments spotted earlier arrive now (see `hazards` below).
+    for (const h of this.hazards.filter(x => x.at <= this.sol)) {
+      this.hazards.splice(this.hazards.indexOf(h), 1);
+      if (h.kind === 'solar' && !this.storm) events.push({ type: 'solar-storm-warning', seen: h.seen, plan: h.plan });
+      if (h.kind === 'dust' && this.dust === 0) { this.dust = h.sols; events.push({ type: 'dust', sols: h.sols, seen: h.seen }); }
+    }
     // Random events, scaled by difficulty. Solar storms are filled in from real data by main.js.
-    const r = rng(), rate = this.d.eventRate;
-    if (!this.storm && r < 0.06 * rate) events.push({ type: 'solar-storm-warning' });
-    else if (this.dust === 0 && r > 1 - 0.03 * rate) { this.dust = 4 + Math.floor(rng() * 5); events.push({ type: 'dust', sols: this.dust }); }
+    // Storms are DETECTED first and arrive TUNED.hazardLead sols later, like real space weather: a burst of
+    // particles from the Sun takes hours to days to cross space, and orbiters photograph dust storms as they grow.
+    // Only the base's hazard monitor shows these early warnings - players who check it can prepare.
+    const r = rng(), rate = this.d.eventRate, pendingKind = k => this.hazards.some(h => h.kind === k);
+    const lead = TUNED.hazardLead;
+    if (!this.storm && !pendingKind('solar') && r < 0.06 * rate) this.hazards.push({ kind: 'solar', at: this.sol + lead, found: this.sol, seen: false });
+    else if (this.dust === 0 && !pendingKind('dust') && r > 1 - 0.03 * rate) this.hazards.push({ kind: 'dust', at: this.sol + lead, found: this.sol, sols: 4 + Math.floor(rng() * 5), seen: false });
     else if (this.relayDown === 0 && this.sol > 8 && r > 0.5 && r < 0.5 + 0.012 * rate) { this.relayDown = 15; events.push({ type: 'relay-lost' }); }
+    if (this.hazards.some(h => !h.seen)) events.push({ type: 'hazard-detected' });
 
     if (this.o2 <= 0) this.over = { win: false, why: 'oxygen' };
     if (this.food <= 0) { if (++this.hungry >= 3) this.over = { win: false, why: 'food' }; } else this.hungry = 0;

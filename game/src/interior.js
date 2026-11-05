@@ -167,6 +167,24 @@ export class Interior {
     win.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.12, 0.2), lam('#2a2e34')), 0, 1.25, 0));
     add('window', 'look out of the window', (R - 0.05) * 0.72, -(R - 0.05) * 0.72, win);
 
+    // hazard monitor - space weather and dust-storm forecasts; it blinks red when it has spotted something new
+    const mon = new THREE.Group();
+    mon.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 0.25), lam('#2a2e34')), 0, 2.0, 0));
+    this.monitorOk = screenTexture(['HAZARD MONITOR', 'Radiation  Dust', 'All clear']);
+    this.monitorAlert = screenTexture(['HAZARD MONITOR', '!! NEW READING !!', 'Check now'], '#ff6b5b');
+    this.monitorScreen = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.35), new THREE.MeshBasicMaterial({ map: this.monitorOk }));
+    mon.add(at(this.monitorScreen, 0, 2.0, 0.14));
+    this.monitorLight = new THREE.PointLight('#ff4b3a', 0, 4, 1.5); this.monitorLight.position.set(0, 2.2, 0.8); mon.add(this.monitorLight);
+    add('monitor', 'check the hazard monitor', -(R - 0.4) * 0.72, (R - 0.4) * 0.72, mon);
+
+    // storage locker - tools you aren't carrying, rock samples, seeds and the water tank
+    const locker = new THREE.Group();
+    locker.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.6, 0.7), lam('#9aa0a8')), 0, 1.3, 0));
+    for (const x of [-0.55, 0.55]) locker.add(at(new THREE.Mesh(new THREE.BoxGeometry(1, 2.4, 0.04), lam('#b9bec5')), x, 1.3, 0.37));
+    locker.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.12, 0.75), glow('#ffd27a')), 0, 2.66, 0));
+    locker.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.4, 32), new THREE.MeshLambertMaterial({ color: '#7fc3ff', transparent: true, opacity: 0.8 })), 1.55, 0.7, 0));   // water tank
+    add('locker', 'open the storage locker', (R - 0.5) * 0.72, (R - 0.5) * 0.72, locker);
+
     // crew table, off to the side so the walk from the airlock to the console stays clear
     this.table = { x: 2.6, z: 2.4 };
     const table = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 48), lam('#bfbab2')); this.scene.add(at(table, this.table.x, 0.8, this.table.z));
@@ -205,6 +223,12 @@ export class Interior {
   enter() { this.pos.set(0, 0, R - 1.6); this.yaw = Math.PI; this.pitch = 0; this.vel = { x: 0, z: 0 }; }
 
   setStorm(on, t) { this.alarm.intensity = on ? 10 + Math.sin(t * 6) * 8 : 0; }
+  // The hazard monitor flashes while it has a reading you haven't looked at yet.
+  setMonitor(alert, t) {
+    const blink = alert && Math.sin(t * 5) > 0;
+    this.monitorScreen.material.map = blink ? this.monitorAlert : this.monitorOk;
+    this.monitorLight.intensity = alert ? 3 + Math.sin(t * 5) * 3 : 0;
+  }
 
   update(dt, keys, active) {
     this.vel ??= { x: 0, z: 0 }; this.step ??= 0;
