@@ -13,6 +13,7 @@ import { loadModel } from './nasamodels.js';
 import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
 import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
 import { initTouch, isTouch } from './touch.js';
+import { earthGlobe } from './globe.js';
 import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
@@ -98,7 +99,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -141,6 +142,7 @@ if (saved) {
 // Back to Mars straight away, with everything as it was.
 async function resume(d) {
   startSound();
+  if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();
   $('#title').classList.add('hidden');
   state.difficulty = d.difficulty; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
   buildWorld();
@@ -163,11 +165,13 @@ async function resume(d) {
   await weatherReady;
   state.phase = 'mars';
   $('#hud').classList.remove('hidden');
+  phoneTips();
   toast(`👋 Welcome back, astronaut! Sol ${outpost.sol} - your mission carries on where you left it.`);
 }
 
 $('#start').onclick = () => {
   clearSave();                                                 // a new mission replaces the old save
+  if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();   // phones: fill the screen like an app
   startSound(); setSound({ scene: 'launch', thrust: 0 });   // sound can only start after a click
   $('#title').classList.add('hidden');
   state.phase = 'launch';
@@ -208,6 +212,7 @@ async function arrive() {
   await weatherReady;
   state.phase = 'mars';
   $('#hud').classList.remove('hidden');
+  phoneTips();
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
     ${speakerHTML('crew-commander', 'Your commander')}
@@ -281,7 +286,7 @@ function openPower() {
     ${rows.map(([k, label]) => `<div class="split-row"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(s[k] * 100)}" data-k="${k}"><b id="v-${k}">${Math.round(s[k] * 100)}%</b></div>`).join('')}
     <div class="forecast" id="forecast"></div>
     <p class="source">Science sent to Earth so far: <b>${outpost.scienceSent}</b>${next ? ` - your base reaches the <b>${next[1].name}</b> at ${next[1].unlockAt}, and Earth sends new designs.` : ' - you are a self-sustaining settlement!'}</p>
-    <div class="earth-card" id="earth-card"><img alt="The whole Earth, photographed by NASA's EPIC camera"><p>Looking for today's photo of Earth…</p></div>
+    <div class="earth-card" id="earth-card"><div class="earth-globe"><canvas aria-label="A 3D Earth you can spin"></canvas><a class="epic-thumb" target="_blank" rel="noopener" title="Today's real photo from NASA's EPIC camera"><img alt="The whole Earth today, photographed by NASA's EPIC camera"></a><span class="spin-tip">drag to spin</span></div><p>Looking for today's photo of Earth…</p></div>
     ${factHTML(F.sunlight)}`;
   const remote = !inside;
   modal({ title: remote ? '⚡ Power control (game paused)' : '🖥 Power console - time is passing', pause: remote, html, choices: [{ label: 'Done', primary: true }] });
@@ -305,8 +310,9 @@ function openPower() {
   Promise.all([loadEarthToday(), loadMarsToday()]).then(([e, today]) => {
     const card = box.querySelector('#earth-card'); if (!card) return;
     if (!e) return card.remove();
-    card.querySelector('img').src = e.src;
-    card.querySelector('p').innerHTML = `${e.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>'}<b>Home, ${dateWords(e.when.replace(' ', 'T') + 'Z')}.</b> A real photo of Earth from NASA's EPIC camera, 1.5 million km from Earth. A radio message from here takes <b>${outpost.delayMinutes().toFixed(1)} minutes</b> to get there.${today?.distance ? ` (In real life today, ${dateWords(today.distance.date)}, Mars is ${(today.distance.km / 1e6).toFixed(0)} million km from Earth - a ${today.distance.lightMinutes}-minute wait, says NASA JPL Horizons.)` : ''}<br><span class="source">Source: <a href="${F.epic.url}" target="_blank" rel="noopener">${F.epic.source}</a></span>`;
+    earthGlobe(card.querySelector('canvas'), e.centre);   // a 3D Earth, turned to the side EPIC sees right now
+    card.querySelector('img').src = e.src; card.querySelector('.epic-thumb').href = e.src;
+    card.querySelector('p').innerHTML = `${e.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>'}<b>Home, ${dateWords(e.when.replace(' ', 'T') + 'Z')}.</b> The globe is turned to the side NASA's EPIC camera saw then, from 1.5 million km away - tap the small picture for its real photo. A radio message from here takes <b>${outpost.delayMinutes().toFixed(1)} minutes</b> to get there.${today?.distance ? ` (In real life today, ${dateWords(today.distance.date)}, Mars is ${(today.distance.km / 1e6).toFixed(0)} million km from Earth - a ${today.distance.lightMinutes}-minute wait, says NASA JPL Horizons.)` : ''}<br><span class="source">Source: <a href="${F.epic.url}" target="_blank" rel="noopener">${F.epic.source}</a></span>`;
     logFact(F.epic);
   });
   sliders.forEach(sl => sl.oninput = () => {
@@ -502,6 +508,25 @@ onLayout((mode, used) => {
   $('#screen-btn').textContent = `📱 Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
 });
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
+
+// Full screen: hides the browser's bars so the game fills the phone like an app. (iPhones don't allow
+// this for web pages - there, "Add to Home Screen" gives the same thing, thanks to manifest.webmanifest.)
+const canFullscreen = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+document.body.classList.toggle('can-fullscreen', canFullscreen);
+function goFullscreen() {
+  const el = document.documentElement;
+  try { (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch { /* not allowed here */ }
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  else goFullscreen();
+}
+document.querySelectorAll('.fs-btn').forEach(b => (b.onclick = toggleFullscreen));
+let sidewaysTip = false;
+function phoneTips() {   // once per game: on a phone held upright, suggest turning it for a bigger view
+  if (sidewaysTip || !isTouch() || !document.body.classList.contains('layout-phone') || innerWidth > innerHeight) return;
+  sidewaysTip = true; setTimeout(() => toast('📱 Tip: turn your phone sideways for a bigger view of Mars.'), 2500);
+}
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
 const soundLabel = () => { $('#sound-btn').textContent = `${isMuted() ? '🔇' : '🔊'} Sound${keyWord(' (M)', '')}`; };

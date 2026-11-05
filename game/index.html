@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#1a0f0b">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mars Outpost">
   <title>Junior Astronaut: Mars Outpost · Zhetalis</title>
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,6 +49,7 @@
         <button id="data-btn-title">Real NASA data used</button>
       </div>
       <div class="screen-pick" id="screen-pick"><span>📱 Screen:</span></div>
+      <button class="fs-btn" id="fs-btn-title">⛶ Play full screen</button>
       <p id="sun-line" class="sun-line">Checking what the Sun is doing right now…</p>
     </div>
   </section>
@@ -72,6 +81,7 @@
         <button id="sound-btn">🔊 Sound (M)</button>
         <button id="data-btn">NASA data</button>
         <button id="screen-btn">📱 Screen</button>
+        <button class="fs-btn" id="fs-btn">⛶ Full screen</button>
       </div>
     </div>
     <div id="hint"></div>

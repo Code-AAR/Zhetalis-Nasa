@@ -62,7 +62,7 @@ export function loadEarthToday() {
 }
 export function epicPhoto(e) {
   const [y, m, d] = e.date.slice(0, 10).split('-');
-  return { src: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/jpg/${e.image}.jpg`, when: e.date };
+  return { src: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/jpg/${e.image}.jpg`, when: e.date, centre: e.centroid_coordinates };
 }
 
 // NASA Mars Trek map tiles (Viking colour mosaic). Zoom level 2 is 8 x 4 tiles of 256 px = one 2048 x 1024 world map.

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { factHTML } from './ui.js';
 import { loadMarsMap } from './nasaimages.js';
 import { loadModel } from './nasamodels.js';
+import { makeSpin } from './globe.js';
 
 const JEZERO = { lat: 18.38, lon: 77.58 };   // Perseverance's landing site (and our outpost)
 
@@ -20,12 +21,12 @@ const ICONS = {
 };
 
 function steps(F, delay) {
+  factHTML(F.mro);   // the orbiter fact still goes into the logbook, without another box on screen
   return [
-    { icon: 'globe', zoom: 0, title: 'Arriving at Mars', text: "This is the real Mars - a map NASA made from thousands of photos taken by the Viking orbiters. The orange dot is Jezero Crater, an ancient lake bed where the Perseverance rover is exploring. That is where your outpost is! The spacecraft circling the planet are NASA's Mars Reconnaissance Orbiter and Mars Odyssey - relay orbiters that will carry your messages to Earth.", fact: F.marsMap, fact2: F.mro },
-    { icon: 'heat', zoom: 1, title: '1. Entry: the heat shield', text: "The lander hits the top of the Martian air at nearly 20,000 km/h. Rubbing through the air makes the heat shield glow hotter than 1,260 °C - but the crew inside stays cool. The air does most of the braking.", fact: F.edl },
-    { icon: 'chute', zoom: 2, title: '2. Descent: a supersonic parachute', text: "Still going faster than sound, a giant parachute opens - Perseverance's was 21.5 metres wide, about as wide as a tennis court is long. Then the heat shield drops off so the radar can see the ground.", fact: F.edl },
-    { icon: 'rockets', zoom: 3, title: '3. Landing: rocket engines', text: "Mars's air is so thin that a parachute can't slow you down enough. For the last part, rocket engines fire downwards to land gently. Perseverance's descent stage used eight rockets and lowered the rover on ropes - a 'sky crane'!", fact: F.edl },
-    { icon: 'clock', zoom: 3, title: '"Seven minutes of terror"', text: `The whole landing takes about 7 minutes. Right now a radio message takes about ${delay.toFixed(0)} minutes to reach Earth - so when mission control hears "we've reached the air", the landing is already over. Nobody can steer it from Earth: the lander must fly itself.`, fact: F.delay },
+    { icon: 'globe', zoom: 0, title: 'Arriving at Mars', text: "This is the real Mars, mapped by NASA's Viking orbiters - drag it to spin it! The orange dot is Jezero Crater, where your outpost is. The orbiters circling it (MRO and Mars Odyssey) will relay your messages to Earth.", fact: F.marsMap },
+    { icon: 'heat', zoom: 1, title: '1. The heat shield', text: "You hit the Martian air at nearly 20,000 km/h. The heat shield glows hotter than 1,260 °C, but the crew inside stays cool.", fact: F.edl },
+    { icon: 'rockets', zoom: 3, title: '2. Parachute, then rockets', text: "A parachute as wide as a tennis court is long opens while you are still faster than sound. Mars's air is too thin to stop you, so rocket engines do the last part." },
+    { icon: 'clock', zoom: 3, title: '"Seven minutes of terror"', text: `The landing takes about 7 minutes, but a radio message takes about ${delay.toFixed(0)} minutes to reach Earth. Nobody can steer from Earth: the lander must fly itself.`, fact: F.delay },
   ];
 }
 
@@ -83,6 +84,7 @@ export function showArrival(F, delayMinutes = 10) {
     // turn the globe so Jezero starts facing us
     const faceJezero = Math.atan2(dir.x, dir.z);
     globe.rotation.y = -faceJezero - 0.9; globe.rotation.x = 0.25;
+    const spin = makeSpin(canvas, globe, { maxTilt: 1 });   // drag (or swipe) to spin Mars
 
     const mapNote = root.querySelector('#ar-map');
     mapNote.textContent = 'Loading NASA\'s Mars map…';
@@ -113,8 +115,11 @@ export function showArrival(F, delayMinutes = 10) {
       size();
       const wantZ = [4.2, 2.6, 2.0, 1.55][s.zoom];
       camZ += (wantZ - camZ) * Math.min(1, dt * 2);
-      globe.rotation.y += dt * (s.zoom ? 0.02 : 0.12);
-      if (s.zoom) globe.rotation.y += ((-faceJezero) - globe.rotation.y) * Math.min(1, dt * 1.2);   // swing Jezero to the front
+      spin.update(dt);
+      if (!spin.busy()) {
+        globe.rotation.y += dt * (s.zoom ? 0.02 : 0.12);
+        if (s.zoom) { const d = -faceJezero - globe.rotation.y; globe.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * Math.min(1, dt * 1.2); }   // swing Jezero to the front
+      }
       camera.position.set(0, 0, camZ); camera.lookAt(0, 0, 0);
       ring.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.2);
       orbit.rotation.y += dt * 0.35; orbit.visible = s.zoom < 2;
