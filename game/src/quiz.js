@@ -52,7 +52,7 @@ export function runQuiz(box, questions, onDone) {
 }
 
 export function badgeFor(score, n) {
-  if (score === n) return { icon: '🥇', name: 'Gold Junior Astronaut' };
-  if (score >= n - 1) return { icon: '🥈', name: 'Silver Junior Astronaut' };
-  return { icon: '🥉', name: 'Bronze Junior Astronaut' };
+  if (score === n) return { key: 'gold', icon: '🥇', name: 'Gold Junior Astronaut' };
+  if (score >= n - 1) return { key: 'silver', icon: '🥈', name: 'Silver Junior Astronaut' };
+  return { key: 'bronze', icon: '🥉', name: 'Bronze Junior Astronaut' };
 }

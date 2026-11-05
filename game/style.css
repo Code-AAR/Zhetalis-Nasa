@@ -135,6 +135,23 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 .badge { text-align: center; font-size: 1.1rem; margin: 12px 0; }
 .badge b { display: block; font-size: 3rem; }
 
+/* team illustrations (assets/art) - always labelled so nobody mistakes them for real photos */
+.art { position: relative; margin: 8px 0; }
+.art img { width: 100%; display: block; border-radius: 12px; }
+.ill-tag { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.6); color: #fff7ee; font-size: .62rem; font-weight: 600; letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; pointer-events: none; }
+.screen-tag { position: fixed; left: auto; right: 12px; bottom: 10px; }
+#title.has-art { background-size: cover; background-position: center; }
+.logo { display: block; width: min(110px, 28vw); height: auto; margin: 0 0 8px; }
+.event-art img { max-height: 30vh; object-fit: cover; }
+.fact .fact-art { float: right; width: 110px; margin: 0 0 6px 10px; }
+.fact .fact-art img { border-radius: 8px; }
+.fact .fact-art .ill-tag { font-size: .5rem; left: 4px; bottom: 4px; }
+.story-art img { max-height: 46vh; object-fit: contain; background: #120a07; }
+.badge-art { width: 120px; margin: 0 auto 6px; }
+.speaker { position: relative; display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
+.speaker img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+.speaker .ill-tag { left: 0; bottom: -4px; font-size: .5rem; }
+
 /* first-person crosshair */
 #crosshair { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; pointer-events: none; z-index: 2; }
 

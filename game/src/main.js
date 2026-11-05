@@ -10,6 +10,7 @@ import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords 
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
+import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
 import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
@@ -21,6 +22,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const F = (await (await fetch('data/mars-facts.json')).json()).facts;
+await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
 for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
 onLog(n => { $('#log-btn').textContent = `📒 Logbook: ${n} (L)`; });
 
@@ -87,6 +89,7 @@ function showData() {
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
     <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. Terrain colours based on Perseverance's photos of Jezero Crater. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
+    ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
     <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up.</p>` });
 }
@@ -108,6 +111,7 @@ $('#start').onclick = () => {
 function buildWorld() {
   world = new World(renderer, F, () => {});
   interior = new Interior();
+  if (hasArt('mars-ground')) world.useGroundArt(artUrl('mars-ground'));
   world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
   outpost = new Outpost(state.difficulty, F);
   world.setPanels(outpost.panels);
@@ -131,6 +135,7 @@ async function arrive() {
   $('#hud').classList.remove('hidden');
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
+    ${speakerHTML('crew-commander', 'Your commander')}
     <p>You just climbed out of your capsule. The outpost in front of you has only the basics - and limited supplies. Inside, the <b>power console</b> shares out the power from the solar panels.</p>
     ${factHTML(F.sol)}
     <p>In this game <b>1 second = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
@@ -268,6 +273,9 @@ function openWorkbench() {
 }
 
 // ---------------- events from the simulation ----------------
+// Mission Control's portrait + an event picture, when the team has added them (assets/art/)
+const eventArt = (type, alt) => speakerHTML('mission-control', 'Mission Control') + artHTML('event-' + type, alt, 'event-art');
+
 function handle(ev) {
   switch (ev.type) {
     case 'solar-storm-warning': {
@@ -276,7 +284,7 @@ function handle(ev) {
       outpost.startStorm(strength, real.cls, real.real);
       const when = real.time ? new Date(real.time).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       say('storm');
-      modal({ title: '☀️ Solar storm warning!', html: `
+      modal({ title: '☀️ Solar storm warning!', html: `${eventArt('solar-storm', 'A solar storm reaching Mars')}
         <p>The Sun just shot out ${flareWords(real.cls)}. Fast particles are on their way - they will hit Mars for about ${outpost.storm.sols} sols.</p>
         ${real.real ? `<p class="fact"><span class="real-tag">REAL</span>This storm is based on a real <b>${real.cls}</b> flare seen by ${real.source}${when ? ' on ' + when : ''}.</p>` : ''}
         <p>What do you do?</p>`,
@@ -290,10 +298,10 @@ function handle(ev) {
     case 'storm-end': toast('☀️ The solar storm has passed.'); break;
     case 'dust':
       world.setDust(true); outpost.today = outpost.forecast(); say('dust');
-      modal({ title: '🌪 Dust storm!', html: `<p>Dust is blocking the sunlight. Your solar panels only make about a third of their normal power for ${ev.sols} sols. Consider moving power from science to life support at the console.</p>${factHTML(F.dustStorm)}` });
+      modal({ title: '🌪 Dust storm!', html: `${eventArt('dust-storm', 'A dust storm covering the outpost')}<p>Dust is blocking the sunlight. Your solar panels only make about a third of their normal power for ${ev.sols} sols. Consider moving power from science to life support at the console.</p>${factHTML(F.dustStorm)}` });
       break;
     case 'dust-end': world.setDust(false); toast('🌤 The dust storm is over - full power again!'); break;
-    case 'conjunction': say('conjunction'); modal({ title: '📵 The Sun is in the way!', html: `${factHTML(F.conjunction)}<p>No supply pods and no new designs from Earth until it passes. Your science waits safely until then.</p>` }); break;
+    case 'conjunction': say('conjunction'); modal({ title: '📵 The Sun is in the way!', html: `${eventArt('conjunction', 'The Sun between Earth and Mars')}${factHTML(F.conjunction)}<p>No supply pods and no new designs from Earth until it passes. Your science waits safely until then.</p>` }); break;
     case 'blackout-end': toast('📡 Earth can hear you again!'); break;
     case 'supply-launched':
       say('supply');
@@ -303,12 +311,12 @@ function handle(ev) {
     case 'tier-up': {
       const t = TIERS[ev.tier], designs = Object.values(UPGRADES).filter(u => u.tier === ev.tier);
       say('design');
-      modal({ title: `🏗 Your base is now a ${t.name}!`, html: `<p>Earth's engineers studied the science you sent and radioed you new designs:</p><p>${designs.map(u => `• <b>${u.name}</b> - ${u.desc}`).join('<br>')}</p><p>Build them at the <b>workbench</b> inside the outpost using parts.</p>` });
+      modal({ title: `🏗 Your base is now a ${t.name}!`, html: `${eventArt('tier-up', 'The outpost growing bigger')}<p>Earth's engineers studied the science you sent and radioed you new designs:</p><p>${designs.map(u => `• <b>${u.name}</b> - ${u.desc}`).join('<br>')}</p><p>Build them at the <b>workbench</b> inside the outpost using parts.</p>` });
       break;
     }
     case 'cold-night': toast('🥶 Your batteries ran flat before morning - the cold slowed the oxygen maker and greenhouse. Build an extra battery!', 5000); break;
     case 'wind-clean': toast('💨 A gust of wind blew some dust off your solar panels! (This really happened to the Spirit and Opportunity rovers.)', 5000); break;
-    case 'relay-lost': outpost.today = outpost.forecast(); say('relay'); modal({ title: '📡 A relay orbiter has failed!', html: `<p>Your messages to Earth usually bounce off orbiters circling Mars. One of them just went silent. Until Earth moves another one into place (about ${outpost.relayDown} sols), you must talk straight to Earth - which needs much more power.</p>${factHTML(F.relay)}` }); break;
+    case 'relay-lost': outpost.today = outpost.forecast(); say('relay'); modal({ title: '📡 A relay orbiter has failed!', html: `${eventArt('relay-lost', 'A relay orbiter above Mars')}<p>Your messages to Earth usually bounce off orbiters circling Mars. One of them just went silent. Until Earth moves another one into place (about ${outpost.relayDown} sols), you must talk straight to Earth - which needs much more power.</p>${factHTML(F.relay)}` }); break;
     case 'relay-restored': toast('📡 A new relay orbiter is in place - talking to Earth is easy again.'); break;
   }
 }
@@ -359,7 +367,7 @@ function endMission() {
   const qs = pickQuestions(new Set(logbook.keys()));
   runQuiz($('#quiz'), qs, score => {
     const b = badgeFor(score, qs.length);
-    $('#badge').innerHTML = `<div class="badge"><b>${b.icon}</b>${score} of ${qs.length} right - you earned the <b>${b.name}</b> badge!</div>`;
+    $('#badge').innerHTML = `<div class="badge">${hasArt('badge-' + b.key) ? artHTML('badge-' + b.key, b.name + ' badge', 'badge-art') : `<b>${b.icon}</b>`}${score} of ${qs.length} right - you earned the <b>${b.name}</b> badge!</div>`;
     try { const best = +localStorage.getItem('ja-best') || 0; if (score > best) localStorage.setItem('ja-best', score); } catch { /* storage blocked */ }
   });
 }
@@ -447,6 +455,25 @@ let sunsetShown = false;
 
 // ---------------- main loop ----------------
 const clock = new THREE.Clock();
+// Team illustrations on the title screen (each slot is optional)
+if (hasArt('title')) {
+  $('#title').style.backgroundImage = `linear-gradient(180deg, rgba(26,15,11,0.25), rgba(26,15,11,0.85)), url("${artUrl('title')}")`;
+  $('#title').classList.add('has-art');
+  $('#title').insertAdjacentHTML('beforeend', '<span class="ill-tag screen-tag">Background: illustration</span>');
+}
+if (hasArt('logo')) $('#title .kicker').insertAdjacentHTML('beforebegin', `<img class="logo" src="${artUrl('logo')}" alt="Zhetalis logo">`);
+if (hasArt('icon') || hasArt('logo')) { const l = document.createElement('link'); l.rel = 'icon'; l.href = artUrl('icon') || artUrl('logo'); document.head.appendChild(l); }
+if (storyPanels().length) {
+  const b = document.createElement('button'); b.id = 'story-btn'; b.textContent = '📖 The story'; b.onclick = showStory;
+  $('#path-btn').before(b);
+}
+function showStory() {
+  const panels = storyPanels(); let i = 0;
+  const draw = () => modal({ title: `📖 The story (${i + 1}/${panels.length})`, html: `${artHTML(base(panels[i].file), panels[i].caption, 'story-art')}<p>${panels[i].caption || ''}</p>`,
+    choices: [...(i < panels.length - 1 ? [{ label: 'Next ›', primary: true, onPick: () => { i++; draw(); } }] : [{ label: 'Close', primary: true }])] });
+  const base = f => f.replace(/\.[a-z0-9]+$/i, '');
+  draw();
+}
 $('#loading').classList.add('hidden');
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);

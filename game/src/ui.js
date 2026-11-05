@@ -1,10 +1,11 @@
 // Small DOM helpers for the HUD, pop-ups and panels.
+import { artHTML } from './art.js';
 export const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function factHTML(f, log = true) {
   if (log) logFact(f);
-  return `<div class="fact">${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div></div>`;
+  return `<div class="fact">${f.id ? artHTML('fact-' + f.id, '', 'fact-art') : ''}${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div></div>`;
 }
 
 // The mission logbook: every real fact the player meets is saved as a card, in the order they found it.

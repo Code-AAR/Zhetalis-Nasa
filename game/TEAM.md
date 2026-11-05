@@ -81,6 +81,15 @@ The launch pad layout (lightning towers, water tower, mound) follows NASA's Arte
 Voice lines the game can already play (add to the table above): `relay.mp3` (a relay orbiter fails) and `design.mp3`
 (Earth sends new designs).
 
+## 🎨 Art slots (illustrations - ChatGPT image generation or hand-drawn)
+
+The game has slots for a title-screen picture, logo, quiz badges, Mission Control and commander portraits, event
+pictures, fact-card pictures, a ground texture and a story comic. Drop a picture in `game/assets/art/` with the slot
+name and list it in `game/assets/art/art.json` - it appears automatically, labelled "Illustration".
+**Full brief with sizes, rules and prompts: [`game/assets/art/README.md`](assets/art/README.md).**
+Most important: no NASA logos, no text in pictures, daytime Mars sky is butterscotch (not blue). Check with
+`node scripts/check-art.mjs`.
+
 Debug for testers: open the game with `#debug` at the end of the address, then in the browser console use `game.phase(0.75)` (sunset), `game.event('relay-lost')`, `game.outpost.parts = 30`, `game.goInside()`.
 
 ## Who does what

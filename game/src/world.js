@@ -220,7 +220,7 @@ export class World {
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(1024, 1024);
     Object.assign(this.sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
     this.scene.add(this.sun, this.sun.target);
-    this.scene.add(makeTerrain());
+    this.terrain = makeTerrain(); this.scene.add(this.terrain);
 
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const { rocks, colliders } = makeRocks(rng); this.scene.add(rocks);
@@ -316,6 +316,15 @@ export class World {
         console.info('Astronaut animations:', Object.keys(actions).join(', ') || 'none matched', gltf.animations.map(a => a.name));
       }
     }, undefined, () => { /* no team model yet - keep the placeholder */ });
+  }
+
+  // Optional team illustration: a seamless ground-detail texture (assets/art/mars-ground.*), tiled across Mars.
+  // It multiplies the terrain's own colours, so a light, neutral texture works best.
+  useGroundArt(url) {
+    new THREE.TextureLoader().load(url, tex => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(70, 70); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+      this.terrain.material.map = tex; this.terrain.material.needsUpdate = true;
+    });
   }
 
   addPickup(kind, x, z) {
