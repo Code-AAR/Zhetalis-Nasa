@@ -38,3 +38,31 @@ body.layout-phone.portrait:not(.touch) #hud #visor { bottom: 110px; }
 .screen-pick button { min-width: 44px; }
 .slide-nav button { min-width: 48px; min-height: 44px; }
 .earth-card .earth-globe .epic-thumb { width: 46px; height: 46px; }
+
+/* ---------- Tester round 4: sideways phones and tablets ---------- */
+
+/* Alerts on every touch layout: just under the meters / Sol panel (measured by src/phone-layout.js),
+   never across the thumb buttons. Short messages sit one row lower. */
+body.touch #hud #alerts {
+  top: var(--top-clear, 126px); bottom: auto; left: 8px; right: 8px; transform: none;
+  max-width: none; align-items: center;
+}
+body.touch #hud #alerts .alert { text-align: center; }
+body.touch:not(.portrait) #toast, body.layout-tablet.touch #toast {
+  top: calc(var(--top-clear, 126px) + 38px); bottom: auto !important;
+}
+body.layout-phone.portrait #hud #alerts { top: var(--top-clear, 126px); }
+body.layout-phone.portrait.touch #toast { top: calc(var(--top-clear, 126px) + 38px); }
+
+/* The menu on touch screens: the thumb buttons step aside while it is open, and the menu scrolls
+   if it is taller than the screen */
+body.touch #hud.menu-open #touch { visibility: hidden; }
+body.touch #hud.menu-open .status {
+  z-index: 6; max-height: calc(100dvh - 20px); overflow-y: auto; overscroll-behavior: contain;
+}
+/* sideways phone: two columns of menu buttons, so it fits in 375 px of height */
+body.layout-phone:not(.portrait) #hud.menu-open .status { width: 320px; max-width: calc(100vw - 20px); }
+body.layout-phone:not(.portrait) #hud.menu-open .status-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* Title screen size buttons: 44 px tall on every touch screen */
+body.touch #title .screen-pick button, body.layout-tablet #title .screen-pick button, body.touch #title #fs-btn-title { min-height: 44px; min-width: 44px; }
