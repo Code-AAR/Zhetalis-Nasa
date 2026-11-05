@@ -30,6 +30,10 @@ from a landing camp up to a self-sustaining settlement with a fission reactor.
 | Regolith shielding study (JGR Planets 2019), NASA Fission Surface Power (IAC 2024) | Burying the outpost; the 40 kW reactor in the last tier | Built in, with sources |
 | NASA/JPL-Caltech Perseverance 3D model | The old rover you salvage | Asset |
 | NASA 3D Resources: SLS Block 1, Mobile Launcher, Mars Reconnaissance Orbiter, Ingenuity | The launch (SLS really drops its stages), the relay orbiter at Mars, the helicopter near the rover | Assets (NASA's own models) |
+| NASA Perseverance SuperCam microphone recording (sol 4) | The wind you hear on Mars is a real recording from Mars | Asset (NASA audio) |
+| NASA/JPL Perseverance sound study | Mars is quiet (sound fades after ~8 m), so the soundscape is soft and muffled; fact card | Built in, with source |
+| Curiosity rover REMS daily weather | Real high/low temperature, air pressure and sunrise in the outpost window | Saved by script (dated) |
+| NASA JPL Horizons | Today's real Earth-Mars distance and radio delay on the console | Saved by script (dated) |
 | NASA Image and Video Library | A real photo of the Artemis II launch (1 April 2026) in the "How do we get there?" explainer | **Live**, or saved (ARCHIVED) |
 | Perseverance raw images (NASA/JPL-Caltech/ASU) | The outpost window shows the rover's newest colour photos of Jezero Crater | **Live**, or a saved list (ARCHIVED) |
 | NASA EPIC camera on DSCOVR | Today's whole-Earth photo on the power console - the people you are radioing | **Live**, or saved (ARCHIVED) |

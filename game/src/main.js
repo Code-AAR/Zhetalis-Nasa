@@ -6,10 +6,11 @@ import { Launch } from './launch.js';
 import { Interior } from './interior.js';
 import { showMissionPath } from './missionpath.js';
 import { showArrival } from './arrival.js';
-import { loadRoverPhotos, loadEarthToday, loadMarsMap, dateWords } from './nasaimages.js';
+import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
+import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
 const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: true });
@@ -78,6 +79,9 @@ function showData() {
     <p class="source">• Power console: today's whole-Earth photo - <a href="https://epic.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA EPIC camera on DSCOVR</a></p>
     <p class="source">• Arrival globe: <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a> - Viking orbiters colour mosaic</p>
     <p class="source">• If a service is down, the game shows a saved list of the same real photos, labelled ARCHIVED.</p>
+    <h4>Real Mars sound and weather</h4>
+    <p class="source">• The wind you hear outside: a real recording by Perseverance's SuperCam microphone, sol 4 (22 Feb 2021) - <a href="https://science.nasa.gov/resource/perseverance-rovers-supercam-records-wind-on-mars/" target="_blank" rel="noopener">NASA/JPL-Caltech/LANL/CNES/CNRS/ISAE-SUPAERO</a>. Breathing, footsteps and the outpost hum are made by the game.</p>
+    <p class="source">• Mars weather in the window: <a href="https://mars.nasa.gov/msl/weather/" target="_blank" rel="noopener">Curiosity rover REMS daily report</a>. • Today's real Earth-Mars distance on the console: <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">NASA JPL Horizons</a>.</p>
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
@@ -88,6 +92,7 @@ function showData() {
 }
 
 $('#start').onclick = () => {
+  startSound(); setSound({ scene: 'launch', thrust: 0 });   // sound can only start after a click
   $('#title').classList.add('hidden');
   state.phase = 'launch';
   launch = new Launch();
@@ -103,6 +108,7 @@ $('#start').onclick = () => {
 function buildWorld() {
   world = new World(renderer, F, () => {});
   interior = new Interior();
+  world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
   outpost = new Outpost(state.difficulty, F);
   world.setPanels(outpost.panels);
   world.setLink(outpost.today.link);
@@ -111,12 +117,15 @@ function buildWorld() {
 // ---------------- after lift-off: how we get there, then arrival ----------------
 async function arrive() {
   $('#countdown').classList.add('hidden'); $('#skip')?.remove();
+  setSound({ scene: 'cruise' });
   await showMissionPath(F);
   const fade = $('#fade'); fade.classList.remove('hidden');
   fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
   await new Promise(r => setTimeout(r, 4200));
   fade.classList.add('hidden');
+  setSound({ scene: 'arrival' });
   await showArrival(F, outpost.delayMinutes());
+  setSound({ scene: 'mars' });
   await weatherReady;
   state.phase = 'mars';
   $('#hud').classList.remove('hidden');
@@ -126,7 +135,9 @@ async function arrive() {
     ${factHTML(F.sol)}
     <p>In this game <b>1 second = 1 Mars hour</b>, so you will see the Sun rise and set. Solar panels only work in daylight - at night your <b>batteries</b> must keep the heater running.</p>
     <p>Your mission: keep the crew alive for <b>${outpost.d.sols} sols</b>, or grow your camp into a <b>self-sustaining settlement</b>. Watch your <b>oxygen</b>, <b>food</b> and <b>radiation badge</b>.</p>
-    <p>Walk to the glowing green door and press <b>E</b> to go inside. Press <b>V</b> any time to see through your own helmet.</p>`,
+    <p>Walk to the glowing green door and press <b>E</b> to go inside. Press <b>V</b> any time to see through your own helmet.</p>
+    <p>🎧 <b>Listen:</b> the wind you hear outside is a <b>real recording from Mars</b>, made by the Perseverance rover's microphone. Press <b>M</b> to turn sound on or off.</p>
+    ${factHTML(F.marsSound)}`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
 
@@ -158,11 +169,13 @@ async function openWindow() {
   if (!isModalOpen() || !$('#modal h3')?.textContent.includes('Mars today')) return;   // the player closed it while loading
   if (!photos.length) return modal({ pause: false, title: '🪟 The view', html: `<p>Couldn't reach NASA's photo server right now.</p>${factHTML(F.air)}${factHTML(F.temperature)}` });
   const tag = mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>';
+  const today = await loadMarsToday(), w = today?.weather;
+  const weather = w ? `<div class="fact"><span class="real-tag">REAL</span><b>Mars weather report:</b> on ${dateWords(w.date)} (sol ${w.sol}), NASA's Curiosity rover in Gale Crater measured a high of <b>${w.high} °C</b> and a low of <b>${w.low} °C</b>. Air pressure: <b>${w.pressure} Pa</b> - less than 1% of Earth's. Sky: ${w.sky.toLowerCase()}, sunrise ${w.sunrise}, sunset ${w.sunset}.<div class="source">Source: <a href="${w.url}" target="_blank" rel="noopener">${w.source}</a></div></div>` : factHTML(F.temperature);
   modal({ pause: false, title: '🪟 Mars today - real photos', html: `
     <p>${tag}These are <b>real photos</b> that NASA's Perseverance rover took in Jezero Crater on Mars a few days ago. In our story it is 2126 - but this is what Mars looks like <b>right now</b>.</p>
     <figure class="slide"><img id="ph-img" alt="Photo of Mars taken by NASA's Perseverance rover"><figcaption id="ph-cap"></figcaption></figure>
     <div class="slide-nav"><button id="ph-prev">‹</button><button id="ph-play">⏸ Pause</button><button id="ph-next">›</button></div>
-    ${factHTML(F.perseverance)}${factHTML(F.temperature)}`, choices: [{ label: 'Done', primary: true, onPick: () => clearInterval(timer) }] });
+    ${weather}${factHTML(F.perseverance)}`, choices: [{ label: 'Done', primary: true, onPick: () => clearInterval(timer) }] });
   let i = 0, timer;
   const show = () => {
     const p = photos[i];
@@ -209,11 +222,11 @@ function openPower() {
     rows.forEach(([k]) => (box.querySelector('#v-' + k).textContent = Math.round(outpost.split[k] * 100) + '%'));
   };
   // the people you are talking to: today's real photo of the whole Earth, from NASA's EPIC camera
-  loadEarthToday().then(e => {
+  Promise.all([loadEarthToday(), loadMarsToday()]).then(([e, today]) => {
     const card = box.querySelector('#earth-card'); if (!card) return;
     if (!e) return card.remove();
     card.querySelector('img').src = e.src;
-    card.querySelector('p').innerHTML = `${e.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>'}<b>Home, ${dateWords(e.when.replace(' ', 'T') + 'Z')}.</b> A real photo of Earth from NASA's EPIC camera, 1.5 million km from Earth. A radio message from here takes <b>${outpost.delayMinutes().toFixed(1)} minutes</b> to get there.<br><span class="source">Source: <a href="${F.epic.url}" target="_blank" rel="noopener">${F.epic.source}</a></span>`;
+    card.querySelector('p').innerHTML = `${e.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>'}<b>Home, ${dateWords(e.when.replace(' ', 'T') + 'Z')}.</b> A real photo of Earth from NASA's EPIC camera, 1.5 million km from Earth. A radio message from here takes <b>${outpost.delayMinutes().toFixed(1)} minutes</b> to get there.${today?.distance ? ` (In real life today, ${dateWords(today.distance.date)}, Mars is ${(today.distance.km / 1e6).toFixed(0)} million km from Earth - a ${today.distance.lightMinutes}-minute wait, says NASA JPL Horizons.)` : ''}<br><span class="source">Source: <a href="${F.epic.url}" target="_blank" rel="noopener">${F.epic.source}</a></span>`;
     logFact(F.epic);
   });
   sliders.forEach(sl => sl.oninput = () => {
@@ -361,6 +374,7 @@ addEventListener('keydown', e => {
   }
   if (e.code === 'KeyP') openPower();
   if (e.code === 'KeyL') openLogbook();
+  if (e.code === 'KeyM') muteButton();
   if (e.code === 'KeyV' && !inside) { world.firstPerson = !world.firstPerson; toast(world.firstPerson ? '👁 First-person view (V to switch back)' : '🎥 Third-person view'); }
 });
 addEventListener('keyup', e => { if (world) world.keys[e.code] = false; });
@@ -378,6 +392,9 @@ addEventListener('mousemove', e => {
 });
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
+function muteButton() { const m = toggleMute(); $('#sound-btn').textContent = m ? '🔇 Sound (M)' : '🔊 Sound (M)'; toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
+$('#sound-btn').onclick = muteButton;
+$('#sound-btn').textContent = isMuted() ? '🔇 Sound (M)' : '🔊 Sound (M)';
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); world?.resize(); launch?.resize(); interior?.resize(); });
@@ -425,7 +442,7 @@ function drawHUD() {
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get outpost() { return outpost; }, get world() { return world; }, get interior() { return interior; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false;
 
 // ---------------- main loop ----------------
@@ -435,6 +452,8 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.phase === 'launch') {
     const { left, lifted, title, caption } = launch.update(dt);
+    const lift = -left;   // seconds since lift-off: engines start at T-1.5, full power after lift-off, quieter once the core stage is gone
+    setSound({ thrust: left > 1.5 ? 0 : lift < 0 ? 0.5 : lift < 11 ? 1 : 0.25 }); tickSound(dt);
     $('#countdown').innerHTML = `<span class="${lifted ? 'cd-phase' : ''}">${lifted ? title : Math.max(0, left)}</span><small>${caption}</small>`;
     if (lifted && !launch.logged) { launch.logged = true; [F.sls, F.mobileLauncher, F.boosters, F.ascent, F.orbitSpeed].forEach(logFact); }
     renderer.render(launch.scene, launch.camera);
@@ -443,6 +462,7 @@ renderer.setAnimationLoop(() => {
   }
   if (state.phase === 'mars' && world) {
     const paused = isPaused();
+    setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
     if (inside) interior.update(dt, world.keys, !isModalOpen());
     else world.update(dt, !isModalOpen());
     if (!paused && !outpost.over) {
@@ -480,6 +500,7 @@ renderer.setAnimationLoop(() => {
     else renderer.render(world.scene, world.camera);
     return;
   }
+  tickSound(dt);
   // title / explainer / cruise: slow pan over Mars once it exists
   if (world) { world.yaw += dt * 0.05; world.update(dt, false); renderer.render(world.scene, world.camera); }
   else renderer.clear();

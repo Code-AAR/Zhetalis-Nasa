@@ -19,6 +19,7 @@ export const QUESTIONS = [
   { fact: 'boosters', q: 'What do the 4 main engines on SLS\'s orange core stage burn?', a: ['Liquid hydrogen and liquid oxygen', 'Petrol', 'Coal'] },
   { fact: 'ingenuity', q: 'What was special about NASA\'s Ingenuity helicopter?', a: ['First powered flight on another planet', 'First rover on the Moon', 'Biggest rocket ever'] },
   { fact: 'mro', q: 'How do messages from rovers on Mars usually reach Earth?', a: ['Through orbiters circling Mars, like MRO', 'By letter', 'Through a cable'] },
+  { fact: 'marsSound', q: 'Compared with Earth, what is sound like on Mars?', a: ['Much quieter - it fades out after about 8 m', 'Much louder', 'Exactly the same'] },
   { fact: 'fission', q: 'Why is a fission reactor useful on Mars?', a: ['It makes power at night and in dust storms', 'It makes the air breathable', 'It makes Mars warmer'] },
   { fact: 'cruiseDose', q: 'Where is space radiation worse for astronauts?', a: ['Travelling between planets', 'On the surface of Mars', 'Inside a buried outpost'] },
 ];

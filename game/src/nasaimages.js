@@ -106,4 +106,11 @@ export function libraryPhoto(it) {
     text: (m.description || '').split('. ')[0] + '.', link: `https://images.nasa.gov/details/${encodeURIComponent(m.nasa_id)}` };
 }
 
+// Real Mars weather (Curiosity) and today's real Earth-Mars distance (JPL Horizons), saved by scripts/snapshot-mars-data.mjs.
+let marsToday;
+export function loadMarsToday() {
+  marsToday ??= fetch('data/mars-today.json').then(r => (r.ok ? r.json() : null)).catch(() => null);
+  return marsToday;
+}
+
 export const dateWords = iso => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });

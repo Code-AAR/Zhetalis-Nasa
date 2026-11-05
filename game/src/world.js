@@ -177,19 +177,32 @@ function makePickup(kind) {
   return g;
 }
 
+// The astronaut: `g` is where the physics puts you; `rig` holds everything you see, so the body can bob,
+// lean and squash without moving the physics. Arms and legs hang from pivots at the shoulders and hips.
 function makeAstronaut() {
-  const g = new THREE.Group();
+  const g = new THREE.Group(), rig = new THREE.Group(); g.add(rig);
   const suit = mat('#f3f1ec'), orange = mat('#e2622f'), visor = new THREE.MeshPhongMaterial({ color: '#1b2a3a', shininess: 90, specular: '#ffcf9a' });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.75, 4, 10), suit); body.position.y = 0.95; g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), suit); head.position.y = 1.78; g.add(head);
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, -Math.PI / 2.4, Math.PI / 1.2, Math.PI / 4, Math.PI / 2.4), visor); face.position.set(0, 1.8, 0.1); g.add(face);
-  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), suit); pack.position.set(0, 1.05, -0.42); g.add(pack);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.12, 0.86), orange); band.position.y = 1.3; g.add(band);
-  const legs = [-0.18, 0.18].map(x => { const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.4, 3, 6), suit); l.position.set(x, 0.32, 0); g.add(l); return l; });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.75, 4, 10), suit); body.position.y = 0.95; rig.add(body);
+  const head = new THREE.Group(); head.position.y = 1.62; rig.add(head);                     // the helmet nods a little as you walk
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), suit); helmet.position.y = 0.16; head.add(helmet);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10, -Math.PI / 2.4, Math.PI / 1.2, Math.PI / 4, Math.PI / 2.4), visor); face.position.set(0, 0.18, 0.1); head.add(face);
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), suit); pack.position.set(0, 1.05, -0.42); rig.add(pack);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.12, 0.86), orange); band.position.y = 1.3; rig.add(band);
+  const limb = (x, y, len, r) => {                       // a pivot with the limb hanging below it
+    const pivot = new THREE.Group(); pivot.position.set(x, y, 0);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 6), suit); m.position.y = -len / 2 - r; pivot.add(m);
+    rig.add(pivot); return pivot;
+  };
+  const legs = [limb(-0.18, 0.62, 0.36, 0.15), limb(0.18, 0.62, 0.36, 0.15)];
+  const arms = [limb(-0.5, 1.38, 0.42, 0.11), limb(0.5, 1.38, 0.42, 0.11)];
+  arms[0].rotation.z = -0.12; arms[1].rotation.z = 0.12;
   g.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  g.userData.legs = legs;
+  Object.assign(g.userData, { rig, legs, arms, head });
   return g;
 }
+
+// Turn by the shortest way round (so you never spin 350° to face 10° to the left).
+const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
 export class World {
   constructor(renderer, facts, onLoaded) {
@@ -269,10 +282,11 @@ export class World {
 
     // Team models: drop a .glb with one of these names into game/assets/ and it replaces the
     // placeholder shape automatically (scaled to the same height). No code changes needed.
-    this.swapModel('astronaut.glb', this.player, 1.85);
+    this.swapModel('astronaut.glb', this.player.userData.rig, 1.85);   // inside the rig, so the team model bobs and leans too
     this.swapModel('hab.glb', this.outpost.group.children[0].parent, null, [0, 1, 2, 3, 4]); // main hab parts
     this.swapModel('lander.glb', this.outpost.group.children.find(c => c.isGroup && c.position.z === -17), 11);
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
+    this.move = new THREE.Vector3(); this.gait = 0; this.swing = 0; this.squash = 0; this.lean = { x: 0, z: 0 };   // animation state
     this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
     this.keys = {}; this.time = 0; this.panelsDirty = false;
     this.setTime(this.phase);
@@ -292,6 +306,15 @@ export class World {
       old.forEach(o => (o.visible = false));
       target.add(model);
       console.info('Using team model', file);
+      // If the model comes with animations named like "Idle", "Walk" and "Run" (e.g. from Mixamo), play them.
+      if (file === 'astronaut.glb' && gltf.animations?.length) {
+        const mixer = new THREE.AnimationMixer(model), find = re => gltf.animations.find(a => re.test(a.name));
+        const clips = { idle: find(/idle|stand|breath/i), walk: find(/walk/i), run: find(/run|jog/i) };
+        const actions = {};
+        for (const [k, c] of Object.entries(clips)) if (c) { actions[k] = mixer.clipAction(c); actions[k].play(); actions[k].setEffectiveWeight(0); }
+        this.astroAnim = { mixer, actions };
+        console.info('Astronaut animations:', Object.keys(actions).join(', ') || 'none matched', gltf.animations.map(a => a.name));
+      }
     }, undefined, () => { /* no team model yet - keep the placeholder */ });
   }
 
@@ -342,6 +365,50 @@ export class World {
     this.night = day < 0.35;
   }
 
+  // Smooth astronaut animation. The team model has no skeleton, so the whole body moves in code:
+  // a bouncy low-gravity lope (Mars has 38% of Earth's gravity), turning smoothly, leaning into the walk,
+  // swinging arms and legs, breathing when still, and a squash when you land.
+  animateAstronaut(dt, running) {
+    const u = this.player.userData, rig = u.rig, speed = Math.hypot(this.move.x, this.move.z);
+    const pace = Math.min(1, speed / 5), run = Math.min(1, Math.max(0, (speed - 5) / 4));
+    // face where you are going, turning smoothly
+    if (speed > 0.4) {
+      const turn = angleTo(this.player.rotation.y, Math.atan2(this.move.x, this.move.z));
+      this.player.rotation.y += turn * (1 - Math.exp(-dt * 10));
+      this.lean.z += (THREE.MathUtils.clamp(-turn * 0.6, -0.25, 0.25) * pace - this.lean.z) * (1 - Math.exp(-dt * 6));
+    } else this.lean.z *= Math.exp(-dt * 6);
+    // the gait moves with distance, not time, so feet don't slide: one full stride is about 2.2 m (long, floaty steps)
+    const stride = running ? 3 : 2.2, before = this.gait;
+    if (this.onGround) this.gait += speed * dt / stride * Math.PI * 2;
+    if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3) this.onStep?.(run);   // a foot touches down
+    const s = Math.sin(this.gait), air = this.onGround ? 0 : 1;
+    this.swing += ((pace * (0.55 + 0.25 * run)) - this.swing) * (1 - Math.exp(-dt * 8));   // swing eases in and out
+    u.legs[0].rotation.x = s * this.swing - air * 0.35; u.legs[1].rotation.x = -s * this.swing - air * 0.15;
+    if (u.arms) { u.arms[0].rotation.x = -s * this.swing * 0.8; u.arms[1].rotation.x = s * this.swing * 0.8; }
+    // bounce: two bumps per stride, higher when running; breathing when standing still
+    const breathe = Math.sin(this.time * 1.6) * 0.012 * (1 - pace);
+    const bob = Math.abs(Math.cos(this.gait)) * (0.06 + 0.12 * run) * pace;
+    this.squash *= Math.exp(-dt * 7);
+    rig.position.y = bob + breathe - this.squash * 0.12;
+    rig.scale.set(1 + this.squash * 0.06, 1 - this.squash * 0.1 + breathe * 0.5, 1 + this.squash * 0.06);
+    this.lean.x += ((0.1 * pace + 0.12 * run) - this.lean.x) * (1 - Math.exp(-dt * 5));   // lean into the walk
+    rig.rotation.set(this.lean.x, 0, this.lean.z);
+    if (u.head) u.head.rotation.x = Math.sin(this.gait * 2) * 0.04 * pace - this.lean.x * 0.5;
+    // first person: a gentle head bob through the helmet
+    this.headBob = { y: bob * 0.5 - this.squash * 0.15 + breathe, x: Math.sin(this.gait) * 0.03 * pace };
+    // a rigged team model with its own animations: blend idle -> walk -> run by speed (slowed a little: low gravity)
+    const anim = this.astroAnim;
+    if (anim) {
+      const a = anim.actions, w = { idle: 1 - pace, walk: pace * (1 - (a.run ? run : 0)), run: a.run ? pace * run : 0 };
+      if (!a.walk) w.idle = 1;
+      for (const [k, act] of Object.entries(a)) act.setEffectiveWeight(w[k] ?? 0);
+      if (a.walk) a.walk.timeScale = Math.max(0.4, speed / 5) * 0.85;
+      if (a.run) a.run.timeScale = Math.max(0.5, speed / 9) * 0.85;
+      anim.mixer.update(dt);
+      rig.position.y = breathe - this.squash * 0.12;     // the animation does its own bouncing
+    }
+  }
+
   // Simple circle collisions so you can't walk through the base or big boulders.
   collide(pos) {
     for (const c of this.colliders) {
@@ -355,30 +422,34 @@ export class World {
   update(dt, controlsActive) {
     this.time += dt;
     const p = this.player.position, g = this.facts.gravity.value;
+    const k = this.keys, running = k.ShiftLeft || k.ShiftRight;
+    const want = new THREE.Vector3();
     if (controlsActive) {
-      const k = this.keys, speed = (k.ShiftLeft || k.ShiftRight ? 9 : 5);
       const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
-      const dir = new THREE.Vector3(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
-      if (dir.lengthSq() > 0) {
-        dir.normalize();
-        p.x += dir.x * speed * dt; p.z += dir.z * speed * dt;
-        this.player.rotation.y = Math.atan2(dir.x, dir.z);
-        const swing = Math.sin(this.time * speed * 1.6) * 0.5;
-        this.player.userData.legs[0].rotation.x = swing; this.player.userData.legs[1].rotation.x = -swing;
-      }
+      want.set(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
+      if (want.lengthSq() > 0) want.normalize().multiplyScalar(running ? 9 : 5);
       if (k.Space && this.onGround) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
     }
+    // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
+    const grip = this.onGround ? (want.lengthSq() ? 7 : 9) : 1.5;
+    this.move.lerp(want, 1 - Math.exp(-grip * dt));
+    p.x += this.move.x * dt; p.z += this.move.z * dt;
     this.vel.y -= g * dt;                                                           // ...but real Mars gravity pulls back slower
     p.y += this.vel.y * dt;
     this.collide(p);
-    const ground = heightAt(p.x, p.z);
-    if (p.y <= ground) { p.y = ground; this.vel.y = 0; this.onGround = true; }
+    const ground = heightAt(p.x, p.z), wasInAir = !this.onGround;
+    if (p.y <= ground) {
+      if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(1, -this.vel.y / 6);   // land with a little squash
+      p.y = ground; this.vel.y = 0; this.onGround = true;
+    }
+    this.animateAstronaut(dt, running);
 
     if (this.firstPerson) {
       // first person: eyes inside the helmet, body hidden so it doesn't block the view
       this.player.visible = false;
-      const eyeFP = new THREE.Vector3(p.x, p.y + 1.7, p.z);
+      const hb = this.headBob || { x: 0, y: 0 };
+      const eyeFP = new THREE.Vector3(p.x + Math.cos(this.yaw) * hb.x, p.y + 1.7 + hb.y, p.z - Math.sin(this.yaw) * hb.x);
       this.camera.position.copy(eyeFP);
       this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
       this.placeSky(p);

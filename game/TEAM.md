@@ -64,6 +64,23 @@ To rebuild SLS: download `3D Printing/Space Launch System (SLS) Block 1` from ht
 The launch pad layout (lightning towers, water tower, mound) follows NASA's Artemis II launch photos; step 1 of
 "How do we get there?" shows a real Artemis II launch photo from the NASA Image and Video Library.
 
+## Sound, animation and more real data (5 Nov)
+
+- **Real sound of Mars:** the wind outside is NASA's recording from Perseverance's SuperCam microphone (sol 4, 22 Feb 2021),
+  `assets/sound/mars-wind-perseverance.mp3`. The game adds suit breathing (faster when your air is low), a suit fan, soft
+  footsteps, the outpost's life-support hum and the launch rumble. **M** or the 🔊 button mutes. Mars is quiet - NASA found
+  sound fades after ~8 m there - so the mix is deliberately soft and muffled.
+- **Smooth astronaut:** speeds up and slows down, turns smoothly, bouncy low-gravity lope, leans, swings arms and legs,
+  breathes when standing still, squashes when landing; gentle head bob in first person and inside the outpost.
+- **Modelling (Sidney, Charm):** `astronaut.glb` currently has no skeleton, so only the whole body moves. If you export a
+  **rigged** astronaut with animations named **Idle**, **Walk** and **Run** (Mixamo works), the game plays and blends
+  them by speed automatically - no code needed.
+- **Real Mars weather** (Curiosity rover, daily report) in the outpost window, and **today's real Earth-Mars distance**
+  (NASA JPL Horizons) on the console. Refresh before a demo: `node scripts/snapshot-mars-data.mjs`.
+
+Voice lines the game can already play (add to the table above): `relay.mp3` (a relay orbiter fails) and `design.mp3`
+(Earth sends new designs).
+
 Debug for testers: open the game with `#debug` at the end of the address, then in the browser console use `game.phase(0.75)` (sunset), `game.event('relay-lost')`, `game.outpost.parts = 30`, `game.goInside()`.
 
 ## Who does what
@@ -126,5 +143,6 @@ The demo video for judging (1-2 minutes): show one real trade-off, e.g. a solar 
 ```
 node scripts/snapshot-noaa.mjs      # saves this week's real space weather
 node scripts/snapshot-nasa-images.mjs  # saves backup links to real Perseverance + EPIC photos
+node scripts/snapshot-mars-data.mjs    # saves Curiosity's latest Mars weather + today's Earth-Mars distance (JPL Horizons)
 node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when DONKI is online)
 ```

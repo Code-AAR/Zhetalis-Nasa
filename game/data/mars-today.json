@@ -1,0 +1,23 @@
+{
+ "saved": "2026-11-05T04:01:56.520Z",
+ "weather": {
+  "sol": 4995,
+  "date": "2026-08-25",
+  "high": -5,
+  "low": -71,
+  "pressure": 777,
+  "sky": "Sunny",
+  "sunrise": "06:46",
+  "sunset": "18:51",
+  "uv": "Moderate",
+  "source": "NASA Curiosity rover, REMS weather station (Centro de Astrobiología), Gale Crater",
+  "url": "https://mars.nasa.gov/msl/weather/"
+ },
+ "distance": {
+  "date": "2026-11-05",
+  "km": 209404441,
+  "lightMinutes": 11.6,
+  "source": "NASA JPL Horizons",
+  "url": "https://ssd.jpl.nasa.gov/horizons/"
+ }
+}

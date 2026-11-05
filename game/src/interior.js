@@ -101,24 +101,35 @@ export class Interior {
     this.yaw = Math.PI; this.pitch = 0;      // start just inside the airlock, facing the console
   }
 
-  enter() { this.pos.set(0, 0, R - 1.6); this.yaw = Math.PI; this.pitch = 0; }
+  enter() { this.pos.set(0, 0, R - 1.6); this.yaw = Math.PI; this.pitch = 0; this.vel = { x: 0, z: 0 }; }
 
   setStorm(on, t) { this.alarm.intensity = on ? 10 + Math.sin(t * 6) * 8 : 0; }
 
   update(dt, keys, active) {
+    this.vel ??= { x: 0, z: 0 }; this.step ??= 0;
+    let wx = 0, wz = 0;
     if (active) {
       const speed = keys.ShiftLeft || keys.ShiftRight ? 4 : 2.6;
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
       const len = Math.hypot(dx, dz);
-      if (len) { this.pos.x += dx / len * speed * dt; this.pos.z += dz / len * speed * dt; }
+      if (len) { wx = dx / len * speed; wz = dz / len * speed; }
+    }
+    {
+      const k = 1 - Math.exp(-dt * 9);                       // ease into and out of walking
+      this.vel.x += (wx - this.vel.x) * k; this.vel.z += (wz - this.vel.z) * k;
+      this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
+      const sp = Math.hypot(this.vel.x, this.vel.z), before = this.step;
+      this.step += sp * dt / 1.4 * Math.PI * 2;
+      if (Math.floor(before / Math.PI) !== Math.floor(this.step / Math.PI) && sp > 1) this.onStep?.();
+      this.bob = Math.abs(Math.cos(this.step)) * 0.035 * Math.min(1, sp / 2.6);
       const r = Math.hypot(this.pos.x, this.pos.z), max = R - 1.2;
       if (r > max) { this.pos.x *= max / r; this.pos.z *= max / r; }
       const tx = this.pos.x - this.table.x, tz = this.pos.z - this.table.z, tr = Math.hypot(tx, tz);   // walk around the table
       if (tr < 1.3 && tr > 0.001) { this.pos.x = this.table.x + tx / tr * 1.3; this.pos.z = this.table.z + tz / tr * 1.3; }
     }
-    const eye = new THREE.Vector3(this.pos.x, 1.65, this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.65 + (this.bob || 0), this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }
