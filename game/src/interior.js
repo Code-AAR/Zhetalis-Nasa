@@ -29,19 +29,24 @@ function screenTexture(lines, color = '#7dffb2') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-function marsWindowTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
-  const g = c.getContext('2d');
-  const sky = g.createLinearGradient(0, 0, 0, 110); sky.addColorStop(0, '#b8774f'); sky.addColorStop(1, '#efc9a4');
-  g.fillStyle = sky; g.fillRect(0, 0, 256, 160);
-  g.fillStyle = '#a85d39'; g.beginPath(); g.moveTo(0, 110);
-  for (let x = 0; x <= 256; x += 16) g.lineTo(x, 95 + Math.sin(x * 0.05) * 12 + Math.sin(x * 0.13) * 6);
-  g.lineTo(256, 160); g.lineTo(0, 160); g.fill();
-  g.fillStyle = '#7a3f26'; g.fillRect(0, 130, 256, 30);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-
+export const observationPhotos=[
+  {slug:'mount-sharp-on-the-horizon',title:'Mount Sharp on the Horizon',credit:'Curiosity · NASA/JPL-Caltech'},
+  {slug:'perched-above-gusev-crater',title:'Perched Above Gusev Crater',credit:'Spirit · NASA/JPL-Caltech/Cornell'},
+  {slug:'sunset-at-mars-gusev-crater-spirit',title:'Sunset at Gusev Crater',credit:'Spirit · NASA/JPL/Texas A&M/Cornell'}
+];
 export class Interior {
+  showPhoto(index){
+    this.photoIndex=(index+observationPhotos.length)%observationPhotos.length;
+    const photo=observationPhotos[this.photoIndex];
+    const texture=this.photoTextures[this.photoIndex]??=new THREE.TextureLoader().load('assets/'+photo.slug+'.jpg',t=>{
+      const aspect=t.image.width/t.image.height, frame=3.6/1.85;
+      t.repeat.set(Math.min(1,frame/aspect),Math.min(1,aspect/frame));
+      t.offset.set((1-t.repeat.x)/2,(1-t.repeat.y)/2);
+    });
+    texture.colorSpace=THREE.SRGBColorSpace;
+    this.photoPanel.material.map=texture;this.photoPanel.material.needsUpdate=true;
+    return photo;
+  }
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#1b1410');
@@ -165,9 +170,12 @@ export class Interior {
 
     // window onto Mars
     const win = new THREE.Group();
-    win.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.6), new THREE.MeshBasicMaterial({ map: marsWindowTexture() })), 0, 2.1, 0));
+    this.photoPanel=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.85),new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false}));
+    win.add(at(this.photoPanel,0,2,.11));
+    this.photoTextures=[];
+    this.showPhoto(0);
     win.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.12, 0.2), lam('#2a2e34')), 0, 1.25, 0));
-    add('window', 'look out of the window', (R - 0.05) * 0.72, -(R - 0.05) * 0.72, win);
+    add('window', 'browse NASA rover photos', (R - 0.05) * 0.72, -(R - 0.05) * 0.72, win);
 
     // hazard monitor - space weather and dust-storm forecasts; it blinks red when it has spotted something new
     const mon = new THREE.Group();

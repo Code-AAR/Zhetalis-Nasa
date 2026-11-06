@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createOpenLayout } from './exploration-layout.js';
-import { installHabitatAccess, pressureTube } from './access.js';
+import { installHabitatAccess } from './access.js';
+import { loadModel } from './nasamodels.js';
 import { GH, heightAt } from './world.js';
 
 export async function installSettlement(world){
@@ -17,8 +18,31 @@ export async function installSettlement(world){
   const anchor=layout.moduleColliders[2];GH.x=anchor.x;GH.z=anchor.z-23;
   const greenhouse=makeBaseGreenhouse(world);
   const start=new THREE.Vector3(anchor.x,4,anchor.z-anchor.r+.6),end=new THREE.Vector3(GH.x,2.1,GH.z+GH.r-.5);
-  const tubeShell=new THREE.MeshStandardMaterial({color:'#dbd6c7',roughness:.7,side:THREE.DoubleSide}),tubeTrim=new THREE.MeshStandardMaterial({color:'#737b79',roughness:.65,metalness:.3});
-  pressureTube(world.scene,start,end,2.2,tubeShell,tubeTrim);
+  const asset=await loadModel('greenhouse-walkway.glb');
+  if(!asset)throw new Error('Greenhouse walkway unavailable');
+  const glassTunnel=asset.scene.clone(true);
+  const lower=new THREE.Vector3(GH.x,.1,GH.z+5);
+  const upper=new THREE.Vector3(anchor.x,2.4,anchor.z-2.7);
+  const axis=upper.clone().sub(lower);
+  glassTunnel.position.copy(lower);
+  glassTunnel.rotation.x=-Math.atan2(axis.y,axis.z);
+  glassTunnel.scale.z=axis.length()/15;
+  world.scene.add(glassTunnel);
+  // Cut only the two facing shells, leaving the side and far walls intact.
+
+  function doorway(root,zMin,zMax,yMin,yMax){
+    const planes=[[1,0,0,-(anchor.x+1.5)],[-1,0,0,anchor.x-1.5],[0,0,1,-zMax],[0,0,-1,zMin],[0,1,0,-yMax],[0,-1,0,yMin]]
+      .map(([x,y,z,d])=>new THREE.Plane(new THREE.Vector3(x,y,z),d));
+    root.updateWorldMatrix(true,true);
+    const opening=new THREE.Box3(new THREE.Vector3(anchor.x-1.5,yMin,zMin),new THREE.Vector3(anchor.x+1.5,yMax,zMax));
+    root.traverse(o=>{
+      if(!o.isMesh||!opening.intersectsBox(new THREE.Box3().setFromObject(o)))return;
+      const cut=material=>{const m=material.clone();m.clippingPlanes=planes;m.clipIntersection=true;m.clipShadows=true;return m;};
+      o.material=Array.isArray(o.material)?o.material.map(cut):cut(o.material);
+    });
+  }
+  doorway(model,anchor.z-anchor.r-1,anchor.z-1,2.35,5.35);
+  doorway(greenhouse,GH.z+4,GH.z+8,.09,3.14);
   layout.colliders.push({x:GH.x,z:GH.z,r:GH.r+.3});
   for(let z=end.z+2;z<start.z;z+=2)layout.colliders.push({x:GH.x,z,r:2.3});
   const colonyTargets=world.extraTargets;
@@ -50,7 +74,18 @@ export async function installSettlement(world){
     const berm=new THREE.Mesh(new THREE.BoxGeometry(5,3,2),soilMat);berm.position.set(c.x,1.5,c.z-4.1);berm.rotation.x=-.12;berms.add(berm);
   }
   shielding.visible=false;berms.visible=false;
-  const mission={...access,model,layout,greenhouse,updateGreenhouse:(beds,powered=true)=>{
+  const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
+  pack.position.set(53.4,heightAt(53.4,-17)+.45,-17);world.scene.add(pack);
+  world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});
+  for(const panel of world.solar.panels){
+    const position=panel.getWorldPosition(new THREE.Vector3());
+    world.colliders.push({x:position.x,z:position.z,r:1.35,object:panel});
+  }
+  const endpoint=layout.moduleColliders[0];
+  const cablePoints=[new THREE.Vector3(53.4,.6,-20),new THREE.Vector3(53.4,.1,-18.8),pack.position.clone(),new THREE.Vector3(51,.1,-17), new THREE.Vector3(endpoint.x,.1,endpoint.z-5),new THREE.Vector3(endpoint.x,.8,endpoint.z-4)];
+  const powerSite={x:pack.position.x,z:pack.position.z+1.6};
+  const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cablePoints),48,.07,8,false),new THREE.MeshStandardMaterial({color:'#42494b',roughness:.8}));world.scene.add(cable);
+  const mission={glassTunnel,blockEquipment:equipmentContact(model),pack,cable,powerSite,...access,model,layout,greenhouse,updateGreenhouse:(beds,powered=true)=>{
     beds.forEach((bed,i)=>{const row=greenhouse.userData.rows[i];row.plants.visible=!!bed.crop;row.plants.scale.y=.2+bed.grown*.8;row.plants.material.color.set(bed.ready?'#a5ae61':bed.crop==='lettuce'?'#833b48':'#4f8f3a');row.led.material.color.set(bed.crop&&powered?'#e05cff':'#504852');});
     greenhouse.userData.growLight.intensity=powered&&beds.some(b=>b.crop)?3:0;
   },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:on=>berms.visible=on};
@@ -84,4 +119,40 @@ function makeBaseGreenhouse(world){
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, 0.15), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.6, 1.55));
 
  ghG.name="base-greenhouse";return ghG;
+}
+
+// The source model batches the solar tables, dish, and mast into a few meshes.
+// Sample their triangles once in a local grid so gaps between them stay walkable.
+function equipmentContact(model){
+  const pitch=.65, cells=new Map(), vertices=[new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()];
+  const sample=new THREE.Vector3();
+  const key=(x,z)=>x+','+z;
+  for(const name of ['Object_13','Object_14','Object_29','Object_31']){
+    const mesh=model.getObjectByName(name);
+    if(!mesh?.isMesh)continue;
+    const geometry=mesh.geometry,position=geometry.attributes.position,index=geometry.index;
+    for(let i=0;i<(index?.count??position.count);i+=3){
+      vertices.forEach((v,j)=>v.fromBufferAttribute(position,index?index.getX(i+j):i+j).applyMatrix4(mesh.matrixWorld));
+      const [a,b,c]=vertices;
+      if(Math.max(a.y,b.y,c.y)<.35 || Math.min(a.y,b.y,c.y)>5)continue;
+      const steps=Math.max(1,Math.ceil(Math.max(a.distanceTo(b),b.distanceTo(c),c.distanceTo(a))/pitch*2));
+      for(let j=0;j<=steps;j++)for(let k=0;k<=steps-j;k++){
+        sample.copy(a).multiplyScalar(1-(j+k)/steps).addScaledVector(b,j/steps).addScaledVector(c,k/steps);
+        if(sample.y<.15)continue;
+        const cell=key(Math.round(sample.x/pitch),Math.round(sample.z/pitch));
+        const span=cells.get(cell);
+        if(span){span.low=Math.min(span.low,sample.y);span.high=Math.max(span.high,sample.y);}
+        else cells.set(cell,{low:sample.y,high:sample.y});
+      }
+    }
+  }
+  return pos=>{
+    const cx=Math.round(pos.x/pitch),cz=Math.round(pos.z/pitch);
+    for(let x=cx-1;x<=cx+1;x++)for(let z=cz-1;z<=cz+1;z++){
+      const span=cells.get(key(x,z));
+      if(!span || pos.y>span.high+.04 || pos.y+1.85<span.low)continue;
+      const dx=pos.x-x*pitch,dz=pos.z-z*pitch,d=Math.hypot(dx,dz),r=pitch*.5+.35;
+      if(d>0 && d<r){pos.x+=dx*(r/d-1);pos.z+=dz*(r/d-1);}
+    }
+  };
 }

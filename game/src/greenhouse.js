@@ -3,6 +3,7 @@
 // under pink-purple LED bars, like NASA's Veggie garden on the ISS. Each bed is a farm plot from colony.js:
 // plant seeds, water it from the pipe, harvest food for the crew. Same shape of class as interior.js.
 import * as THREE from 'three';
+import { loadModel } from './nasamodels.js';
 import { CROPS } from './colony.js';
 
 const R = 7, SEG = 64;                         // dome radius (metres)
@@ -35,7 +36,21 @@ export class Greenhouse {
     const frame = std('#eceae4', { metalness: 0.3, roughness: 0.4 });
     for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; this.scene.add(rib); }
     for (const a of [0.35, 0.7, 1.05]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(R * Math.cos(a), 0.05, 8, SEG), frame); ring.rotation.x = Math.PI / 2; ring.position.y = R * Math.sin(a); this.scene.add(ring); }
-    this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.6, SEG, 1, true), std('#d9d4cb', { side: THREE.DoubleSide })), 0, 0.3, 0));   // low base wall
+    // Cut the dome skin and its ribs where they meet the passage.
+    for(const member of this.scene.children.filter(o=>o.isMesh)){
+      member.updateMatrix();
+      const geom=member.geometry, indices=geom.index, pos=geom.attributes.position;
+      const keep=[],point=new THREE.Vector3(),center=new THREE.Vector3();
+      for(let i=0;i<indices.count;i+=3){
+        center.set(0,0,0);
+        for(let j=0;j<3;j++)center.add(point.fromBufferAttribute(pos,indices.getX(i+j)).applyMatrix4(member.matrix));
+        center.multiplyScalar(1/3);
+        if(center.z>5 && Math.abs(center.x)<1.59 && center.y<2.96)continue;
+        keep.push(indices.getX(i),indices.getX(i+1),indices.getX(i+2));
+      }
+      geom.setIndex(keep);
+    }
+    this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.6, SEG, 1, true,.23,Math.PI*2-.46), std('#d9d4cb', { side: THREE.DoubleSide })), 0, 0.3, 0));   // low base wall
     const floor = new THREE.Mesh(new THREE.CircleGeometry(R, SEG), std('#6b7079')); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; this.scene.add(floor);
     for (const x of [-2.4, 0, 2.4]) { const path = box(1.0, 0.02, 11, std('#8a9099')); this.scene.add(at(path, x, 0.02, 0)); }   // walkways between the beds
 
@@ -66,12 +81,14 @@ export class Greenhouse {
     tap.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1, 0.38), new THREE.MeshBasicMaterial({ map: label(['WATER', 'from the base'], '#9fe7ff') })), 0, 2.0, 0.3));
     this.stations.push({ type: 'gh-tap', label: 'fill your water jug at the tap', x: -3.6, z: -3.6 });
 
-    // ---- tunnel hatch back into the outpost (+x side, towards it), and the airlock to outside (-x side) ----
-    const hatch = new THREE.Group(); hatch.position.set(0, 0, R - 0.3); hatch.rotation.y = Math.PI; this.scene.add(hatch);
-    hatch.add(at(new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.3, 48), std('#eceae4')), 0, 1.4, 0)); hatch.children[0].rotation.x = Math.PI / 2;
-    hatch.add(at(new THREE.Mesh(new THREE.CircleGeometry(1.05, 48), std('#2a2e34')), 0, 1.4, 0.16));
-    hatch.add(at(box(2.2, 0.12, 0.1, new THREE.MeshBasicMaterial({ color: '#ffd27a' })), 0, 2.85, 0.1));
-    this.stations.push({ type: 'gh-hab', label: 'walk through the tunnel to the outpost', x: 0, z: R - 1.6 });
+    // The pressure tunnel runs toward the habitat (+z). The exterior airlock faces west.
+
+    this.walkwayReady = loadModel('greenhouse-walkway.glb').then(asset=>{
+      if(!asset)throw new Error('Greenhouse walkway unavailable');
+      const walkway=asset.scene.clone(true);
+      walkway.position.z=5;
+      this.scene.add(walkway);
+    });
     const lock = new THREE.Group(); lock.position.set(-(R - 0.3), 0, 0); lock.rotation.y = Math.PI / 2; this.scene.add(lock);
     lock.add(at(box(1.8, 2.5, 0.15, std('#2a2e34')), 0, 1.25, 0));
     lock.add(at(box(2.0, 0.12, 0.2, new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.6, 0));
@@ -79,7 +96,7 @@ export class Greenhouse {
 
     // a few potted herbs and a bench by the door, so it feels lived in
     const pot = std('#b5653d');
-    for (const [x, z] of [[-1.6, 5.4], [1.6, 5.4], [5.0, 3.2]]) {
+    for (const [x, z] of [[-2.4, 4.7], [2.4, 4.7], [5.0, 3.2]]) {
       this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.4, 24), pot), x, 0.2, z));
       this.scene.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 14), std('#4f8f3a')), x, 0.6, z));
     }
@@ -123,7 +140,9 @@ export class Greenhouse {
     this.step += sp * dt / 1.9 * Math.PI * 2;
     if (Math.floor(before / Math.PI) !== Math.floor(this.step / Math.PI) && sp > 1) this.onStep?.();
     const r = Math.hypot(this.pos.x, this.pos.z), max = R - 1.0;
-    if (r > max) { this.pos.x *= max / r; this.pos.z *= max / r; }
+    if(this.pos.z>5.6 && Math.abs(this.pos.x)<1.6){
+      this.pos.x=THREE.MathUtils.clamp(this.pos.x,-1.12,1.12);
+    } else if (r > max) { this.pos.x *= max / r; this.pos.z *= max / r; }
     for (const x of BEDS) {                         // walk around the beds, not through them
       const hx = BED_W / 2 + 0.3, hz = BED_LEN / 2 + 0.3, dx = this.pos.x - x, dz = this.pos.z;
       if (Math.abs(dx) < hx && Math.abs(dz) < hz) {

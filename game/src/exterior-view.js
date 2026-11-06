@@ -5,7 +5,7 @@ import * as THREE from 'three';
 export function renderInteriorView(renderer, world, room, kind, dt) {
   const camera=room.exteriorCamera??=new THREE.PerspectiveCamera();
   camera.copy(room.camera);camera.far=1800;
-  if(kind==='greenhouse'){
+  if(kind!=='capsule'){
     camera.position.add(world.settlement.greenhouse.position);
   }else{
     const lander=world.outpost.group.getObjectByName('lander');
@@ -14,7 +14,9 @@ export function renderInteriorView(renderer, world, room, kind, dt) {
     camera.quaternion.premultiply(lander.quaternion);
   }
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
-  const hidden=[world.player,world.viewSlot,kind==='greenhouse'?world.settlement.greenhouse:world.outpost.group.getObjectByName('lander')];
+  const hidden=[world.player,world.viewSlot,kind!=='capsule'?world.settlement.greenhouse:world.outpost.group.getObjectByName('lander')];
+  if(kind!=='capsule')hidden.push(world.settlement.glassTunnel);
+  if(kind==='habitat')hidden.push(world.settlement.model);
   const visibility=hidden.map(o=>o.visible),originalCamera=world.camera,autoClear=renderer.autoClear;
   try{
     hidden.forEach(o=>o.visible=false);

@@ -50,7 +50,7 @@ export const UPGRADES = {
   battery:    { name: 'Extra battery',         parts: 3,  tier: 0, desc: `Stores ${TUNED.batteryUpgrade} kWh more for the night, so the heater never runs out.` },
   regolith:   { name: 'Bury the outpost under regolith', parts: 5, tier: 0, once: true, desc: 'Pile Mars soil over the outpost. Thick soil blocks 30% more radiation - real Mars base plans do this.' },
   panel:      { name: 'Extra solar panel',     parts: 4,  tier: 1, desc: `+${TUNED.kWhPerPanel} kWh every clear sol (only in daylight).` },
-  greenhouse: { name: 'Bigger greenhouse',     parts: 5,  tier: 1, desc: 'Grows 40% more food from the same power.' },
+  greenhouse: { name: 'Bigger greenhouse',     parts: 5,  tier: 1, desc: 'Adds 40% to each grow bed’s harvest.' },
   moxie:      { name: 'Better oxygen maker',   parts: 5,  tier: 2, desc: 'Makes 30% more oxygen from the same power - like an upgraded MOXIE.' },
   wall:       { name: 'Water-wall shielding',  parts: 6,  tier: 2, desc: 'Water tanks in the walls block 15% more radiation.' },
   reactor:    { name: 'Small fission reactor', parts: 12, tier: 3, once: true, desc: `+${TUNED.reactorKWh} kWh every sol, day and night, even in dust storms. NASA is designing one for the Moon and Mars.` },
@@ -65,9 +65,14 @@ export class Outpost {
     this.d = d; this.facts = facts;
     this.sol = 0;
     this.crew = d.crew;
-    this.o2 = d.o2; this.food = d.food; this.parts = d.parts;
+    this.o2 = d.o2;
+    this.food = this.crew * 3;
+    this.rations = d.food;
+    this.powerStep = 0;
+    this.harvestMeals = 0;
+    this.parts = d.parts;
     this.dose = 0; this.science = 0; this.scienceSent = 0;
-    this.panels = 4; this.clean = 1;                       // panel cleanliness 0..1
+    this.panels = 3; this.clean = 1;                       // panel cleanliness 0..1
     this.battery = TUNED.batteryStart; this.reactors = 0;
     this.upgrades = { suit: 0, battery: 0, regolith: 0, greenhouse: 0, moxie: 0, wall: 0 };
     this.split = { life: 0.4, comms: 0.15, science: 0.25, shield: 0.2 };
@@ -108,7 +113,7 @@ export class Outpost {
     const e = Math.max(0, total - heater);                       // the heater's night power is set aside first
     const lifeK = e * this.split.life * (cold ? 0.7 : 1);         // freezing machines work worse
     const o2 = lifeK * TUNED.o2Share * TUNED.o2PerKWh * (1 + 0.3 * this.upgrades.moxie);
-    const food = lifeK * (1 - TUNED.o2Share) * TUNED.foodPerKWh * (1 + 0.4 * this.upgrades.greenhouse);
+    const food = 0; // Stored meals come from the locker, deliveries and harvested beds.
     const commsNeed = TUNED.commsNeedKWh * (this.relayDown > 0 ? TUNED.directToEarthFactor : 1);
     const link = e * this.split.comms >= commsNeed && this.blackout === 0;
     const shieldLevel = Math.min(1, (e * this.split.shield) / TUNED.shieldFullKWh);
@@ -130,6 +135,7 @@ export class Outpost {
     this.sol += 1;
 
     this.o2 = Math.max(0, this.o2 + f.o2Net);
+    const fed = this.food >= this.crew;
     this.food = Math.max(0, this.food + f.foodNet);
     if (f.cold) events.push({ type: 'cold-night' });
     let dose = f.dose;
@@ -180,10 +186,10 @@ export class Outpost {
     if (this.hazards.some(h => !h.seen)) events.push({ type: 'hazard-detected' });
 
     if (this.o2 <= 0) this.over = { win: false, why: 'oxygen' };
-    if (this.food <= 0) { if (++this.hungry >= 3) this.over = { win: false, why: 'food' }; } else this.hungry = 0;
+    if (!fed) { if (++this.hungry >= 3) this.over = { win: false, why: 'food' }; } else this.hungry = 0;
     if (this.dose >= this.limit) this.over = { win: false, why: 'radiation' };
     const t = this.forecast();
-    if (!this.over && this.tier === 3 && this.reactors > 0 && t.o2Net >= 0 && t.foodNet >= 0 && this.sol >= this.d.sols / 2)
+    if (!this.over && this.tier === 3 && this.reactors > 0 && t.o2Net >= 0 && this.harvestMeals / this.sol >= this.crew && this.sol >= this.d.sols / 2)
       this.over = { win: true, why: 'settlement' };   // self-sufficient, and it has proved it for half the mission
     if (!this.over && this.sol >= this.d.sols) this.over = { win: true, why: 'complete' };
     this.today = t;
@@ -194,7 +200,7 @@ export class Outpost {
     this.storm = { sols: 2 + Math.round(strength), total: 2 + Math.round(strength), strength, label, real };
   }
 
-  unlocked(key) { return this.tier >= UPGRADES[key].tier; }
+  unlocked(key) { if(this.powerStep<6 && ['panel','battery'].includes(key))return false; return this.tier >= UPGRADES[key].tier; }
   built(key) { return key === 'reactor' ? this.reactors > 0 : key === 'regolith' ? this.upgrades.regolith > 0 : false; }
 
   buy(key) {

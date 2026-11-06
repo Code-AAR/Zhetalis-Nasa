@@ -182,6 +182,7 @@ function makeRocks(rng) {
   const mat = new THREE.MeshLambertMaterial({ flatShading: true });
   const rocks = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
+  const vertex = new THREE.Vector3();
   const tints = ['#8a4a2d', '#a85d39', '#6e3b28', '#c07a52'].map(c => new THREE.Color(c));
   const colliders = [];
   for (let i = 0; i < count; i++) {
@@ -192,7 +193,11 @@ function makeRocks(rng) {
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
     rocks.setMatrixAt(i, m.compose(p, q, s));
     rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
-    if (!slab && size > 1.3) colliders.push({ x, z, r: size * 0.9 });
+    let top = -Infinity;
+    const vertices = geo.attributes.position;
+    for (let j=0;j<vertices.count;j++)
+      top = Math.max(top,vertex.fromBufferAttribute(vertices,j).applyMatrix4(m).y);
+    colliders.push({ x, z, r: Math.max(s.x,s.z)*.85, top });
   }
   rocks.castShadow = true; rocks.receiveShadow = true;
   return { rocks, colliders };
@@ -258,7 +263,20 @@ function makeSkyLights(scene) {
   const tex = new THREE.CanvasTexture(c);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#fff1dc', transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
   glow.scale.setScalar(260); scene.add(glow);
-  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 20), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
+  // HMI is a full-disk observation. Map it onto a camera-facing disk.
+  const texture = new THREE.TextureLoader().load('assets/sdo-sun.jpg');
+  texture.colorSpace=THREE.SRGBColorSpace;
+  const material=new THREE.ShaderMaterial({
+    uniforms:{solarMap:{value:texture}},
+    vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:`uniform sampler2D solarMap; varying vec2 vUv;
+      void main(){float intensity=texture2D(solarMap, .5+(vUv-.5)*.92).r;
+        gl_FragColor=vec4(vec3(1.,.965,.89)*sqrt(intensity)*2.5,1.);
+        #include <colorspace_fragment>
+      }`
+  });
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(2.5,64),material);
+  disc.name='SDO solar disk';
   scene.add(disc);
   // thousands of stars and the Milky Way; the thin, dry air of Mars makes the night sky very clear
   const stars = makeStars(850, 3500, true); scene.add(stars);
@@ -327,6 +345,7 @@ function makeAstronaut() {
 }
 
 // Turn by the shortest way round (so you never spin 350° to face 10° to the left).
+const ROCK_STEP_HEIGHT = 0.45; // metres above the boot soles while grounded
 const WALK = 3.2, RUN = 6.2;   // m/s - a brisk walk and a low-gravity lope (take the rover for long trips)
 const angleTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
@@ -616,14 +635,22 @@ export class World {
   groundHeightAt(x,z){return this.settlement?.walkHeight(x,z,heightAt(x,z))??heightAt(x,z);}
 
   // Simple circle collisions so you can't walk through the base or big boulders.
-  collide(pos) {
+  collide(pos, previousFeet = pos.y) {
+    const reachableTop = this.onGround ? previousFeet + ROCK_STEP_HEIGHT : Math.max(previousFeet, pos.y);
+    let support = -Infinity;
     for (const c of this.colliders) {
+      if(c.object && !c.object.visible)continue;
       if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
+      if (d < min && c.top !== undefined && reachableTop >= c.top-.001) {
+        support = Math.max(support,c.top);
+        continue;
+      }
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
     }
     const lim = WORLD_SIZE * 0.42, r = Math.hypot(pos.x, pos.z);
     if (r > lim) { pos.x *= lim / r; pos.z *= lim / r; }
+    return support;
   }
 
   enterRover() { this.driving = true; this.firstPerson = false; this.move.set(0, 0, 0); this.yaw = this.sev.yaw; this.pitch = 0.35; }
@@ -657,13 +684,15 @@ export class World {
     this.move.lerp(want, 1 - Math.exp(-grip * dt));
     p.x += this.move.x * dt; p.z += this.move.z * dt;
     this.vel.y -= g * dt;                                                           // ...but real Mars gravity pulls back slower
+    const previousFeet = p.y;
     p.y += this.vel.y * dt;
-    this.collide(p);
-    const ground = this.groundHeightAt(p.x, p.z), wasInAir = !this.onGround;
+    const rockTop = this.collide(p, previousFeet);
+    this.settlement?.blockEquipment(p);
+    const ground = Math.max(rockTop,this.groundHeightAt(p.x, p.z)), wasInAir = !this.onGround;
     if (p.y <= ground || (this.onGround&&Math.abs(p.y-ground)<.45)) {
       if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);   // land with a little squash
       p.y = ground; this.vel.y = 0; this.onGround = true;
-    }
+    } else this.onGround = false;
     this.animateAstronaut(dt, running);
 
     if (this.firstPerson) {
@@ -682,7 +711,7 @@ export class World {
     // third-person camera
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
     for (const c of this.colliders) {                      // keep the camera out of buildings and boulders
-      if (c.r < 2) continue;
+      if (c.r < 2 || (c.object && !c.object.visible)) continue;
       const dx = eye.x - c.x, dz = eye.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.8;
       if (d < min) { const k = d > 0.001 ? min / d : 1; eye.x = c.x + dx * k; eye.z = c.z + (d > 0.001 ? dz * k : min); }
     }
@@ -729,6 +758,7 @@ export class World {
     this.sky.position.copy(cam);
     this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
+    this.skyLights.disc.lookAt(cam);
     this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
     this.skyLights.moons.userData.place(this.phase, cam, (this.nightness ?? 0) * (this.dustOn ? 0.2 : 1));
     this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);
@@ -737,11 +767,16 @@ export class World {
   }
 
   // What the player is close enough to use with E.
+  aimsAt(object){
+    const ray=this.aimRay??=new THREE.Raycaster();
+    ray.setFromCamera(this.aimPoint||{x:0,y:0},this.camera);
+    return ray.intersectObject(object,true).some(hit=>hit.object.isMesh);
+  }
   nearest() {
     if (this.driving) return { type: 'sev-exit', d: 0 };
     const p = this.player.position, list = [];
     if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
-    if(this.settlement)for(const entrance of this.settlement.entrances)list.push({type:'door',entrance,range:1.8,d:Math.hypot(p.x-entrance.x,p.y-entrance.y,p.z-entrance.z)});
+    if(this.settlement){for(const entrance of this.settlement.entrances)if(Math.hypot(p.x-entrance.x,p.z-entrance.z)<1.85 && this.aimsAt(entrance.handle))list.push({type:'door',entrance,range:1.8,d:Math.hypot(p.x-entrance.x,p.y-entrance.y,p.z-entrance.z)});}
     else list.push({type:'door',d:Math.hypot(p.x-this.door.x,p.z-this.door.z)});
     list.push({type:'ghdoor',d:Math.hypot(p.x-(GH.x-GH.r-2.6),p.z-GH.z)});
     if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start

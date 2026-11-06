@@ -59,7 +59,7 @@ export async function createOpenLayout(world, habitat) {
     spawn=[door.x,door.z+8];
     route=[[-24,-12],[-24,16],[door.x,16],[door.x,door.z]];
     locations.base=[door.x,door.z];
-    colliders=[...sceneryColliders,...moduleColliders,{x:110,z:65,r:.6}];
+    colliders=[...sceneryColliders,...moduleColliders,{x:110,z:65,r:.6},{x:111.4,z:65,r:.65},{x:-65,z:35,r:.35,top:rock.position.y+size.y*.7/Math.max(size.x,size.y,size.z)},{x:-125,z:-75,r:.35},{x:-124.1,z:-75,r:.5}];
   }
   refit();
   const targets=p=>['meteorite','relay','ice'].map(key=>({type:'survey-'+key,d:Math.hypot(p.x-locations[key][0],p.z-locations[key][1])}));

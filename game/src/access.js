@@ -38,7 +38,7 @@ export function installHabitatAccess(world, model, layout) {
     addBox(2.65,.12,1.1,c.x,height-.06,doorZ-.4,shell);
     addBox(2.05,2.65,.12,c.x,height+1.325,doorZ+.22,dark);
     addBox(2.25,.13,.2,c.x,height+2.86,doorZ+.18,light);
-    addBox(.12,.5,.15,c.x+.78,height+1.2,doorZ+.33,metal);
+    entrance.handle=addBox(.19,.55,.22,c.x+.78,height+1.2,doorZ+.33,light);
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#26353a';ctx.fillRect(0,0,512,96);ctx.fillStyle='#c9f5db';ctx.font='30px system-ui';ctx.textAlign='center';ctx.fillText(`AIRLOCK ${String(index+1).padStart(2,'0')} · E`,256,61);
     const sign=new THREE.Mesh(new THREE.PlaneGeometry(2,.375),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));
@@ -47,6 +47,7 @@ export function installHabitatAccess(world, model, layout) {
   });
   for(let i=0;i<layout.moduleColliders.length-1;i++){
     const a=layout.moduleColliders[i],b=layout.moduleColliders[i+1];
+    layout.colliders.push({x:(a.x+b.x)/2,z:(a.z+b.z)/2,r:1.7});
     pressureTube(group,new THREE.Vector3(a.x+a.r-1,4,a.z),new THREE.Vector3(b.x-b.r+1,4,b.z),2.2,shell,metal);
   }
   return {

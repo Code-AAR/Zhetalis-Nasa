@@ -12,7 +12,7 @@ export class CrewInterior extends Interior {
     const wallMat=new THREE.MeshStandardMaterial({color:'#d8d9d1',roughness:.8,metalness:.1});
     const floorMat=new THREE.MeshStandardMaterial({color:'#4b5359',roughness:.95});
     const trimMat=new THREE.MeshStandardMaterial({color:'#8c9b9e',roughness:.7});
-    this.podNames=['Airlock & power','Storage & workshop','Life support','Crew shelter','Observation','Science & hazards'];
+    this.podNames=['Airlock & power','Storage & workshop','Life support · Greenhouse','Crew shelter','Observation','Science & hazards'];
     for(let i=0;i<6;i++){
       const cx=i*SPACING;
       const floor=new THREE.Mesh(new THREE.CircleGeometry(RADIUS,32),floorMat);floor.rotation.x=-Math.PI/2;floor.position.set(cx,0,0);this.scene.add(floor);
@@ -21,7 +21,14 @@ export class CrewInterior extends Interior {
         const angle=j/24*Math.PI*2;
         const atConnector=Math.abs(Math.sin(angle))>.9&&((Math.sin(angle)>0&&i<5)||(Math.sin(angle)<0&&i>0));
         const atAirlock=i===0&&Math.cos(angle)>.94;
-        if(atConnector||atAirlock){
+        if(i===4 && Math.cos(angle)<-.94){
+          for(const [y,h] of [[.57,1.14],[4.73,3.74]]){
+            const panel=new THREE.Mesh(new THREE.BoxGeometry(1.1,h,.12),wallMat);
+            panel.position.set(cx+Math.sin(angle)*RADIUS,y,Math.cos(angle)*RADIUS);panel.rotation.y=angle;this.scene.add(panel);
+          }
+          continue;
+        }
+        if(atConnector||atAirlock||(i===2 && Math.cos(angle)<-.94)){
           const bulkhead=new THREE.Mesh(new THREE.BoxGeometry(1.1,3.6,.12),wallMat);bulkhead.name='upper-pressure-bulkhead';bulkhead.position.set(cx+Math.sin(angle)*RADIUS,4.8,Math.cos(angle)*RADIUS);bulkhead.rotation.y=angle;this.scene.add(bulkhead);continue;
         }
         const panel=new THREE.Mesh(new THREE.BoxGeometry(1.1,6.6,.08),wallMat);panel.position.set(cx+Math.sin(angle)*RADIUS,3.3,Math.cos(angle)*RADIUS);panel.rotation.y=angle;this.scene.add(panel);
@@ -29,7 +36,7 @@ export class CrewInterior extends Interior {
       const lamp=new THREE.PointLight('#eaf5ed',20,12,1.5);lamp.position.set(cx,5.8,0);this.scene.add(lamp);
       const strip=new THREE.Mesh(new THREE.BoxGeometry(.9,.035,.12),new THREE.MeshBasicMaterial({color:'#efffe9'}));strip.position.set(cx,6.53,0);this.scene.add(strip);
       const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');ctx.fillStyle='#26343d';ctx.fillRect(0,0,512,96);ctx.font='32px system-ui';ctx.fillStyle='#ecf2e7';ctx.textAlign='center';ctx.fillText(this.podNames[i],256,60);
-      const label=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}));label.position.set(cx,3.35,-3.9);this.scene.add(label);
+      const label=new THREE.Mesh(new THREE.PlaneGeometry(i===2?2.45:1.1,i===2?.42:.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}));label.position.set(cx,3.35,-3.9);this.scene.add(label);
       if(i<5){
         const mid=cx+SPACING/2,len=SPACING-2*3.5;
         const bottom=new THREE.Mesh(new THREE.BoxGeometry(len,.04,2.8),floorMat);bottom.position.set(mid,.005,0);this.scene.add(bottom);
@@ -40,11 +47,19 @@ export class CrewInterior extends Interior {
       }
     }
     const layout={exit:[0,0,3.7,1],console:[0,0,-2.9,1],workbench:[1,0,-2.8,1],locker:[1,0,2.9,1],greenhouse:[2,0,-3.2,1],shelter:[3,0,-2.8,1],window:[4,0,-3.9,1],monitor:[5,0,-2.9,1]};
-    for(const {station,object}of stations){if(!object)continue;const[pod,dx,z,scale]=layout[station.type];station.x=pod*SPACING+dx;station.z=z;object.position.set(station.x,0,z);object.scale.set(scale,1,scale);object.lookAt(pod*SPACING,0,0);this.scene.add(object);}
+    for(const {station,object}of stations){if(!object)continue;const[pod,dx,z,scale]=layout[station.type];station.x=pod*SPACING+dx;station.z=z;object.position.set(station.x,0,z);object.scale.set(scale,1,scale);object.lookAt(pod*SPACING,0,0);if(station.type!=="greenhouse")this.scene.add(object);
+      if(['locker','workbench','console','monitor','shelter'].includes(station.type)){
+        object.updateWorldMatrix(true,true);
+        this.obstacles??=[];
+        this.obstacles.push(new THREE.Box3().setFromObject(object));
+      }
+    }
     this.enter();
   }
   enter(){this.pos.set(0,0,1.25);this.yaw=Math.PI;this.pitch=0;this.vel={x:0,z:0};}
-  walkable(x,z){return (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean);}
+  walkable(x,z){
+    if(this.obstacles?.some(b=>x>b.min.x-.18 && x<b.max.x+.18 && z>b.min.z-.18 && z<b.max.z+.18))return false;
+    return (Math.abs(x-SPACING*2)<1.12 && z>=-5 && z<0)|| (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean);}
   update(dt,keys,active){
     this.vel??={x:0,z:0};let x=0,z=0;
     if(active){const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);x=Math.sin(this.yaw)*f-Math.cos(this.yaw)*s;z=Math.cos(this.yaw)*f+Math.sin(this.yaw)*s;const len=Math.hypot(x,z);if(len){const speed=keys.ShiftLeft||keys.ShiftRight?3.5:2.6;x=x/len*speed;z=z/len*speed;}}

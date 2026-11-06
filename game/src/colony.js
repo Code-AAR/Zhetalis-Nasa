@@ -21,9 +21,9 @@ export const BAG = 8;           // rock samples you can carry before you must un
 export const JUG_L = 10;        // litres in a full water jug
 // Growing times are shortened for the game; the real times are shown next to them.
 export const CROPS = {
-  lettuce: { name: 'Red romaine lettuce', icon: '🥬', sols: 3, meals: 8,  water: 6,  real: 'about 4 weeks', colour: '#7a2f3a' },
-  wheat:   { name: 'Dwarf wheat',         icon: '🌾', sols: 5, meals: 15, water: 9,  real: 'about 2 months', colour: '#c9b25a' },
-  potato:  { name: 'Potatoes',            icon: '🥔', sols: 6, meals: 22, water: 12, real: 'about 3 to 4 months', colour: '#4f8f3a' },
+  lettuce: { name: 'Red romaine lettuce', icon: '🥬', sols: 3, meals: 8,  water: 6,  real: '33 days in NASA’s 2015 ISS harvest', colour: '#7a2f3a' },
+  wheat:   { name: 'Dwarf wheat',         icon: '🌾', sols: 5, meals: 15, water: 9,  real: '64–86 days in NASA chamber tests', colour: '#c9b25a' },
+  potato:  { name: 'Potatoes',            icon: '🥔', sols: 6, meals: 22, water: 12, real: '90–105 days in NASA chamber tests', colour: '#4f8f3a' },
 };
 export const GREENHOUSE = { cost: { hematite: 3, iron: 1, parts: 2 }, max: 4, tank: 12, near: 75 };
 // Earth's catalogue: you pay with Mars samples (scientists on Earth want them); goods come down on the next cargo pod.
@@ -42,7 +42,7 @@ export function newColony() {
   return {
     belt: ['pickaxe'], held: 0, locker: ['builder', 'jug'],
     bag: { hematite: 0, gypsum: 0, iron: 0 }, store: { hematite: 0, gypsum: 0, iron: 0 },
-    seeds: { lettuce: 2, wheat: 0, potato: 0 },    // the base came with two packs of lettuce seeds
+    seeds: { lettuce: 2, wheat: 1, potato: 1 },    // Flight manifest for the base grow beds
     tank: 20, jug: 0,                              // litres in the base water tank and in your jug
     farmQuest: {}, greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
     base: [0, 1, 2, 3].map(() => ({ crop: null, grown: 0, tank: 6, ready: false })),   // the 4 grow beds in the base greenhouse (greenhouse.js)
@@ -230,7 +230,8 @@ export class Colony {
       do { const a = rng() * Math.PI * 2, d = 32 + rng() * (ore === 'iron' ? 190 : 150); x = Math.cos(a) * d; z = Math.sin(a) * d; tries++; }
       while (tries < 40 && (heightAt(x, z) > 38 || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
       const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
-      this.deposits.push({ id, ore, x, z, group });
+      group.updateMatrixWorld(true);
+      this.deposits.push({ id, ore, x, z, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
     });
     this.restore();
     world.extraTargets = p => this.targets(p);
@@ -240,6 +241,9 @@ export class Colony {
   restore() {
     for (const d of this.deposits) {
       const gone = this.s.mined.includes(d.id);
+      const index=this.world.colliders.indexOf(d.collider);
+      if(gone && index>=0)this.world.colliders.splice(index,1);
+      if(!gone && index<0)this.world.colliders.push(d.collider);
       if (gone) this.world.scene.remove(d.group); else if (!d.group.parent) this.world.scene.add(d.group);
     }
     this.houses?.forEach(h => { this.world.scene.remove(h.group); this.world.colliders.splice(this.world.colliders.indexOf(h.collider), 1); });
@@ -267,7 +271,11 @@ export class Colony {
   // ---------- what's nearby, for the Use button ----------
   targets(p) {
     const list = [];
-    for (const d of this.deposits) if (!this.s.mined.includes(d.id)) list.push({ type: 'ore', deposit: d, d: Math.hypot(p.x - d.x, p.z - d.z) - 0.9 });
+    for (const d of this.deposits) {
+      const distance=Math.hypot(p.x-d.x,p.z-d.z);
+      if(distance<4 && d.group.parent && this.world.aimsAt(d.group))
+        list.push({type:'ore',deposit:d,d:distance-.9});
+    }
     for (const h of this.houses) list.push({ type: 'greenhouse', house: h, d: Math.hypot(p.x - h.gh.x, p.z - h.gh.z) - 2.4 });
     return list;
   }
@@ -296,11 +304,12 @@ export class Colony {
   strike(dep) {
     const o = ORES[dep.ore];
     const hits = (this.s.hits[dep.id] || 0) + 1; this.s.hits[dep.id] = hits;
-    dep.group.position.y -= 0.05; dep.group.rotation.y += 0.04;            // chips fly, the rock settles
+    dep.collider.top -= 0.05; dep.group.position.y -= 0.05; dep.group.rotation.y += 0.04;            // chips fly, the rock settles
     if (hits < o.hits) return { broke: false, left: o.hits - hits };
     const room = BAG - this.bagCount(), got = Math.min(room, o.yield);
     if (got <= 0) { this.s.hits[dep.id] = o.hits - 1; return { broke: false, full: true }; }
     this.s.bag[dep.ore] += got; this.s.mined.push(dep.id); this.world.scene.remove(dep.group);
+    const index=this.world.colliders.indexOf(dep.collider);if(index>=0)this.world.colliders.splice(index,1);
     return { broke: true, ore: dep.ore, got, firstTime: !this.s.seenOre.includes(dep.ore) && this.s.seenOre.push(dep.ore) };
   }
   unload() {   // sample bag -> base storage
@@ -359,7 +368,10 @@ export class Colony {
   fillJug() { const want = Math.min(JUG_L - this.s.jug, this.s.tank); this.s.jug += want; this.s.tank -= want; return want; }
   harvest(h, outpost) {
     if (!h.gh.ready) return 0;
-    const meals = CROPS[h.gh.crop].meals; outpost.food += meals;
+    const meals = Math.round(CROPS[h.gh.crop].meals * (1 + 0.4 * outpost.upgrades.greenhouse));
+    this.s.produce = (this.s.produce || 0) + meals;
+    if(h.gh.crop==='potato')this.s.seeds.potato++; // reserve a seed tuber for replanting
+    outpost.harvestMeals += meals;
     Object.assign(h.gh, { crop: null, grown: 0, ready: false }); this.drawHouse(h); return meals;
   }
   // Once per sol: plants drink from their tank and grow. With a dry tank, or no power for the lights, they wait.
