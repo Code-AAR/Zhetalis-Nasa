@@ -35,7 +35,7 @@
     <div class="mission-shell">
       <header class="mission-header">
         <a class="mission-brand" href="../" aria-label="Zhetalis home"><img src="assets/zhetalis-badge.png" alt="Zhetalis" width="64" height="64"><span>Zhetalis<small>Space exploration, in your hands.</small></span></a>
-        <nav aria-label="Game information"><button id="howto">How to play</button><button id="data-btn-title">NASA data &amp; credits <span aria-hidden="true">↗</span></button></nav>
+        <nav aria-label="Game information"><button id="howto">How to play</button><button id="age-btn" aria-label="Player age: changes how much text the game shows"></button><button id="data-btn-title">NASA data &amp; credits <span aria-hidden="true">↗</span></button></nav>
       </header>
       <main class="mission-main">
         <div class="mission-copy">
@@ -44,11 +44,14 @@
           <p class="mission-intro">It’s 2126. Your crew needs a home on Mars.<br class="desktop-break"> Build an outpost. Make every watt count.</p>
           <fieldset class="mission-level"><legend>Choose your mission</legend><div id="difficulties"></div></fieldset>
           <p id="mission-summary" class="mission-summary">80 sols · 3 crew · Real trade-offs.</p>
+          <fieldset class="mission-level"><legend>Choose where to land</legend><div id="sites" class="seg"></div></fieldset>
+          <p id="site-summary" class="mission-summary"></p>
           <div class="launch-actions">
             <button id="resume" class="hidden"></button>
             <button id="start" class="primary">Launch to Mars <span aria-hidden="true">↗</span></button>
           </div>
           <button id="path-btn" class="journey-link">What does it take to get there? <span aria-hidden="true">→</span></button>
+          <button id="pedia-btn-title" class="journey-link">📖 Mars-pedia: look up any word <span aria-hidden="true">→</span></button>
         </div>
         <div class="planet-explorer" aria-label="Explore Earth, the Moon and Mars">
           <div class="planet-heading"><span id="planet-context">Your destination</span><span>NASA surface imagery</span></div>
@@ -104,6 +107,7 @@
         <button id="log-btn">📒 Logbook (L)</button>
         <button id="sound-btn">🔊 Sound (M)</button>
         <button id="data-btn">NASA data</button>
+        <button id="pedia-btn">📖 Mars-pedia</button>
         <button id="screen-btn">📱 Screen</button>
         <button class="fs-btn" id="fs-btn">⛶ Full screen</button>
       </div>

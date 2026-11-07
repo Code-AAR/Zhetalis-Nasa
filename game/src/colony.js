@@ -43,7 +43,7 @@ export function newColony() {
     belt: ['pickaxe'], held: 0, locker: ['builder', 'jug'],
     bag: { hematite: 0, gypsum: 0, iron: 0 }, store: { hematite: 0, gypsum: 0, iron: 0 },
     seeds: { lettuce: 2, wheat: 0, potato: 0 },    // the base came with two packs of lettuce seeds
-    tank: 20, jug: 0,                              // litres in the base water tank and in your jug
+    tank: 20, jug: 0, ice: 0,                      // litres in the base water tank and in your jug; kg of dirty ice waiting to be melted
     greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
     base: [0, 1, 2, 3].map(() => ({ crop: null, grown: 0, tank: 6, ready: false })),   // the 4 grow beds in the base greenhouse (greenhouse.js)
   };

@@ -3,9 +3,12 @@ import { artHTML } from './art.js';
 export const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export function factHTML(f, log = true) {
+export function factHTML(f, log = true, open = false) {
   if (log) logFact(f);
-  return `<div class="fact">${f.id ? artHTML('fact-' + f.id, '', 'fact-art') : ''}${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div></div>`;
+  const body = `${f.id ? artHTML('fact-' + f.id, '', 'fact-art') : ''}${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div>`;
+  // Younger players (ages 7-9 on the title screen) see each fact folded up, so pop-ups stay short.
+  if (!open && document.body.classList.contains('young')) return `<details class="fact fact-fold"><summary>🔎 Real NASA fact - tap to read</summary>${body}</details>`;
+  return `<div class="fact">${body}</div>`;
 }
 
 // The mission logbook: every real fact the player meets is saved as a card, in the order they found it.

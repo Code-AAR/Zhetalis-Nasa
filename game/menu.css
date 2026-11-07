@@ -26,6 +26,14 @@
 #title #difficulties .card { flex: 1; padding: 12px 6px; text-align: center; display: block; color: var(--menu-muted); border-radius: 5px; }
 #title #difficulties b { font-size: 12px; font-weight: 400; }
 #title #difficulties .selected { background: #353b3d; color: var(--menu-ink); }
+#title .seg { display: flex; gap: 4px; background: var(--menu-surface); padding: 5px; border-radius: 8px; max-width: 420px; }
+#title .seg .card { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 4px; text-align: center; display: block; color: var(--menu-muted); border-radius: 5px; }
+#title .seg b { font-size: 12px; font-weight: 400; }
+#title .seg .selected { background: #353b3d; color: var(--menu-ink); }
+#title #mission-summary + .mission-level { margin-top: 12px; }
+#title #site-summary { margin-top: 8px; margin-bottom: 0; }
+#title .mission-level:has(#sites) legend { margin-bottom: 8px; }
+#title #mission-summary { margin-bottom: 0; }
 .mission-summary { color: var(--menu-muted); font-size: 12px; margin: 12px 0 24px; min-height: 20px; }
 .launch-actions { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
 #title #start { display: flex; justify-content: space-between; align-items: center; background: var(--menu-ink); color: #101313; border-radius: 7px; padding: 17px 22px; font-size: 15px; font-weight: 600; }
