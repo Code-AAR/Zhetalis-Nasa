@@ -7,6 +7,23 @@ export const DIFFICULTY = {
   hard:   { label: 'Commander', sols: 150, crew: 4, o2: 22, food: 22, parts: 0, eventRate: 1.4, blurb: '150 sols, 4 crew. Big storms, long nights.' },
 };
 
+// Where you land changes the game. Each site is a real place on Mars; the numbers (solar, ice, dose...) are
+// game balance that follow the real trade-off described in `why` - they are not measurements.
+export const SITES = {
+  plains: { name: 'Arcadia Planitia', short: 'Plains', icon: '🟫', solar: 1, ice: 1, dose: 1, science: 1, heater: 1, dust: 1, parts: 0,
+    blurb: 'Flat ground with ice just under the dust. A good place to start.',
+    why: "Orbiters found water ice just under the surface of these northern plains, and the flat ground is easy to build on." },
+  polar:  { name: 'Near the north pole', short: 'Pole (hard)', icon: '🧊', solar: 0.85, ice: 2, dose: 1, science: 1, heater: 1.25, dust: 0.8, parts: 0,
+    blurb: 'Lots of ice - but cold, with weak sunlight for your solar panels.',
+    why: "Near the pole there is plenty of ice, but the Sun stays low in the sky and the nights are very cold." },
+  jezero: { name: 'Jezero Crater', short: 'Jezero', icon: '🔬', solar: 1.1, ice: 0.5, dose: 1, science: 1.5, heater: 1, dust: 1.1, parts: 0,
+    blurb: 'An old lake where Perseverance looks for signs of past life. Great science, little ice.',
+    why: "Jezero was a lake billions of years ago - the best place to look for signs of ancient life. Near the equator, ice is buried deep." },
+  cave:   { name: 'Lava tube, Tharsis', short: 'Lava cave', icon: '🕳', solar: 0.9, ice: 0.7, dose: 0.55, science: 0.9, heater: 0.9, dust: 1, parts: -2,
+    blurb: 'A rock roof blocks radiation - but it is hard to reach and build in.',
+    why: "Orbiters have photographed holes that may be skylights into lava tubes. Metres of rock overhead would block a lot of radiation." },
+};
+
 export const TUNED = {
   solSeconds: 37,          // 1.5 real seconds = 1 Mars hour, so a sol (24.66 h) takes 37 s
   dayStart: 0.25, dayEnd: 0.75,   // fraction of the sol that is daylight
@@ -25,7 +42,7 @@ export const TUNED = {
   shieldFullKWh: 4,        // power per sol for the storm-shelter systems
   shieldCut: 0.6,          // full shield power removes 60% of radiation inside
   wallCut: 0.15,           // water walls remove 15% more
-  regolithCut: 0.3,        // burying the outpost under Mars soil removes 30% more
+  regolithCuts: [0, 0.18, 0.28, 0.33],   // Mars soil piled on the outpost: 0, 1, 2, 3 layers. Each layer helps less than the one before
   supplyEvery: 12,         // Earth can send a supply pod every 12 sols
   stormDose: 110,          // extra mSv from an unshielded solar storm (stronger than reality - see facts)
   suitSeconds: 75,         // seconds of spacewalk on a full suit tank (in daylight)
@@ -48,7 +65,7 @@ export const TIERS = [
 export const UPGRADES = {
   suit:       { name: 'Suit tank upgrade',     parts: 3,  tier: 0, desc: 'Stay outside 50% longer.' },
   battery:    { name: 'Extra battery',         parts: 3,  tier: 0, desc: `Stores ${TUNED.batteryUpgrade} kWh more for the night, so the heater never runs out.` },
-  regolith:   { name: 'Bury the outpost under regolith', parts: 5, tier: 0, once: true, desc: 'Pile Mars soil over the outpost. Thick soil blocks 30% more radiation - real Mars base plans do this.' },
+  regolith:   { name: 'Add a layer of Mars soil (regolith)', parts: 3, tier: 0, max: 3, desc: 'Pile another half metre of Mars soil on the outpost to block radiation. The first layer helps most - each extra layer helps less.' },
   panel:      { name: 'Extra solar panel',     parts: 4,  tier: 1, desc: `+${TUNED.kWhPerPanel} kWh every clear sol (only in daylight).` },
   greenhouse: { name: 'Bigger greenhouse',     parts: 5,  tier: 1, desc: 'Adds 40% to each grow bed’s harvest.' },
   moxie:      { name: 'Better oxygen maker',   parts: 5,  tier: 2, desc: 'Makes 30% more oxygen from the same power - like an upgraded MOXIE.' },
@@ -60,9 +77,9 @@ for (const u of Object.values(UPGRADES)) u.unlockAt = TIERS[u.tier].science;
 const C = 299792.458; // km/s
 
 export class Outpost {
-  constructor(difficulty, facts) {
+  constructor(difficulty, facts, site = 'plains') {
     const d = DIFFICULTY[difficulty];
-    this.d = d; this.facts = facts;
+    this.d = d; this.facts = facts; this.site = SITES[site] ? site : 'plains';
     this.sol = 0;
     this.crew = d.crew;
     this.o2 = d.o2;
@@ -70,7 +87,7 @@ export class Outpost {
     this.rations = d.food;
     this.powerStep = 0;
     this.harvestMeals = 0;
-    this.parts = d.parts;
+    this.parts = Math.max(0, d.parts + SITES[this.site].parts);
     this.dose = 0; this.science = 0; this.scienceSent = 0;
     this.panels = 3; this.clean = 1;                       // panel cleanliness 0..1
     this.battery = TUNED.batteryStart; this.reactors = 0;
@@ -84,6 +101,7 @@ export class Outpost {
     this.today = this.forecast();
   }
 
+  get s() { return SITES[this.site] || SITES.plains; }
   get limit() { return this.facts.careerLimit.value; }
   get o2Need() { return this.crew * this.facts.oxygen.value; }
   get tier() { let t = 0; TIERS.forEach((x, i) => { if (this.scienceSent >= x.science) t = i; }); return t; }
@@ -96,7 +114,7 @@ export class Outpost {
   }
   delayMinutes(sol = this.sol) { return this.distanceKm(sol) / C / 60; }
 
-  solar() { return this.panels * TUNED.kWhPerPanel * this.clean * (this.dust > 0 ? 0.35 : 1); }
+  solar() { return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1); }
   energy() { return this.solar() + this.reactors * TUNED.reactorKWh; }
 
   setSplit(split) {
@@ -108,7 +126,7 @@ export class Outpost {
   // What one sol looks like with the current choices - shown live in the power console.
   forecast() {
     const total = this.energy();
-    const heater = TUNED.heaterKWh;
+    const heater = TUNED.heaterKWh * this.s.heater;
     const cold = this.battery < heater && this.reactors === 0;   // batteries run flat before morning
     const e = Math.max(0, total - heater);                       // the heater's night power is set aside first
     const lifeK = e * this.split.life * (cold ? 0.7 : 1);         // freezing machines work worse
@@ -117,9 +135,9 @@ export class Outpost {
     const commsNeed = TUNED.commsNeedKWh * (this.relayDown > 0 ? TUNED.directToEarthFactor : 1);
     const link = e * this.split.comms >= commsNeed && this.blackout === 0;
     const shieldLevel = Math.min(1, (e * this.split.shield) / TUNED.shieldFullKWh);
-    const protection = Math.min(0.92, TUNED.shieldCut * shieldLevel + TUNED.wallCut * this.upgrades.wall + TUNED.regolithCut * this.upgrades.regolith);
-    const dose = this.facts.surfaceDose.value * (1 - protection);
-    const science = e * this.split.science * (this.shelter > 0 ? 0 : 1);
+    const protection = Math.min(0.92, TUNED.shieldCut * shieldLevel + TUNED.wallCut * this.upgrades.wall + TUNED.regolithCuts[Math.min(3, this.upgrades.regolith)]);
+    const dose = this.facts.surfaceDose.value * this.s.dose * (1 - protection);
+    const science = e * this.split.science * this.s.science * (this.shelter > 0 ? 0 : 1);
     return { total, solar: this.solar(), energy: e, heater, cold, o2, o2Net: o2 - this.o2Need, food, foodNet: food - this.crew,
              link, commsNeed, shieldLevel, protection, dose, science };
   }
@@ -181,7 +199,7 @@ export class Outpost {
     const r = rng(), rate = this.d.eventRate, pendingKind = k => this.hazards.some(h => h.kind === k);
     const lead = TUNED.hazardLead;
     if (!this.storm && !pendingKind('solar') && r < 0.06 * rate) this.hazards.push({ kind: 'solar', at: this.sol + lead, found: this.sol, seen: false });
-    else if (this.dust === 0 && !pendingKind('dust') && r > 1 - 0.03 * rate) this.hazards.push({ kind: 'dust', at: this.sol + lead, found: this.sol, sols: 4 + Math.floor(rng() * 5), seen: false });
+    else if (this.dust === 0 && !pendingKind('dust') && r > 1 - 0.03 * rate * this.s.dust) this.hazards.push({ kind: 'dust', at: this.sol + lead, found: this.sol, sols: 4 + Math.floor(rng() * 5), seen: false });
     else if (this.relayDown === 0 && this.sol > 8 && r > 0.5 && r < 0.5 + 0.012 * rate) { this.relayDown = 15; events.push({ type: 'relay-lost' }); }
     if (this.hazards.some(h => !h.seen)) events.push({ type: 'hazard-detected' });
 
@@ -201,11 +219,11 @@ export class Outpost {
   }
 
   unlocked(key) { if(this.powerStep<6 && ['panel','battery'].includes(key))return false; return this.tier >= UPGRADES[key].tier; }
-  built(key) { return key === 'reactor' ? this.reactors > 0 : key === 'regolith' ? this.upgrades.regolith > 0 : false; }
+  built(key) { const u = UPGRADES[key]; return key === 'reactor' ? this.reactors > 0 : u?.max ? this.upgrades[key] >= u.max : false; }
 
   buy(key) {
     const u = UPGRADES[key];
-    if (!u || !this.unlocked(key) || this.parts < u.parts || (u.once && this.built(key))) return false;
+    if (!u || !this.unlocked(key) || this.parts < u.parts || ((u.once || u.max) && this.built(key))) return false;
     this.parts -= u.parts;
     if (key === 'panel') this.panels += 1;
     else if (key === 'battery') { this.upgrades.battery += 1; this.battery += TUNED.batteryUpgrade; }

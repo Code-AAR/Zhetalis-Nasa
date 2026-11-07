@@ -454,3 +454,23 @@ body.fp:not(.touch) #hud #hint { bottom: 10px; }
 body.fp #hud #visor { bottom: 70px; }
 @media (max-width: 760px) { body.fp:not(.touch) #hud #hint { bottom: 66px; } body.fp #hud #visor { bottom: 124px; } }
 body.fp #hud .meters, body.fp #hud #sol, body.fp #hud #tod, body.fp #hud #credits, body.fp #hud #link { display: none; }
+
+/* younger players: facts folded up so pop-ups stay short */
+details.fact-fold summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+details.fact-fold[open] summary { margin-bottom: 6px; }
+body.young .modal-box p { font-size: 1.05rem; }
+
+/* Mars-pedia */
+#pedia-q { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: var(--ink); margin: 6px 0 10px; }
+.pedia-list h4 { margin: 12px 0 6px; }
+.pedia-word { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 10px; margin: 6px 0; line-height: 1.45; }
+.pedia-word b { display: block; color: var(--warn); }
+
+/* water plant steps */
+.forecast.stock small { display: block; color: var(--muted); }
+#hud.menu-open #hint { display: none !important; }   /* the open menu needs the space; the hint comes back when it closes */
+@media (max-width: 420px) { .age-word { display: none; } }
+.forecast.layer-list { grid-template-columns: 1fr; }
+.water-steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.water-steps button { text-align: left; }
+.water-steps button small { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }

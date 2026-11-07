@@ -43,7 +43,7 @@ export function newColony() {
     belt: ['pickaxe'], held: 0, locker: ['builder', 'jug'],
     bag: { hematite: 0, gypsum: 0, iron: 0 }, store: { hematite: 0, gypsum: 0, iron: 0 },
     seeds: { lettuce: 2, wheat: 1, potato: 1 },    // Flight manifest for the base grow beds
-    tank: 20, jug: 0,                              // litres in the base water tank and in your jug
+    tank: 20, jug: 0, ice: 0,                              // litres in the base water tank and in your jug
     farmQuest: {}, greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
     base: [0, 1, 2, 3].map(() => ({ crop: null, grown: 0, tank: 6, ready: false })),   // the 4 grow beds in the base greenhouse (greenhouse.js)
   };

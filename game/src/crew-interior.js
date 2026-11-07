@@ -46,9 +46,9 @@ export class CrewInterior extends Interior {
         for(const z of[-1.45,1.45]){const side=new THREE.Mesh(new THREE.BoxGeometry(len,3,.05),trimMat);side.position.set(mid,1.5,z);this.scene.add(side);}
       }
     }
-    const layout={exit:[0,0,3.7,1],console:[0,0,-2.9,1],workbench:[1,0,-2.8,1],locker:[1,0,2.9,1],greenhouse:[2,0,-3.2,1],shelter:[3,0,-2.8,1],window:[4,0,-3.9,1],monitor:[5,0,-2.9,1]};
+    const layout={exit:[0,0,3.7,1],console:[0,0,-2.9,1],workbench:[1,0,-2.8,1],locker:[1,0,2.9,1],greenhouse:[2,0,-3.2,1],water:[2,0,2.9,1],shelter:[3,0,-2.8,1],window:[4,0,-3.9,1],monitor:[5,0,-2.9,1]};
     for(const {station,object}of stations){if(!object)continue;const[pod,dx,z,scale]=layout[station.type];station.x=pod*SPACING+dx;station.z=z;object.position.set(station.x,0,z);object.scale.set(scale,1,scale);object.lookAt(pod*SPACING,0,0);if(station.type!=="greenhouse")this.scene.add(object);
-      if(['locker','workbench','console','monitor','shelter'].includes(station.type)){
+      if(['locker','workbench','console','monitor','shelter','water'].includes(station.type)){
         object.updateWorldMatrix(true,true);
         this.obstacles??=[];
         this.obstacles.push(new THREE.Box3().setFromObject(object));

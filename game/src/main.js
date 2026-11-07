@@ -1,23 +1,24 @@
 import * as THREE from 'three';
 import { renderInteriorView } from './exterior-view.js';
-import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS } from './sim.js';
+import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS, SITES } from './sim.js';
+import { openPedia } from './pedia.js';
 import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords } from './spaceweather.js';
 import { World, GH } from './world.js';
 import { Launch } from './launch.js';
-import { CrewInterior as Interior } from './crew-interior.js?v=phone-ready-9';
-import { installSettlement } from './settlement.js?v=phone-ready-9';
+import { CrewInterior as Interior } from './crew-interior.js?v=landing-water-12';
+import { installSettlement } from './settlement.js?v=landing-water-12';
 import { fieldMapHTML } from './fieldmap.js';
-import { Capsule } from './capsule.js?v=phone-ready-9';
-import { Greenhouse } from './greenhouse.js?v=phone-ready-9';
-import { showMissionPath } from './missionpath.js?v=phone-ready-9';
-import { showArrival } from './arrival.js?v=phone-ready-9';
+import { Capsule } from './capsule.js?v=landing-water-12';
+import { Greenhouse } from './greenhouse.js?v=landing-water-12';
+import { showMissionPath } from './missionpath.js?v=landing-water-12';
+import { showArrival } from './arrival.js?v=landing-water-12';
 import { loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
 import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
 import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
-import { initTouch, isTouch } from './touch.js?v=phone-ready-9';
+import { initTouch, isTouch } from './touch.js?v=landing-water-12';
 import { earthGlobe, moonGlobe } from './globe.js';
 import { Colony, newColony, ORES, TOOLS, CROPS, SHOP, GREENHOUSE, BAG, JUG_L, priceWords } from './colony.js';
 import { initMissionMenu } from './menu.js?v=orbit-spin-6';
@@ -34,7 +35,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
-const F = (await (await fetch('data/mars-facts.json')).json()).facts;
+const F = (await (await fetch('data/mars-facts.json?v=landing-water-12')).json()).facts;
 await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
 for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
 onLog(n => { $('#log-btn').textContent = `📒 Logbook: ${n} (L)`; });
@@ -50,7 +51,7 @@ function openLogbook() {
 let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
-const state = { phase: 'title', difficulty: 'normal', speed: 1 };
+const state = { phase: 'title', difficulty: 'normal', speed: 1, site: 'plains', age: 'older' };
 $('#map-btn').onclick = () => modal({title:'Surface operations map',html:fieldMapHTML(world)+farmQuestHTML(colony?.s)});
 let colony, marsNow = null, monitorTipShown = false, toolbarKey = '', visorKey = '';
 let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
@@ -74,6 +75,33 @@ for (const [key, d] of Object.entries(DIFFICULTY)) {
   diffBox.appendChild(b);
 }
 
+// Landing site and player age: two more rows of choices on the title screen, built like the mission row.
+function choiceRow(box, options, current, pick) {
+  for (const [key, label] of options) {
+    const b = document.createElement('button');
+    b.className = 'card' + (key === current ? ' selected' : ''); b.innerHTML = `<b>${label}</b>`;
+    b.setAttribute('aria-pressed', String(key === current));
+    b.onclick = () => {
+      box.querySelectorAll('.card').forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
+      b.classList.add('selected'); b.setAttribute('aria-pressed', 'true'); pick(key);
+    };
+    box.appendChild(b);
+  }
+}
+const siteLine = () => { const s = SITES[state.site]; $('#site-summary').textContent = `${s.name}: ${s.blurb}`; };
+choiceRow($('#sites'), Object.entries(SITES).map(([k, s]) => [k, `${s.icon} ${s.short}`]), state.site, k => { state.site = k; siteLine(); });
+siteLine();
+try { if (localStorage.getItem('ja-age') === 'younger') state.age = 'younger'; } catch { /* storage blocked */ }
+// Player age, a small toggle in the title bar: ages 7-9 get shorter pop-ups (facts folded up until tapped).
+const setAge = a => {
+  state.age = a; document.body.classList.toggle('young', a === 'younger');
+  $('#age-btn').innerHTML = a === 'younger' ? '🧒 <span class="age-word">Ages </span>7-9' : '🧑 <span class="age-word">Ages </span>10-12';
+  try { localStorage.setItem('ja-age', a); } catch { /* storage blocked */ }
+};
+$('#age-btn').onclick = () => { setAge(state.age === 'younger' ? 'older' : 'younger'); toast(state.age === 'younger' ? '🧒 Ages 7-9: shorter pop-ups - tap a fact to read it' : '🧑 Ages 10-12: all the facts, open'); };
+setAge(state.age);
+$('#pedia-btn-title').onclick = $('#pedia-btn').onclick = () => openPedia(F);
+
 function showSun() {
   const s = sunToday(weather);
   const tag = s.mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>';
@@ -95,6 +123,8 @@ $('#howto').onclick = () => modal({ title: 'How to play', html: `
   <p>At an airlock, aim at the green handle and ${keyWord('press E','tap Use')}. With your pickaxe equipped, aim at a sparkling ore deposit and ${keyWord('click to strike','tap Use to strike')}.</p>
   <p>Inside the outpost, walk to the <b>power console</b> to split your power between:</p>
   <p>🫁 <b>Life support</b> - makes oxygen and powers the grow lights.<br>📡 <b>Talk to Earth</b> - sends your science home and brings supply pods.<br>🔬 <b>Science</b> - when Earth receives enough, its engineers radio you new <b>upgrade designs</b>.<br>🛡 <b>Shielding</b> - protects you from radiation, especially during solar storms.</p>
+  <p>📍 <b>Where you land matters.</b> The ice plains are the easy start. The pole has lots of ice but weak sunlight and cold nights. Jezero Crater is best for science but has little ice. A lava tube blocks radiation but is hard to build in.</p>
+  <p>🧊 Collect ice outside, then use the <b>water plant</b> inside: melt and filter the ice into clean water, and split water into oxygen. Pile <b>layers of Mars soil</b> on the outpost at the workbench - you decide how thick is thick enough.</p>
   <p>Build the designs at the <b>workbench</b> using <b>parts</b> you salvage outside. There is never enough power for everything - that is the real puzzle astronauts and NASA mission planners solve!</p>` });
 $('#data-btn-title').onclick = $('#data-btn').onclick = showData;
 $('#path-btn').onclick = () => showMissionPath(F);
@@ -124,7 +154,7 @@ function showData() {
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
-    <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it.</p>` });
+    <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it. • Landing sites: the real places are real, but how much sun, ice, radiation and science each one gives is game balance. • Mars-soil shielding: 18%, 28% and 33% for 1, 2 and 3 layers are game numbers that follow the real pattern (the first layer helps most). • The water plant's filter keeps 90% of dug-up ice as water (game); splitting 1 L of water into 0.89 kg of oxygen is real chemistry.</p>` });
 }
 
 // ---------------- save and resume ----------------
@@ -167,7 +197,7 @@ async function resume(d) {
   startSound();
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();
   $('#title').classList.add('hidden');
-  state.difficulty = d.difficulty; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
+  state.difficulty = d.difficulty; state.site = SITES[d.outpost.site] ? d.outpost.site : 'plains'; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
   buildWorld();
   await world.ready;
   world.settlement.surveys = new Set(d.surveys || []);
@@ -222,7 +252,7 @@ function buildWorld() {
   ghRoom.onStep = () => footstep(0, true);
   if (hasArt('mars-ground')) world.useGroundArt(artUrl('mars-ground'));
   world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
-  outpost = new Outpost(state.difficulty, F);
+  outpost = new Outpost(state.difficulty, F, state.site);
   world.setPanels(outpost.panels);
   world.setLink(outpost.today.link);
   colony = new Colony(world);                                 // tools, ores, trading and greenhouses
@@ -261,7 +291,9 @@ async function arrive() {
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
     <p>Collect the landed power kits and rations from the habitat locker. Follow the arrow to assemble and deploy your equipment.</p>
-    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}. Your lander supplies startup power.</p>`,
+    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}. Your lander supplies startup power.</p>
+    <p>Landing scenario: <b>${outpost.s.name}</b>. ${outpost.s.why} All scenarios use the same Gusev-inspired training landscape.</p>
+    <p>Collect ice and process it at the water plant in the greenhouse service room.</p>`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
 
@@ -338,7 +370,7 @@ function stationAction(s) {
   if (s.type === 'gh-tap') {
     if (!colony.has('jug')) return toast('💧 This tap fills the water jug for greenhouses you build outside. The jug is in the storage locker in the outpost.', 5000);
     const l = colony.fillJug(); toolbarKey = '';
-    return toast(l ? `💧 Filled your jug with ${l} L (base tank: ${colony.s.tank.toFixed(0)} L left).` : colony.s.tank <= 0 ? '💧 The base water tank is empty - collect ice outside!' : '💧 Your jug is already full.');
+    return toast(l ? `💧 Filled your jug with ${l} L (base tank: ${colony.s.tank.toFixed(0)} L left).` : colony.s.tank <= 0 ? '💧 The base water tank is empty - collect ice outside and melt it at the water plant!' : '💧 Your jug is already full.');
   }
   if (s.type === 'shelter') return modal({ pause: false, title: '🛏 Storm shelter', html: `<p>During a solar storm, the crew squeezes into this small room with the thickest walls. It blocks most of the radiation - but nobody can do science or go outside.</p><p>${outpost.storm ? (outpost.shelter ? `<b>Sheltering now:</b> ${outpost.shelter} sols left.` : '<b>A solar storm is happening!</b> Choosing "hide in the shelter" in the warning keeps you safe.') : 'No storm right now.'}</p>${factHTML(F.careerLimit)}` });
   if(s.type==='window'&&room===capsule)return toast('The windows show the live landscape outside your lander. Look around to see the camp and changing Martian sky.',5000);
@@ -353,6 +385,7 @@ function stationAction(s) {
   }
   if (s.type === 'monitor') return openMonitor();
   if (s.type === 'locker') return openLocker();
+  if (s.type === 'water') return openWaterPlant();
 }
 
 // ---------------- the power trade-off ----------------
@@ -363,7 +396,7 @@ function openPower() {
   const nextTier = TIERS[outpost.tier + 1];
   const next = nextTier ? [null, { name: `"${nextTier.name}" tier`, unlockAt: nextTier.science }] : null;
   const html = `
-    <p>Each sol you make <b>${outpost.energy().toFixed(0)} kWh</b>${outpost.dust ? ' (a dust storm is blocking the sunlight!)' : ''}. The night heater takes <b>${TUNED.heaterKWh} kWh</b> first, so you can share out <b>${outpost.today.energy.toFixed(0)} kWh</b>. Move the sliders - the total always stays 100%.</p>
+    <p>Each sol you make <b>${outpost.energy().toFixed(0)} kWh</b>${outpost.dust ? ' (a dust storm is blocking the sunlight!)' : ''}. The night heater takes <b>${outpost.today.heater} kWh</b> first, so you can share out <b>${outpost.today.energy.toFixed(0)} kWh</b>. Move the sliders - the total always stays 100%.</p>
     ${rows.map(([k, label]) => `<div class="split-row"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(s[k] * 100)}" data-k="${k}"><b id="v-${k}">${Math.round(s[k] * 100)}%</b></div>`).join('')}
     <div class="forecast" id="forecast"></div>
     <p class="source">Science sent to Earth so far: <b>${outpost.scienceSent}</b>${next ? ` - your base reaches the <b>${next[1].name}</b> at ${next[1].unlockAt}, and Earth sends new designs.` : ' - you are a self-sustaining settlement!'}</p>
@@ -433,9 +466,10 @@ function syncPowerHardware(){
 function openWorkbench() {
   const byTier = TIERS.map((t, i) => {
     const items = Object.entries(UPGRADES).filter(([, u]) => u.tier === i).map(([k, u]) => {
-      const open = outpost.unlocked(k), done = u.once && outpost.built(k);
+      const open = outpost.unlocked(k), done = (u.once || u.max) && outpost.built(k);
       const why = !open && outpost.powerStep<6 && ['panel','battery'].includes(k) ? 'Commission the landed power kit first.' : done ? 'Built!' : open ? u.desc : `Design arrives when your base becomes a ${t.name} (${t.science} science sent).`;
-      return `<button data-build="${k}" ${!open || done || outpost.parts < u.parts ? 'disabled' : ''}><span><b>${done ? '✅ ' : open ? '' : '🔒 '}${u.name}</b><small>${why}</small></span><b>${u.parts} parts</b></button>`;
+      const count = u.max ? ` (${outpost.upgrades[k]} of ${u.max} layers)` : '';
+      return `<button data-build="${k}" ${!open || done || outpost.parts < u.parts ? 'disabled' : ''}><span><b>${done ? '✅ ' : open ? '' : '🔒 '}${u.name}${count}</b><small>${why}</small></span><b>${u.parts} parts</b></button>`;
     }).join('');
     return `<h4>${i <= outpost.tier ? '' : '🔒 '}Tier ${i + 1}: ${t.name}</h4><div class="shop">${items}</div>`;
   }).join('');
@@ -451,11 +485,46 @@ function openWorkbench() {
     if (outpost.buy(key)) {
       toast(`🔧 Built: ${UPGRADES[key].name}`);
       syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
-      if (key === 'regolith') modal({ pause: false, title: '⛏ Outpost buried!', html: factHTML(F.regolith) });
+      if (key === 'regolith') soilLayerReport();
       else if (key === 'reactor') modal({ pause: false, title: '⚛ Reactor online!', html: factHTML(F.fission) });
       else openWorkbench();
     }
   });
+}
+
+// How thick is thick enough? After each layer of Mars soil, show what every layer adds - the first helps most.
+function soilLayerReport() {
+  const n = outpost.upgrades.regolith, cuts = TUNED.regolithCuts;
+  const rows = [1, 2, 3].map(i => `<div class="${i <= n ? 'pos' : ''}">${i <= n ? '✅' : '⬜'} Layer ${i} (${(i * 0.5).toFixed(1)} m of soil): blocks <b>${Math.round(cuts[i] * 100)}%</b> <small>(+${Math.round((cuts[i] - cuts[i - 1]) * 100)}% from this layer)</small></div>`).join('');
+  modal({ pause: false, title: `⛏ Soil layer ${n} added!`, html: `
+    <p>Your outpost is now under about <b>${(n * 0.5).toFixed(1)} m</b> of Mars soil. Look how much each layer adds:</p>
+    <div class="forecast layer-list">${rows}</div>
+    <p>Every layer costs parts and work, but each one helps less than the one before. ${n < 3 ? 'Is another layer worth it? You decide!' : 'That is as thick as your crew can pile it.'}</p>
+    ${factHTML(n === 1 ? F.regolith : F.regolithDepth)}
+    <p class="source">The percentages are game numbers that follow the real pattern - they are not measurements.</p>`,
+    choices: [{ label: 'Back to the workbench', primary: true, onPick: openWorkbench }] });
+}
+
+// The water plant: dirty ice → melt and filter → clean water → split by electrolysis → oxygen.
+const ICE_TO_WATER = 0.9;   // game: 10% of what you dig up is dust and grit the filter takes out
+const O2_PER_L = 0.89;      // real: splitting 1 L (1 kg) of water gives 0.89 kg of oxygen
+function openWaterPlant() {
+  const s = colony.s; s.ice = s.ice || 0;
+  modal({ pause: false, title: '💧 The water plant', html: `
+    <p>Water is life on Mars: you drink it, plants drink it, and you can even <b>breathe</b> it - after you split it.</p>
+    <div class="forecast stock">
+      <div>🧊 Dirty ice: <b>${s.ice.toFixed(0)} kg</b><small>collect ice outside</small></div>
+      <div>💧 Clean water: <b>${s.tank.toFixed(0)} L</b><small>for greenhouses and oxygen</small></div>
+      <div>🫁 Oxygen: <b>${outpost.o2.toFixed(1)} kg</b><small>the crew breathes ${outpost.o2Need.toFixed(1)} kg a sol</small></div>
+    </div>
+    <div class="water-steps">
+      <button data-melt ${s.ice <= 0 ? 'disabled' : ''}>🔥 1. Melt and filter all the ice<small>Heat melts it, a filter removes the dust and grit. ${s.ice.toFixed(0)} kg of ice → ${(s.ice * ICE_TO_WATER).toFixed(0)} L of clean water.</small></button>
+      <button data-split ${s.tank < 5 ? 'disabled' : ''}>⚡ 2. Split 5 L of water into oxygen<small>Electrolysis: 5 L of water → ${(5 * O2_PER_L).toFixed(1)} kg of oxygen (and hydrogen).</small></button>
+    </div>
+    ${factHTML(F.electrolysis)}${factHTML(F.waterRecovery)}`, choices: [{ label: 'Done', primary: true }] });
+  const box = $('#modal .modal-box');
+  box.querySelector('[data-melt]').onclick = () => { const l = Math.round(s.ice * ICE_TO_WATER); s.tank += l; s.ice = 0; toast(`💧 Melted and filtered: +${l} L of clean water.`); openWaterPlant(); };
+  box.querySelector('[data-split]').onclick = () => { s.tank -= 5; outpost.o2 += 5 * O2_PER_L; toast(`🫁 +${(5 * O2_PER_L).toFixed(1)} kg of oxygen for the crew.`); openWaterPlant(); };
 }
 
 // ---------------- outside work: mining, the locker, trading, greenhouses ----------------
@@ -728,7 +797,7 @@ function collect(n) {
     return;
   }
   const p = n.pickup; world.removePickup(p);
-  if (p.kind === 'ice') { outpost.o2 += 4; colony.s.tank += 8; toast('🧊 Ice! Melted into 8 L for the water tank, and split into +4 kg oxygen'); }
+  if (p.kind === 'ice') { const kg = Math.round(8 * outpost.s.ice); colony.s.ice = (colony.s.ice || 0) + kg; toast(`🧊 Ice! +${kg} kg of dirty ice for the water plant inside the outpost${outpost.s.ice > 1 ? ' (thick ice here!)' : outpost.s.ice < 1 ? ' (ice is thin here)' : ''}.`); }
   if (p.kind === 'metal') { outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
   if (p.kind === 'pod' && p.cargo) { colony.receive(p.cargo, outpost); toast(`📦 Your order from Earth: ${cargoWords(p.cargo)}. Seeds go into the storage locker.`, 5000); }
   else if (p.kind === 'pod') { outpost.o2 += 15; outpost.food += 20; outpost.parts += 3; toast('📦 Supplies from Earth: +15 kg oxygen, +20 meals, +3 parts'); }
@@ -919,8 +988,8 @@ function drawHUD() {
   // time of day (1 s = 1 Mars hour) and a battery gauge: charges in daylight, the heater drains it at night
   const ph = solClock / TUNED.solSeconds, hour = Math.floor(ph * 24.66), isDay = ph > TUNED.dayStart && ph < TUNED.dayEnd;
   const nightDone = ph >= TUNED.dayEnd ? (ph - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart) : (ph + 1 - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart);
-  const battery = o.reactors ? 1 : isDay ? Math.min(1, (ph - TUNED.dayStart) / 0.3) : Math.max(0, 1 - nightDone * TUNED.heaterKWh / o.battery);
-  $('#tod').textContent = `${isDay ? '☀️ Day' : '🌙 Night'} · ${String(hour).padStart(2, '0')}:00 Mars time · 🔋 ${Math.round(battery * 100)}% · 🏗 ${TIERS[o.tier].name}`;
+  const battery = o.reactors ? 1 : isDay ? Math.min(1, (ph - TUNED.dayStart) / 0.3) : Math.max(0, 1 - nightDone * f.heater / o.battery);
+  $('#tod').textContent = `${isDay ? '☀️ Day' : '🌙 Night'} · ${String(hour).padStart(2, '0')}:00 Mars time · 🔋 ${Math.round(battery * 100)}% · 🏗 ${TIERS[o.tier].name} · ${o.s.icon} ${o.s.short}`;
   const quest=colony?.s.farmQuest;
   $('#map-btn').textContent = quest?.rewarded?'Map · Explore':questBearing();
   $('#credits').textContent = `🔩 ${o.parts} parts · 🔬 ${o.scienceSent} science sent${o.science >= 1 ? ` (+${Math.floor(o.science)} waiting)` : ''}`;

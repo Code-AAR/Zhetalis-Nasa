@@ -195,6 +195,20 @@ export class Interior {
     locker.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.4, 32), new THREE.MeshLambertMaterial({ color: '#7fc3ff', transparent: true, opacity: 0.8 })), 1.55, 0.7, 0));   // water tank
     add('locker', 'open the storage locker', (R - 0.5) * 0.72, (R - 0.5) * 0.72, locker);
 
+    // water plant - melts and filters dug-up ice, then splits water into oxygen (electrolysis)
+    const plant = new THREE.Group(), steelW = smooth('#aab1ba', { metalness: 0.5, roughness: 0.35 });
+    plant.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 0.8), smooth('#3a3f46')), 0, 0.06, 0));               // skid
+    plant.add(at(cyl(0.34, 1.1, smooth('#d9683a'), 40), -0.48, 0.67, 0));                                             // ice melter
+    plant.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.34, 40, 16, 0, Math.PI * 2, 0, Math.PI / 2), smooth('#d9683a')), -0.48, 1.22, 0));
+    plant.add(at(cyl(0.34, 1.25, new THREE.MeshStandardMaterial({ color: '#7fc3ff', transparent: true, opacity: 0.75, roughness: 0.15 }), 40), 0.48, 0.75, 0));   // clean water
+    plant.add(at(cyl(0.36, 0.06, steelW, 40), 0.48, 1.4, 0));
+    const pipe = cyl(0.05, 0.62, steelW, 16); pipe.rotation.z = Math.PI / 2; plant.add(at(pipe, 0, 1.0, 0.1));
+    const pipe2 = cyl(0.05, 0.62, steelW, 16); pipe2.rotation.z = Math.PI / 2; plant.add(at(pipe2, 0, 0.45, 0.1));
+    plant.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.05), smooth('#1b1e22')), 0, 1.45, 0.05));        // little control screen
+    plant.add(at(new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.2), glow('#9fe7ff')), 0, 1.45, 0.08));
+    plant.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.06, 0.06), glow('#9fe7ff')), 0, 1.75, -0.2));             // light bar
+    add('water', 'use the water plant', -R * 0.87 * Math.sin(0.44), R * 0.87 * Math.cos(0.44), plant);
+
     // crew table, off to the side so the walk from the airlock to the console stays clear
     this.table = { x: 2.6, z: 2.4 };
     const table = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 48), lam('#bfbab2')); this.scene.add(at(table, this.table.x, 0.8, this.table.z));
