@@ -6,6 +6,7 @@
 // Game rules (made up for balance): driving uses the rover's battery, which recharges when parked near the
 // outpost. Inside, your suit refills from the cabin air, and the walls block some radiation.
 import * as THREE from 'three';
+import { blockPanel } from './panel-contact.js';
 import { loadModel } from './nasamodels.js';
 import { splitGeometry } from './suit.js';
 
@@ -101,6 +102,7 @@ export class Rover {
     // bump into the outpost, boulders and the old rover
     for (const c of this.colliders) {
       if (c.self || (c.object && !c.object.visible)) continue;
+      if(c.halfX !== undefined){if(blockPanel(this.pos,c,2.2))this.speed*=0.5;continue;}
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }
     }

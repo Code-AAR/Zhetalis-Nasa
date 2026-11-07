@@ -64,6 +64,7 @@ export async function installSettlement(world){
   if(keepLander){keepLander.x=40;keepLander.z=-50;}
   world.sev.pos.set(-42,heightAt(-42,32),32);world.sev.place(0);world.sevCollider.x=-42;world.sevCollider.z=32;
   world.solar.group.position.set(42,heightAt(42,-20),-20);
+  for(const panel of world.solar.panels){panel.position.y=heightAt(42+panel.position.x,-20+panel.position.z)-world.solar.group.position.y;}
   world.colliders.splice(0,world.colliders.length,...layout.colliders,...(keepLander?[keepLander]:[]));
   world.clearRocksAround(GH.x,GH.z,GH.r+3);
   world.player.position.set(28,heightAt(28,-35),-35);world.yaw=Math.atan2(layout.door.x-28,layout.door.z+35);world.move.set(0,0,0);world.vel.set(0,0,0);
@@ -83,7 +84,7 @@ export async function installSettlement(world){
   world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});
   for(const panel of world.solar.panels){
     const position=panel.getWorldPosition(new THREE.Vector3());
-    world.colliders.push({x:position.x,z:position.z,r:1.35,object:panel});
+    world.colliders.push({x:position.x,z:position.z,r:1.9,halfX:1.7,halfZ:1.05,object:panel});
   }
   const endpoint=layout.moduleColliders[0];
   const cablePoints=[new THREE.Vector3(53.4,.6,-20),new THREE.Vector3(53.4,.1,-18.8),pack.position.clone(),new THREE.Vector3(51,.1,-17), new THREE.Vector3(endpoint.x,.1,endpoint.z-5),new THREE.Vector3(endpoint.x,.8,endpoint.z-4)];

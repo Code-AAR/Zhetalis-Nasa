@@ -337,7 +337,7 @@
   },
   "tuned": {
     "note": "These are game balance numbers so a whole mission fits into minutes of play. They are NOT measurements.",
-    "solSeconds": "1 real second = 1 Mars hour, so a sol (24.66 hours) passes in about 25 seconds",
+    "solSeconds": "A full day/night cycle takes 5 real minutes at normal speed. One real Martian sol is about 24 Earth hours 39 minutes (24.66 hours).",
     "solarStormDose": "Solar storm radiation is made stronger than reality so you can see shielding matter within one game",
     "kWhPerPanel": "Each solar panel makes 6 kWh per clear sol in the game"
   }

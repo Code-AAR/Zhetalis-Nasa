@@ -1,5 +1,6 @@
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
 import * as THREE from 'three';
+import { blockPanel } from './panel-contact.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
@@ -192,6 +193,12 @@ function makeRocks(rng) {
     s.set(size * (0.8 + rng()), slab ? size * 0.18 : size * (0.6 + rng() * 0.5), size * (0.8 + rng()));
     p.set(x, heightAt(x, z) + s.y * 0.35, z);
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
+    let contact = Infinity;
+    for(let j=0;j<vertices.count;j++){
+      vertex.fromBufferAttribute(vertices,j).multiply(s).applyQuaternion(q);
+      contact=Math.min(contact,vertex.y-heightAt(x+vertex.x,z+vertex.z));
+    }
+    p.y=-contact-Math.min(.3,s.y*.2);
     rocks.setMatrixAt(i, m.compose(p, q, s));
     rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
     let top = -Infinity, radiusSq = 0;
@@ -317,8 +324,22 @@ function makeSolarField() {
   for (let i = 0; i < 12; i++) {
     const p = new THREE.Group();
     const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 2), panelMat); board.rotation.x = -0.45; board.position.y = 1.3; p.add(board);
+    for(const side of [-1,1]){
+      const rail=new THREE.Mesh(new THREE.BoxGeometry(.08,.1,2.08),frame);rail.position.set(side*1.64,.02,0);board.add(rail);
+      const rim=new THREE.Mesh(new THREE.BoxGeometry(3.36,.1,.08),frame);rim.position.set(0,.02,side*1.04);board.add(rim);
+      for(const front of [-1,1]){
+        const z=front*.8, top=1.3+Math.sin(.45)*z;
+        const leg=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,top,8),frame);leg.position.set(side*1.3,top/2,z);p.add(leg);
+        const foot=new THREE.Mesh(new THREE.BoxGeometry(.3,.09,.3),frame);foot.position.set(side*1.3,.025,z);p.add(foot);
+      }
+    }
+    const grid=[];
+    for(let col=0;col<=8;col++){const x=-1.55+col*3.1/8;grid.push(new THREE.Vector3(x,-.95,0),new THREE.Vector3(x,.95,0));}
+    for(let row=0;row<=4;row++){const y=-.95+row*1.9/4;grid.push(new THREE.Vector3(-1.55,y,0),new THREE.Vector3(1.55,y,0));}
+    const cells=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(grid),new THREE.LineBasicMaterial({color:'#7186a4'}));
+    cells.rotation.x=-Math.PI/2;cells.position.y=.065;board.add(cells);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 12), frame); post.position.y = 0.65; p.add(post);
-    p.position.set((i % 4) * 3.8, 0, Math.floor(i / 4) * 3.2);
+    p.position.set((i % 4) * 4.6, 0, Math.floor(i / 4) * 3.4);
     p.traverse(o => { if (o.isMesh) o.castShadow = true; });
     p.visible = false; g.add(p); panels.push(p);
   }
@@ -334,7 +355,8 @@ function makePickup(kind) {
     pod:   { geo: new THREE.CylinderGeometry(0.9, 1.1, 1.8, 24), color: '#f2f2f2', beam: '#ff7a3d' },
   }[kind];
   const body = new THREE.Mesh(looks.geo, new THREE.MeshLambertMaterial({ color: looks.color, emissive: looks.color, emissiveIntensity: 0.35, flatShading: true }));
-  body.castShadow = true; body.position.y = 0.9; g.add(body);
+  body.geometry.computeBoundingBox();
+  body.castShadow = true; body.position.y = -body.geometry.boundingBox.min.y; g.add(body);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 40, 6, 1, true), new THREE.MeshBasicMaterial({ color: looks.beam, transparent: true, opacity: 0.35, depthWrite: false }));
   beam.position.y = 20; g.add(beam);
   g.userData.body = body;
@@ -669,6 +691,7 @@ export class World {
     for (const c of this.colliders) {
       if (c.rock) continue;
       if(c.object && !c.object.visible)continue;
+      if(c.halfX !== undefined){blockPanel(pos,c,0.45);continue;}
       if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
@@ -734,7 +757,7 @@ export class World {
       this.camera.position.copy(eyeFP);
       this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
       this.placeSky(p);
-            for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+            // Collectibles rest on the soil; their light beams mark their locations.
       if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
       return;
     }
@@ -755,7 +778,7 @@ export class World {
     this.camera.lookAt(this.cameraTarget);
     this.placeSky(p);
     
-    for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+    // Collectibles rest on the soil; their light beams mark their locations.
     if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
   }
 
@@ -778,7 +801,7 @@ export class World {
       this.camera.lookAt(r.pos.x, r.pos.y + 2, r.pos.z);
     }
     this.placeSky(r.pos);
-    for (const pk of this.pickups) { pk.group.userData.body.rotation.y += dt; pk.group.userData.body.position.y = 0.9 + Math.sin(this.time * 2 + pk.x) * 0.15; }
+    // Collectibles rest on the soil; their light beams mark their locations.
     if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
   }
 
@@ -811,7 +834,14 @@ export class World {
     else list.push({type:'door',d:Math.hypot(p.x-this.door.x,p.z-this.door.z)});
     list.push({type:'ghdoor',d:Math.hypot(p.x-(GH.x-GH.r-2.6),p.z-GH.z)});
     if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start
-    if (this.panelsDirty) list.push({ type: 'panels', d: Math.hypot(p.x - (this.solar.group.position.x + 5.7), p.z - (this.solar.group.position.z + 3.2)) - 4 });
+    if (this.panelsDirty) {
+      const point = this.panelPoint ??= new THREE.Vector3();
+      for (const panel of this.solar.panels) if (panel.visible) {
+        panel.getWorldPosition(point);
+        const dx = Math.max(0, Math.abs(p.x-point.x)-1.7), dz = Math.max(0, Math.abs(p.z-point.z)-1.05);
+        list.push({type:'panels',d:Math.hypot(dx,dz,p.y-point.y),range:2});
+      }
+    }
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
     if (this.heli.model && !this.heli.seen) list.push({ type: 'heli', d: Math.hypot(p.x - this.heli.x, p.z - this.heli.z) });
     for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });

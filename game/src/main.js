@@ -11,7 +11,7 @@ import { fieldMapHTML } from './fieldmap.js';
 import { Capsule } from './capsule.js?v=landing-water-12';
 import { Greenhouse } from './greenhouse.js?v=landing-water-12';
 import { showMissionPath } from './missionpath.js?v=landing-water-12';
-import { showArrival } from './arrival.js?v=slow-dots-27';
+import { showArrival } from './arrival.js?v=five-minute-sol-28';
 import { loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
@@ -139,7 +139,7 @@ function showData() {
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
-    <p class="source">• 1 sol passes in ${TUNED.solSeconds} seconds. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it. • Landing sites: the real places are real, but how much sun, ice, radiation and science each one gives is game balance. • Mars-soil shielding: 18%, 28% and 33% for 1, 2 and 3 layers are game numbers that follow the real pattern (the first layer helps most). • The water plant's filter keeps 90% of dug-up ice as water (game); splitting 1 L of water into 0.89 kg of oxygen is real chemistry.</p>` });
+    <p class="source">• 1 sol is about 24 Earth hours 39 minutes (24.66 hours). In this game, a full day/night cycle takes ${TUNED.solSeconds / 60} minutes at normal speed. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it. • Landing sites: the real places are real, but how much sun, ice, radiation and science each one gives is game balance. • Mars-soil shielding: 18%, 28% and 33% for 1, 2 and 3 layers are game numbers that follow the real pattern (the first layer helps most). • The water plant's filter keeps 90% of dug-up ice as water (game); splitting 1 L of water into 0.89 kg of oxygen is real chemistry.</p>` });
 }
 
 // ---------------- save and resume ----------------
@@ -153,7 +153,7 @@ function saveGame() {
   const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
   const data = {
     v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
-    entry: world.activeEntrance?.index??0, solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
+    entry: world.activeEntrance?.index??0, solSeconds: TUNED.solSeconds, solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
     world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
     colony: colony?.s, surveys: [...(world.settlement?.surveys || [])],
@@ -189,6 +189,7 @@ async function resume(d) {
   world.activeEntrance=world.settlement.entrances[d.entry??0];
   Object.assign(outpost, { powerStep: 6, rations: 0 }, d.outpost); outpost.today = outpost.forecast();
   ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
+  solClock = (solClock / (d.solSeconds || 37) % 1) * TUNED.solSeconds;
   d.logbook.forEach(id => F[id] && logFact(F[id]));
   const w = d.world;
   world.pickups.slice().forEach(p => world.removePickup(p));
@@ -539,7 +540,7 @@ function outsideTemp() {
   return Math.round(w.low + (w.high - w.low) * t * t * (3 - 2 * t));
 }
 function marsTime() {
-  const h = solClock / TUNED.solSeconds * 24.66;
+  const h = solClock / TUNED.solSeconds * 24;
   return `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
 }
 
@@ -969,8 +970,8 @@ function drawHUD() {
   $('#m-rad').title = `Radiation badge: ${o.dose.toFixed(1)} of ${o.limit} mSv`;
   $('#m-suit').title = `Suit oxygen: ${Math.round(suit * o.suitSeconds())} s of air left`;
   $('#sol').textContent = `Sol ${o.sol} of ${o.d.sols}`;
-  // time of day (1 s = 1 Mars hour) and a battery gauge: charges in daylight, the heater drains it at night
-  const ph = solClock / TUNED.solSeconds, hour = Math.floor(ph * 24.66), isDay = ph > TUNED.dayStart && ph < TUNED.dayEnd;
+  // A sol uses a 24-hour Mars clock; its real duration is about 24.66 Earth hours. Battery gauge: charges in daylight, the heater drains it at night
+  const ph = solClock / TUNED.solSeconds, hour = Math.floor(ph * 24), isDay = ph > TUNED.dayStart && ph < TUNED.dayEnd;
   const nightDone = ph >= TUNED.dayEnd ? (ph - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart) : (ph + 1 - TUNED.dayEnd) / (1 - TUNED.dayEnd + TUNED.dayStart);
   const battery = o.reactors ? 1 : isDay ? Math.min(1, (ph - TUNED.dayStart) / 0.3) : Math.max(0, 1 - nightDone * f.heater / o.battery);
   $('#tod').textContent = `${isDay ? '☀️ Day' : '🌙 Night'} · ${String(hour).padStart(2, '0')}:00 Mars time · 🔋 ${Math.round(battery * 100)}% · 🏗 ${TIERS[o.tier].name} · ${o.s.icon} ${o.s.short}`;

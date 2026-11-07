@@ -25,7 +25,7 @@ export const SITES = {
 };
 
 export const TUNED = {
-  solSeconds: 37,          // 1.5 real seconds = 1 Mars hour, so a sol (24.66 h) takes 37 s
+  solSeconds: 300,         // A full day/night cycle takes 5 real minutes at normal speed
   dayStart: 0.25, dayEnd: 0.75,   // fraction of the sol that is daylight
   kWhPerPanel: 6,          // per clear sol, with clean panels
   heaterKWh: 4,            // the heater keeps the crew warm at night - it runs from the batteries
