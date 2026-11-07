@@ -31,7 +31,7 @@ export class Greenhouse {
     const sun = new THREE.DirectionalLight('#fff1dc', 1.2); sun.position.set(6, 10, 4); this.scene.add(sun);
 
     // the dome: clear panels on a white frame (long ribs and rings)
-    const glass = new THREE.MeshStandardMaterial({ color: '#e8f4f6', transparent: true, opacity: 0.07, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false });
+    const glass = new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.13, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false });
     this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(R, SEG, 24, 0, Math.PI * 2, 0, Math.PI / 2), glass));
     const frame = std('#eceae4', { metalness: 0.3, roughness: 0.4 });
     for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; this.scene.add(rib); }

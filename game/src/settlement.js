@@ -111,7 +111,7 @@ function makeBaseGreenhouse(world){
   // the base greenhouse: a glass dome 14 m across on the end of the tunnel, with 4 hydroponic grow beds inside
   // under pink LED bars. Walk in through its airlock (or through the tunnel from inside the outpost) - greenhouse.js
   const ghG = new THREE.Group(); ghG.position.set(GH.x, heightAt(GH.x,GH.z), GH.z); world.scene.add(ghG);
-  ghG.add(new THREE.Mesh(new THREE.SphereGeometry(GH.r, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#e8f4f6', transparent: true, opacity: 0.10, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false })));
+  ghG.add(new THREE.Mesh(new THREE.SphereGeometry(GH.r, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.18, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false })));
   const frame = mat('#eceae4', { flatShading: false });
   for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(GH.r, 0.06, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; ghG.add(rib); }
   for (const a of [0.35, 0.7, 1.05]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(GH.r * Math.cos(a), 0.06, 8, 64), frame); ring.rotation.x = Math.PI / 2; ring.position.y = GH.r * Math.sin(a); ghG.add(ring); }

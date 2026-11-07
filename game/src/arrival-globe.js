@@ -42,13 +42,20 @@ export class ArrivalGlobe {
         model.position.set(i?0:1.42,0,i?1.6:0);orbits[i].add(model);
       }).then(settled,settled);
     }
-    const spin=makeSpin(canvas,globe,{maxTilt:1}),clock=new THREE.Clock(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+    const spin=this.spin=makeSpin(canvas,globe,{maxTilt:1,onSpin:()=>{this.focusTurn=null;this.manualSpin=true;}}),clock=new THREE.Clock(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
     let width,height;this.zoom=1;
     const draw=()=>{
       const w=canvas.clientWidth,h=canvas.clientHeight;
       if(w&&h&&(w!==width||h!==height)){width=w;height=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.position.z=4.2*Math.max(1,1.12/camera.aspect);camera.updateProjectionMatrix();}
-      const dt=Math.min(clock.getDelta(),.05);spin.update(dt);
-      const targetZoom=this.selected?.78:1;this.zoom=reduced.matches?targetZoom:THREE.MathUtils.lerp(this.zoom,targetZoom,1-Math.exp(-dt*4));camera.position.z=4.2*Math.max(1,1.12/camera.aspect)*this.zoom;
+      const dt=Math.min(clock.getDelta(),.05);
+      if(this.focusTurn){
+        const turn=this.focusTurn;turn.elapsed=(performance.now()-turn.started)/1000;
+        const t=reduced.matches?1:Math.min(1,turn.elapsed/2.4);
+        const eased=t*t*t*(t*(t*6-15)+10);
+        globe.quaternion.slerpQuaternions(turn.from,turn.to,eased);
+        if(t===1)this.focusTurn=null;
+      }else if(!this.selected||this.manualSpin)spin.update(dt);
+      const targetZoom=this.selected?.78:1;this.zoom=reduced.matches?targetZoom:THREE.MathUtils.lerp(this.zoom,targetZoom,1-Math.exp(-dt*1.5));camera.position.z=4.2*Math.max(1,1.12/camera.aspect)*this.zoom;
       if(!reduced.matches){if(!spin.busy()&&!this.selected)globe.rotation.y+=dt*.12;orbits[0].rotation.y+=dt*.35;orbits[1].rotation.y-=dt*.22;}
       scene.updateMatrixWorld(true);
       for(const {marker,label} of this.markers){const point=marker.getWorldPosition(new THREE.Vector3()),front=point.z>0;point.project(camera);label.hidden=!front;label.style.left=((point.x*.5+.5)*w)+'px';label.style.top=((-point.y*.5+.5)*h)+'px';}
@@ -57,7 +64,7 @@ export class ArrivalGlobe {
     };
     draw();
   }
-  select(key){const target=this.markers.find(m=>m.key===key);if(!target)return;this.selected=key;this.globe.quaternion.setFromUnitVectors(target.direction,new THREE.Vector3(0,0,1));this.scanRing.position.copy(target.direction).multiplyScalar(1.02);this.scanRing.lookAt(target.direction.clone().multiplyScalar(2));for(const m of this.markers)m.label.setAttribute('aria-pressed',String(m.key===key));}
+  select(key){const target=this.markers.find(m=>m.key===key);if(!target)return;this.selected=key;this.spin.stop();this.manualSpin=false;this.focusTurn={from:this.globe.quaternion.clone(),to:new THREE.Quaternion().setFromUnitVectors(target.direction,new THREE.Vector3(0,0,1)),elapsed:0,started:performance.now()};this.scanRing.position.copy(target.direction).multiplyScalar(1.02);this.scanRing.lookAt(target.direction.clone().multiplyScalar(2));for(const m of this.markers)m.label.setAttribute('aria-pressed',String(m.key===key));}
   scan(){this.scanning=true;this.scanRing.visible=true;}
   dispose(){
     this.labels.forEach(label=>label.remove());

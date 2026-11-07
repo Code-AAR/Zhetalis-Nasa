@@ -30,6 +30,7 @@ export function makeSpin(el, target, { maxTilt = 0.9, onSpin } = {}) {
       target.rotation.y += vx * dt * 60;
       target.rotation.x = THREE.MathUtils.clamp(target.rotation.x + vy * dt * 60, -maxTilt, maxTilt);
     },
+    stop: () => { vx = 0; vy = 0; },
     busy: () => !!drag || performance.now() - last < 4000,
   };
 }
