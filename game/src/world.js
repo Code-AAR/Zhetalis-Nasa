@@ -390,7 +390,7 @@ export class World {
     this.terrain = makeTerrain(); this.scene.add(this.terrain);
 
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks);
+    const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks); this.rocks=rocks;
     this.lowRocks = lowRocks;
     this.rockContact = createRockContact(rocks);
     this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
@@ -652,6 +652,14 @@ export class World {
     const k = this.toolSwing, lift = k < 0.45 ? Math.sin(k / 0.45 * Math.PI / 2) : k < 0.6 ? 1 - (k - 0.45) / 0.15 * 1.3 : -0.3 * (1 - (k - 0.6) / 0.4);
     this.viewSlot.rotation.set(lift * 1.1, 0, -lift * 0.25);       // first person: the pickaxe comes up and chops down
     if (this.toolSwing >= 1) this.toolSwing = -1;
+  }
+
+  clearRocksAround(x,z,radius){
+    const m=new THREE.Matrix4(),p=new THREE.Vector3(),q=new THREE.Quaternion(),scale=new THREE.Vector3();
+    for(let i=0;i<this.rocks.count;i++){this.rocks.getMatrixAt(i,m);m.decompose(p,q,scale);if(Math.hypot(p.x-x,p.z-z)<radius+Math.max(scale.x,scale.z)){m.makeTranslation(p.x,-10000,p.z);this.rocks.setMatrixAt(i,m);}}
+    this.rocks.instanceMatrix.needsUpdate=true;this.rocks.computeBoundingSphere();
+    this.lowRocks=this.lowRocks.filter(c=>Math.hypot(c.x-x,c.z-z)>radius+c.radius);
+    for(let i=this.colliders.length-1;i>=0;i--){const c=this.colliders[i];if(c.rock&&Math.hypot(c.x-x,c.z-z)<radius+c.r)this.colliders.splice(i,1);}
   }
 
   groundHeightAt(x,z){const ground=heightAt(x,z),surface=this.settlement?.crossings.height(x,z,ground)??ground;return this.settlement?.walkHeight(x,z,surface)??surface;}

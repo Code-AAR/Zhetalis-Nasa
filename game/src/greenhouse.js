@@ -51,13 +51,14 @@ export class Greenhouse {
       geom.setIndex(keep);
     }
     this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.6, SEG, 1, true,.23,Math.PI*2-.46), std('#d9d4cb', { side: THREE.DoubleSide })), 0, 0.3, 0));   // low base wall
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(R, SEG), std('#6b7079')); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; this.scene.add(floor);
-    for (const x of [-2.4, 0, 2.4]) { const path = box(1.0, 0.02, 11, std('#8a9099')); this.scene.add(at(path, x, 0.02, 0)); }   // walkways between the beds
+    this.furnishings = new THREE.Group(); this.scene.add(this.furnishings);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(R, SEG), std('#6b7079')); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; this.furnishings.add(floor);
+    for (const x of [-2.4, 0, 2.4]) { const path = box(1.0, 0.02, 11, std('#8a9099')); this.furnishings.add(at(path, x, 0.02, 0)); }   // walkways between the beds
 
     this.stations = [];
     // ---- the four grow beds ----
     this.beds = BEDS.map((x, i) => {
-      const g = new THREE.Group(); g.position.set(x, 0, 0); this.scene.add(g);
+      const g = new THREE.Group(); g.position.set(x, 0, 0); this.furnishings.add(g);
       const metal = std('#c9ced6', { metalness: 0.5, roughness: 0.35 });
       for (const z of [-2.3, 0, 2.3]) for (const sx of [-0.45, 0.45]) g.add(at(box(0.06, 0.7, 0.06, metal), sx, 0.35, z));   // legs
       g.add(at(box(BED_W, 0.22, BED_LEN, std('#f2f2f0')), 0, 0.8, 0));                          // white trough
@@ -75,7 +76,7 @@ export class Greenhouse {
     });
 
     // ---- water tap: pipes from the outpost's water tank ----
-    const tap = new THREE.Group(); tap.position.set(-4.4, 0, -4.4); tap.lookAt(0, 0, 0); this.scene.add(tap);
+    const tap = new THREE.Group(); tap.position.set(-4.4, 0, -4.4); tap.lookAt(0, 0, 0); this.furnishings.add(tap);
     tap.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.6, 32), new THREE.MeshStandardMaterial({ color: '#7fc3ff', transparent: true, opacity: 0.75, roughness: 0.2 })), 0, 0.8, 0));
     tap.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.08, 32), std('#c9ced6')), 0, 1.62, 0));
     tap.add(at(new THREE.Mesh(new THREE.PlaneGeometry(1, 0.38), new THREE.MeshBasicMaterial({ map: label(['WATER', 'from the base'], '#9fe7ff') })), 0, 2.0, 0.3));
@@ -97,8 +98,8 @@ export class Greenhouse {
     // a few potted herbs and a bench by the door, so it feels lived in
     const pot = std('#b5653d');
     for (const [x, z] of [[-2.4, 4.7], [2.4, 4.7], [5.0, 3.2]]) {
-      this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.4, 24), pot), x, 0.2, z));
-      this.scene.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 14), std('#4f8f3a')), x, 0.6, z));
+      this.furnishings.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.4, 24), pot), x, 0.2, z));
+      this.furnishings.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 14), std('#4f8f3a')), x, 0.6, z));
     }
     this.enter('hab');
   }

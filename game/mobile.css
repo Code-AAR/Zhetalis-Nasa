@@ -81,3 +81,5 @@ body #toast.show{pointer-events:auto;transition:opacity .15s ease}
 @media(max-width:600px){.landing-regions{grid-template-columns:repeat(2,1fr)}.landing-marker{font-size:11px;max-width:115px}.landing-art{height:34dvh;min-height:220px}}
 
 .mission-brief{border-left:2px solid #cda875;padding:8px 14px;margin:14px 0;background:#151d26}.mission-brief h3{font-size:16px;margin:0 0 8px}.mission-brief p{color:#cbd3db}
+
+.landing-art .landing-marker{width:44px;height:44px;min-width:44px;padding:0;border:0;background:transparent;border-radius:50%;box-shadow:none}.landing-marker::after{content:"";position:absolute;left:16px;top:16px;width:12px;height:12px;border-radius:50%;background:#ffd98d;border:2px solid #443022;box-shadow:0 0 0 3px #ffd98d33}.landing-marker[aria-pressed=true]::after{background:#8cf2df;box-shadow:0 0 0 5px #8cf2df44}.landing-marker:focus-visible{outline:2px solid #fff}

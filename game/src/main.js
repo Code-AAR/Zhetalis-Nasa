@@ -243,6 +243,7 @@ function buildWorld() {
   colony = new Colony(world);                                 // tools, ores, trading and greenhouses
   renderer.localClippingEnabled=true;
   world.ready = Promise.all([installSettlement(world),ghRoom.walkwayReady]).then(() => {
+    world.settlement.bindGreenhouse(ghRoom);
     const targets = world.extraTargets;
     world.extraTargets = p => {
       const list = targets(p), step = outpost.powerStep;

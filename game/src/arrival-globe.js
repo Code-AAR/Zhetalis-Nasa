@@ -27,7 +27,7 @@ export class ArrivalGlobe {
       const direction=latLonDir(site.lat,site.lon);
       const marker=new THREE.Mesh(new THREE.SphereGeometry(.025,12,8),new THREE.MeshBasicMaterial({color:'#ffd27a'}));
       marker.position.copy(direction).multiplyScalar(1.015);globe.add(marker);
-      const label=document.createElement('button');label.className='landing-marker';label.textContent=site.name;label.setAttribute('aria-label','Select '+site.name);label.onclick=()=>onSelect(site.key);canvas.parentElement.appendChild(label);
+      const label=document.createElement('button');label.className='landing-marker';label.textContent='';label.title=site.name;label.setAttribute('aria-label','Select '+site.name);label.onclick=()=>onSelect(site.key);canvas.parentElement.appendChild(label);
       this.labels.push(label);this.markers.push({key:site.key,marker,direction,label});
     }
     this.scanRing=new THREE.Mesh(new THREE.RingGeometry(.05,.065,32),new THREE.MeshBasicMaterial({color:'#88e8dc',side:THREE.DoubleSide,transparent:true}));globe.add(this.scanRing);this.scanRing.visible=false;
