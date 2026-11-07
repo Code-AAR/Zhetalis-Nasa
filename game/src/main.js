@@ -278,7 +278,9 @@ async function arrive() {
   const fade = $('#fade'), wait = ms => new Promise(r => setTimeout(r, ms));
   fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
   fade.style.opacity = 0; fade.classList.remove('hidden'); void fade.offsetWidth; fade.style.opacity = 1;   // fade in
-  await wait(7000);
+  const skipTravel = document.createElement('button'); skipTravel.className = 'travel-dismiss'; skipTravel.textContent = 'Continue to Mars ›'; fade.appendChild(skipTravel);
+  await new Promise(resolve => { const timer = setTimeout(resolve, 7000); skipTravel.onclick = () => { clearTimeout(timer); resolve(); }; });
+  skipTravel.remove();
   fade.style.opacity = 0; await wait(900);                                                                // fade out slowly
   fade.classList.add('hidden'); fade.style.opacity = '';
   setSound({ scene: 'arrival' });

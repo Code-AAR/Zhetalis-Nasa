@@ -21,7 +21,10 @@ export function logFact(f) {
 }
 export const onLog = fn => logListeners.push(fn);
 
-let modalOpen = false, modalPauses = true;
+let modalOpen = false, modalPauses = true, dismissCurrent;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalOpen) { e.preventDefault(); e.stopImmediatePropagation(); dismissCurrent?.(); }
+}, true);
 export const isModalOpen = () => modalOpen;
 export const isPaused = () => modalOpen && modalPauses;   // the outpost panel lets time keep running
 
@@ -29,7 +32,7 @@ export const isPaused = () => modalOpen && modalPauses;   // the outpost panel l
 export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause = true }) {
   modalPauses = pause;
   const box = $('#modal .modal-box');
-  box.innerHTML = `<h3>${title}</h3>${html || ''}<div class="choices"></div>`;
+  box.innerHTML = `<header class="message-header"><h3>${title}</h3><button type="button" class="modal-dismiss" aria-label="Close message">×</button></header>${html || ''}<div class="choices"></div>`;
   box.scrollTop = 0;   // every new pop-up starts at its title
   const list = box.querySelector('.choices');
   choices.forEach(c => {
@@ -39,10 +42,12 @@ export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause
     b.onclick = () => { close(); c.onPick?.(); };
     list.appendChild(b);
   });
-  if(choices.length===1&&!choices[0].onPick){const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='modal-dismiss';dismiss.setAttribute('aria-label','Close panel');dismiss.textContent='×';dismiss.onclick=close;box.prepend(dismiss);}
+  box.querySelector('.modal-dismiss').onclick = close;
+  let closed = false;
+  dismissCurrent = close;
   $('#modal').classList.remove('hidden'); modalOpen = true;
   document.exitPointerLock?.();
-  function close() { $('#modal').classList.add('hidden'); modalOpen = false; onClose?.(); }
+  function close() { if (closed) return; closed = true; if (dismissCurrent === close) { $('#modal').classList.add('hidden'); modalOpen = false; dismissCurrent = null; } onClose?.(); }
   return close;
 }
 
@@ -56,8 +61,9 @@ export function say(name) {
 let toastTimer;
 // Short messages: they fade in, stay long enough to read (longer messages stay longer), then fade out slowly.
 export function toast(text, ms = 3200) {
-  ms = Math.max(ms, 2600 + text.length * 55);
-  const t = $('#toast'); t.textContent = text; t.classList.add('show');
+  ms = Math.min(6000, Math.max(ms, 2000 + text.length * 20));
+  const t = $('#toast'); t.innerHTML = '<span></span><button type="button" aria-label="Dismiss notification">×</button>'; t.querySelector('span').textContent = text; t.classList.add('show');
+  t.querySelector('button').onclick = () => { clearTimeout(toastTimer); t.classList.remove('show'); };
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
