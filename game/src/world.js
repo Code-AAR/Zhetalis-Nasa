@@ -705,7 +705,7 @@ export class World {
       this.vel.y -= g * dt;
       p.y += this.vel.y * dt;
     }
-    this.rockContact.block(p, previous);
+    this.rockContact.block(p, previous, this.onGround);
     this.collide(p);
     this.settlement?.blockEquipment(p);
     const ceiling = Math.max(previous.y, p.y) + (this.onGround ? 0.45 : 0.02);
