@@ -183,7 +183,8 @@ function makeRocks(rng) {
   const rocks = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
   const tints = ['#8a4a2d', '#a85d39', '#6e3b28', '#c07a52'].map(c => new THREE.Color(c));
-  const colliders = [];
+  const colliders = [], lowRocks = [];
+  const vertices = geo.attributes.position, vertex = new THREE.Vector3();
   for (let i = 0; i < count; i++) {
     let x, z; do { x = (rng() - 0.5) * WORLD_SIZE * 0.7; z = (rng() - 0.5) * WORLD_SIZE * 0.7; } while (Math.hypot(x, z) < 24);
     const slab = rng() < 0.55, size = slab ? 1.5 + rng() * 4 : 0.4 + rng() * 2.2;
@@ -192,10 +193,34 @@ function makeRocks(rng) {
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
     rocks.setMatrixAt(i, m.compose(p, q, s));
     rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
-    if (!slab && size > 1.3) colliders.push({ x, z, r: size * 0.9 });
+    let top = -Infinity, radiusSq = 0;
+    for (let j = 0; j < vertices.count; j++) {
+      vertex.fromBufferAttribute(vertices, j).multiply(s).applyQuaternion(q);
+      top = Math.max(top, p.y + vertex.y);
+      radiusSq = Math.max(radiusSq, vertex.x * vertex.x + vertex.z * vertex.z);
+    }
+    const radius = Math.sqrt(radiusSq);
+    if (top - heightAt(x, z) <= 0.8) lowRocks.push({ x, z, top, radius });
+    else colliders.push({ x, z, r: slab ? radius * 0.6 : size * 0.9 });
   }
   rocks.castShadow = true; rocks.receiveShadow = true;
-  return { rocks, colliders };
+  return { rocks, colliders, lowRocks };
+}
+
+// Blend the visible rock top into the surrounding soil so boots and tyres can
+// climb gradually. Keep the bare terrain sampler for scenery and placement.
+function surfaceAt(x, z, lowRocks, padding) {
+  const ground = heightAt(x, z);
+  let support = ground;
+  for (const rock of lowRocks) {
+    const dx = x - rock.x, dz = z - rock.z;
+    const distanceSq = dx * dx + dz * dz;
+    const edge = rock.radius + padding;
+    if (distanceSq >= edge * edge || rock.top <= ground) continue;
+    const weight = 1 - THREE.MathUtils.smoothstep(Math.sqrt(distanceSq), rock.radius * 0.35, edge);
+    support = Math.max(support, THREE.MathUtils.lerp(ground, rock.top, weight));
+  }
+  return support;
 }
 
 export const GH = { x: -17.5, z: 1, r: 7 };   // the base greenhouse dome (greenhouse.js is its inside)
@@ -365,7 +390,8 @@ export class World {
     this.terrain = makeTerrain(); this.scene.add(this.terrain);
 
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    const { rocks, colliders } = makeRocks(rng); this.scene.add(rocks);
+    const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks);
+    this.lowRocks = lowRocks;
     this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
     this.solar = makeSolarField(); this.scene.add(this.solar.group);
     this.colliders = [...colliders, ...this.outpost.colliders];
@@ -409,7 +435,7 @@ export class World {
     });
 
     // NASA's Space Exploration Vehicle: a pressurised crew rover you can drive (rover.js)
-    this.sev = new Rover(this.scene, heightAt, this.colliders);
+    this.sev = new Rover(this.scene, (x, z) => surfaceAt(x, z, this.lowRocks, 0.65), this.colliders);
     this.sevCollider = { x: this.sev.pos.x, z: this.sev.pos.z, r: 2.4, self: true };
     this.colliders.push(this.sevCollider);
     this.driving = false;
@@ -640,7 +666,8 @@ export class World {
   exitRover() {
     const e = this.sev.exitPoint();
     this.driving = false; this.sev.speed = 0;
-    this.player.position.set(e.x, heightAt(e.x, e.z), e.z); this.player.rotation.y = this.sev.yaw + Math.PI;
+    this.player.position.set(e.x, surfaceAt(e.x, e.z, this.lowRocks, 0.35), e.z); this.player.rotation.y = this.sev.yaw + Math.PI;
+    this.onGround = true; this.vel.y = 0;
     this.yaw = this.sev.yaw + Math.PI; this.pitch = 0.25;
   }
 
@@ -666,12 +693,14 @@ export class World {
     const grip = this.onGround ? (want.lengthSq() ? 7 : 9) : 1.5;
     this.move.lerp(want, 1 - Math.exp(-grip * dt));
     p.x += this.move.x * dt; p.z += this.move.z * dt;
-    this.vel.y -= g * dt;                                                           // ...but real Mars gravity pulls back slower
-    p.y += this.vel.y * dt;
     this.collide(p);
-    const ground = heightAt(p.x, p.z), wasInAir = !this.onGround;
-    if (p.y <= ground) {
-      if (wasInAir && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);   // land with a little squash
+    const ground = surfaceAt(p.x, p.z, this.lowRocks, 0.35);
+    if (!this.onGround) {
+      this.vel.y -= g * dt;                       // Mars gravity pulls back slower
+      p.y += this.vel.y * dt;
+    }
+    if (this.onGround || p.y <= ground) {
+      if (!this.onGround && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);
       p.y = ground; this.vel.y = 0; this.onGround = true;
     }
     this.animateAstronaut(dt, running);
