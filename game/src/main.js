@@ -11,7 +11,7 @@ import { fieldMapHTML } from './fieldmap.js';
 import { Capsule } from './capsule.js?v=landing-water-12';
 import { Greenhouse } from './greenhouse.js?v=landing-water-12';
 import { showMissionPath } from './missionpath.js?v=landing-water-12';
-import { showArrival } from './arrival.js?v=landing-water-12';
+import { showArrival } from './arrival.js?v=slow-dots-27';
 import { loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
 import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';

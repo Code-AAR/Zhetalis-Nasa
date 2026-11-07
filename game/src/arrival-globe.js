@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeSpin, latLonDir } from './globe.js';
+import { makeSpin, latLonDir } from './globe.js?v=slow-dots-27';
 import { loadMarsMap } from './nasaimages.js';
 import { loadModel } from './nasamodels.js';
 
@@ -50,13 +50,13 @@ export class ArrivalGlobe {
       const dt=Math.min(clock.getDelta(),.05);
       if(this.focusTurn){
         const turn=this.focusTurn;turn.elapsed=(performance.now()-turn.started)/1000;
-        const t=reduced.matches?1:Math.min(1,turn.elapsed/2.4);
+        const t=reduced.matches?1:Math.min(1,turn.elapsed/5);
         const eased=t*t*t*(t*(t*6-15)+10);
         globe.quaternion.slerpQuaternions(turn.from,turn.to,eased);
         if(t===1)this.focusTurn=null;
       }else if(!this.selected||this.manualSpin)spin.update(dt);
-      const targetZoom=this.selected?.78:1;this.zoom=reduced.matches?targetZoom:THREE.MathUtils.lerp(this.zoom,targetZoom,1-Math.exp(-dt*1.5));camera.position.z=4.2*Math.max(1,1.12/camera.aspect)*this.zoom;
-      if(!reduced.matches){if(!spin.busy()&&!this.selected)globe.rotation.y+=dt*.12;orbits[0].rotation.y+=dt*.35;orbits[1].rotation.y-=dt*.22;}
+      const targetZoom=this.selected?.78:1;this.zoom=reduced.matches?targetZoom:THREE.MathUtils.lerp(this.zoom,targetZoom,1-Math.exp(-dt*.65));camera.position.z=4.2*Math.max(1,1.12/camera.aspect)*this.zoom;
+      if(!reduced.matches){if(!spin.busy()&&!this.selected)globe.rotation.y+=dt*.045;orbits[0].rotation.y+=dt*.35;orbits[1].rotation.y-=dt*.22;}
       scene.updateMatrixWorld(true);
       for(const {marker,label} of this.markers){const point=marker.getWorldPosition(new THREE.Vector3()),front=point.z>0;point.project(camera);label.hidden=!front;label.style.left=((point.x*.5+.5)*w)+'px';label.style.top=((-point.y*.5+.5)*h)+'px';}
       if(this.scanning){const phase=(performance.now()%2400)/2400;this.scanRing.scale.setScalar(reduced.matches?2:1+phase*4);this.scanRing.material.opacity=reduced.matches?.7:1-phase;}
