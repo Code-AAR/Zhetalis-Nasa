@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
 import { Rover } from './rover.js';
+import { createRockContact } from './rock-contact.js';
 import { makeStars, makePlanets } from './sky.js';
 
 // ---------- terrain shape (deterministic, so every player gets the same map) ----------
@@ -201,7 +202,7 @@ function makeRocks(rng) {
     }
     const radius = Math.sqrt(radiusSq);
     if (top - heightAt(x, z) <= 0.8) lowRocks.push({ x, z, top, radius });
-    else colliders.push({ x, z, r: slab ? radius * 0.6 : size * 0.9 });
+    else colliders.push({ x, z, rock: true, r: slab ? radius * 0.6 : size * 0.9 });
   }
   rocks.castShadow = true; rocks.receiveShadow = true;
   return { rocks, colliders, lowRocks };
@@ -392,6 +393,7 @@ export class World {
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks);
     this.lowRocks = lowRocks;
+    this.rockContact = createRockContact(rocks);
     this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
     this.solar = makeSolarField(); this.scene.add(this.solar.group);
     this.colliders = [...colliders, ...this.outpost.colliders];
@@ -655,6 +657,7 @@ export class World {
   // Simple circle collisions so you can't walk through the base or big boulders.
   collide(pos) {
     for (const c of this.colliders) {
+      if (c.rock) continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
     }
@@ -692,16 +695,22 @@ export class World {
     // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
     const grip = this.onGround ? (want.lengthSq() ? 7 : 9) : 1.5;
     this.move.lerp(want, 1 - Math.exp(-grip * dt));
+    const previous = this.previousFeetPosition ??= new THREE.Vector3();
+    previous.copy(p);
     p.x += this.move.x * dt; p.z += this.move.z * dt;
-    this.collide(p);
-    const ground = surfaceAt(p.x, p.z, this.lowRocks, 0.35);
     if (!this.onGround) {
-      this.vel.y -= g * dt;                       // Mars gravity pulls back slower
+      this.vel.y -= g * dt;
       p.y += this.vel.y * dt;
     }
-    if (this.onGround || p.y <= ground) {
+    this.rockContact.block(p, previous);
+    this.collide(p);
+    const ceiling = Math.max(previous.y, p.y) + (this.onGround ? 0.45 : 0.02);
+    const ground = Math.max(heightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling));
+    if ((this.onGround && Math.abs(p.y - ground) <= 0.45) || (this.vel.y <= 0 && p.y <= ground)) {
       if (!this.onGround && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);
       p.y = ground; this.vel.y = 0; this.onGround = true;
+    } else {
+      this.onGround = false;
     }
     this.animateAstronaut(dt, running);
 
