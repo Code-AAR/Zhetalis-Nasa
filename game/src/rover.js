@@ -100,7 +100,7 @@ export class Rover {
     this.pos.x += Math.sin(this.yaw) * step; this.pos.z += Math.cos(this.yaw) * step;
     // bump into the outpost, boulders and the old rover
     for (const c of this.colliders) {
-      if (c.self) continue;
+      if (c.self || (c.object && !c.object.visible)) continue;
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }
     }

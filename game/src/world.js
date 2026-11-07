@@ -654,7 +654,7 @@ export class World {
     if (this.toolSwing >= 1) this.toolSwing = -1;
   }
 
-  groundHeightAt(x,z){return this.settlement?.walkHeight(x,z,heightAt(x,z))??heightAt(x,z);}
+  groundHeightAt(x,z){const ground=heightAt(x,z),surface=this.settlement?.crossings.height(x,z,ground)??ground;return this.settlement?.walkHeight(x,z,surface)??surface;}
 
   // Simple circle collisions so you can't walk through the base or big boulders.
   collide(pos) {

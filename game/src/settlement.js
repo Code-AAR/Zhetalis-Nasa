@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { layServiceCables, cableCrossings } from './cable-crossings.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createOpenLayout } from './exploration-layout.js';
 import { installHabitatAccess } from './access.js';
@@ -85,7 +86,11 @@ export async function installSettlement(world){
   const cablePoints=[new THREE.Vector3(53.4,.6,-20),new THREE.Vector3(53.4,.1,-18.8),pack.position.clone(),new THREE.Vector3(51,.1,-17), new THREE.Vector3(endpoint.x,.1,endpoint.z-5),new THREE.Vector3(endpoint.x,.8,endpoint.z-4)];
   const powerSite={x:pack.position.x,z:pack.position.z+1.6};
   const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cablePoints),48,.07,8,false),new THREE.MeshStandardMaterial({color:'#42494b',roughness:.8}));world.scene.add(cable);
-  const mission={glassTunnel,blockEquipment:equipmentContact(model),pack,cable,powerSite,...access,model,layout,greenhouse,updateGreenhouse:(beds,powered=true)=>{
+  const serviceCables=layServiceCables(model,world.scene,heightAt);
+  const crossings=cableCrossings([serviceCables,cable],heightAt);
+  const previousSurface=world.sev.surfaceAt;
+  world.sev.surfaceAt=(x,z)=>crossings.height(x,z,previousSurface(x,z));
+  const mission={crossings,serviceCables,glassTunnel,blockEquipment:equipmentContact(model),pack,cable,powerSite,...access,model,layout,greenhouse,updateGreenhouse:(beds,powered=true)=>{
     beds.forEach((bed,i)=>{const row=greenhouse.userData.rows[i];row.plants.visible=!!bed.crop;row.plants.scale.y=.2+bed.grown*.8;row.plants.material.color.set(bed.ready?'#a5ae61':bed.crop==='lettuce'?'#833b48':'#4f8f3a');row.led.material.color.set(bed.crop&&powered?'#e05cff':'#504852');});
     greenhouse.userData.growLight.intensity=powered&&beds.some(b=>b.crop)?3:0;
   },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:on=>berms.visible=on};

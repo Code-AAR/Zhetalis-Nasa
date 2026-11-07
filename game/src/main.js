@@ -6,7 +6,7 @@ import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords }
 import { World, GH } from './world.js';
 import { Launch } from './launch.js';
 import { CrewInterior as Interior } from './crew-interior.js?v=landing-water-12';
-import { installSettlement } from './settlement.js?v=landing-water-12';
+import { installSettlement } from './settlement.js?v=cable-crossings-14';
 import { fieldMapHTML } from './fieldmap.js';
 import { Capsule } from './capsule.js?v=landing-water-12';
 import { Greenhouse } from './greenhouse.js?v=landing-water-12';
