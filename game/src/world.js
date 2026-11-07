@@ -458,7 +458,17 @@ export class World {
     });
 
     // NASA's Space Exploration Vehicle: a pressurised crew rover you can drive (rover.js)
-    this.sev = new Rover(this.scene, (x, z) => surfaceAt(x, z, this.lowRocks, 0.65), this.colliders);
+    // Sample rendered rock triangles, including large sloping slabs. Cache only
+    // within a frame so movement checks and suspension share exact contacts.
+    this.roverSurfaceCache = new Map();
+    const roverSample = (x,z) => {
+      const key = `${x},${z}`;
+      let value = this.roverSurfaceCache.get(key);
+      if(!value){value=this.rockContact.surface(x,z,heightAt(x,z));this.roverSurfaceCache.set(key,value);}
+      return value;
+    };
+    this.sev = new Rover(this.scene, (x,z)=>roverSample(x,z).height, this.colliders);
+    this.sev.surfaceSample = roverSample;
     this.sevCollider = { x: this.sev.pos.x, z: this.sev.pos.z, r: 2.4, self: true };
     this.colliders.push(this.sevCollider);
     this.driving = false;
@@ -711,6 +721,7 @@ export class World {
   update(dt, controlsActive) {
     this.time += dt; this.frameDt = dt;
     const nearHome = Math.hypot(this.sev.pos.x, this.sev.pos.z) < 32;
+    this.roverSurfaceCache.clear();
     this.sev.update(dt, controlsActive ? this.keys : {}, this.driving, nearHome, this.night);
     this.sevCollider.x = this.sev.pos.x; this.sevCollider.z = this.sev.pos.z;
     if (this.driving) return this.updateDriving(dt);

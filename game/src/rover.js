@@ -7,11 +7,11 @@
 // outpost. Inside, your suit refills from the cabin air, and the walls block some radiation.
 import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
+import { moveOverSurface, ROVER_MOTION } from './rover-terrain.js';
 import { loadModel } from './nasamodels.js';
 import { splitGeometry } from './suit.js';
 
-const MAX = 15, REVERSE = 4, ACCEL = 6.5, BRAKE = 11;    // m/s and m/s²: about 54 km/h, much faster than running (6 m/s). The real concept
-                                                          // vehicle tops out near 10 km/h - the game speeds it up so trips are short
+const {max:MAX, reverse:REVERSE, accel:ACCEL, brake:BRAKE} = ROVER_MOTION; // Deliberately accelerated game handling.
 const DRAIN = 1 / 150, CHARGE = 1 / 25;                   // battery per second: about 2.5 min of driving, 25 s to fill up
 
 export class Rover {
@@ -98,10 +98,14 @@ export class Rover {
     // a car turns more the faster it rolls (and the other way when reversing)
     this.yaw += this.steer * 0.75 * Math.min(1, Math.abs(this.speed) / 2.5) * Math.sign(this.speed) * dt;
     const step = this.speed * dt;
-    this.pos.x += Math.sin(this.yaw) * step; this.pos.z += Math.cos(this.yaw) * step;
+    const dx = Math.sin(this.yaw) * step, dz = Math.cos(this.yaw) * step;
+    if(this.surfaceSample){
+      const moved = moveOverSurface(this.pos,dx,dz,this.yaw,this.surfaceSample);
+      if(moved < 1)this.speed *= moved;
+    }else{this.pos.x+=dx;this.pos.z+=dz;}
     // bump into the outpost, boulders and the old rover
     for (const c of this.colliders) {
-      if (c.self || (c.object && !c.object.visible)) continue;
+      if (c.self || (c.rock && this.surfaceSample) || (c.object && !c.object.visible)) continue;
       if(c.halfX !== undefined){if(blockPanel(this.pos,c,2.2))this.speed*=0.5;continue;}
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }
@@ -130,6 +134,7 @@ export class Rover {
     const bellyHigh = Math.max(at(L / 2, 0), at(0, 0), at(-L / 2, 0));
     const rideHeight = Math.max((front + back) / 2, wheelHigh - 0.45, bellyHigh - 0.35);
     this.tilt.y += (rideHeight - this.tilt.y) * k;
+    this.tilt.y = Math.max(this.tilt.y, rideHeight - .22); // keep the chassis above rising rock while suspension eases
     this.pos.y = this.tilt.y;
     this.group.position.copy(this.pos);
     this.group.rotation.set(0, this.yaw, 0);
