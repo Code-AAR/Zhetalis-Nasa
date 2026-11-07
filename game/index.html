@@ -21,13 +21,15 @@
   <link rel="stylesheet" href="loading-screen.css">
   <link rel="stylesheet" href="phone.css">
   <link rel="stylesheet" href="briefing.css?v=landing-water-12">
-  <link rel="stylesheet" href="mobile.css?v=compact-messages-16">
+  <link rel="stylesheet" href="mobile.css?v=globe-landing-19">
   <script type="importmap">
     { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
         "./src/ui.js": "./src/ui.js?v=compact-messages-16",
         "./src/world.js": "./src/world.js?v=rock-slopes-15",
         "./src/rock-contact.js": "./src/rock-contact.js?v=rock-slopes-15",
+        "./src/arrival.js?v=landing-water-12": "./src/arrival.js?v=globe-landing-19",
+        "./src/arrival-globe.js": "./src/arrival-globe.js?v=globe-landing-19",
         "./src/briefing.js": "./src/briefing.js?v=compact-messages-16",
         "./src/rover.js": "./src/rover.js?v=cable-crossings-14",
         "./src/sim.js": "./src/sim.js?v=landing-water-12",
@@ -54,8 +56,6 @@
           <p class="mission-intro">It’s 2126. Your crew needs a home on Mars.<br class="desktop-break"> Build an outpost. Make every watt count.</p>
           <fieldset class="mission-level"><legend>Choose your mission</legend><div id="difficulties"></div></fieldset>
           <p id="mission-summary" class="mission-summary">80 sols · 3 crew · Real trade-offs.</p>
-          <fieldset class="mission-level"><legend>Choose your landing scenario</legend><div id="sites" class="seg"></div></fieldset>
-          <p id="site-summary" class="mission-summary"></p><p class="mission-summary">Scenarios change resources and hazards; all use the same training landscape.</p>
           <div class="launch-actions">
             <button id="resume" class="hidden"></button>
             <button id="start" class="primary">Launch to Mars <span aria-hidden="true">↗</span></button>
@@ -138,7 +138,7 @@
   <div id="loading">Loading Mars…</div>
 
   <script type="module" src="src/loading-screen.js"></script>
-  <script type="module" src="src/main.js?v=compact-messages-16"></script>
+  <script type="module" src="src/main.js?v=globe-landing-19"></script>
   <script type="module" src="src/phone-layout.js?v=landing-water-12"></script>
 </body>
 </html>

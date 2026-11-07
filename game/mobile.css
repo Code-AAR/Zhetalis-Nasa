@@ -59,3 +59,25 @@ body #toast.show{pointer-events:auto;transition:opacity .15s ease}
 .briefing-dismiss{position:sticky;top:0;z-index:6;display:flex;justify-content:flex-end;background:#24150f}
 .briefing-dismiss button,.travel-dismiss{min-height:44px;padding:8px 14px}
 #fade .travel-dismiss{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));pointer-events:auto;z-index:30}
+/* Mars approach: region selection stays with the globe, before the scan. */
+#arrival.landing-flow{position:fixed;inset:0;z-index:30;overflow:auto;background:#0b1017;padding:16px max(12px,env(safe-area-inset-left))}
+.landing-shell{width:min(940px,100%);margin:auto;color:#f3e9dd}
+.landing-header{position:sticky;top:-16px;z-index:8;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0b1017;padding:8px 0}
+.landing-header span{font-size:12px;letter-spacing:.14em;color:#d2ac83}
+.landing-flow h2{font-size:clamp(21px,3vw,32px);margin:10px 0}
+.landing-flow p{font-size:14px;line-height:1.5;margin:8px 0}
+.landing-art{position:relative;height:clamp(240px,45dvh,440px);overflow:hidden;border:1px solid #37414a;border-radius:14px;background:#080c12}
+.landing-art canvas{width:100%;height:100%;display:block}
+.landing-marker{position:absolute;transform:translate(-50%,-50%);padding:6px 9px;min-height:44px;max-width:155px;font-size:12px;background:#1b252fee;border:1px solid #dfae70;z-index:2}
+.landing-marker[aria-pressed=true],.landing-regions button[aria-pressed=true]{background:#674027;border-color:#ffdb9f}
+.landing-regions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.landing-flow button{min-height:44px;touch-action:manipulation}
+.landing-regions button{font-size:13px;padding:8px}
+.landing-actions{position:sticky;bottom:0;background:#0b1017;display:flex;gap:8px;padding:12px 0;z-index:5}
+.landing-actions button{flex:1}
+.landing-flow details{font-size:13px;color:#c0c8d0;margin-bottom:16px}
+.scan-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#080c12}
+.landing-flow [hidden]{display:none!important}
+@media(max-width:600px){.landing-regions{grid-template-columns:repeat(2,1fr)}.landing-marker{font-size:11px;max-width:115px}.landing-art{height:34dvh;min-height:220px}}
+
+.mission-brief{border-left:2px solid #cda875;padding:8px 14px;margin:14px 0;background:#151d26}.mission-brief h3{font-size:16px;margin:0 0 8px}.mission-brief p{color:#cbd3db}

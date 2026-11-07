@@ -75,22 +75,7 @@ for (const [key, d] of Object.entries(DIFFICULTY)) {
   diffBox.appendChild(b);
 }
 
-// Landing site and player age: two more rows of choices on the title screen, built like the mission row.
-function choiceRow(box, options, current, pick) {
-  for (const [key, label] of options) {
-    const b = document.createElement('button');
-    b.className = 'card' + (key === current ? ' selected' : ''); b.innerHTML = `<b>${label}</b>`;
-    b.setAttribute('aria-pressed', String(key === current));
-    b.onclick = () => {
-      box.querySelectorAll('.card').forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
-      b.classList.add('selected'); b.setAttribute('aria-pressed', 'true'); pick(key);
-    };
-    box.appendChild(b);
-  }
-}
-const siteLine = () => { const s = SITES[state.site]; $('#site-summary').textContent = `${s.name}: ${s.blurb}`; };
-choiceRow($('#sites'), Object.entries(SITES).map(([k, s]) => [k, `${s.icon} ${s.short}`]), state.site, k => { state.site = k; siteLine(); });
-siteLine();
+// Player age remains a title-screen preference; landing is chosen on approach.
 try { if (localStorage.getItem('ja-age') === 'younger') state.age = 'younger'; } catch { /* storage blocked */ }
 // Player age, a small toggle in the title bar: ages 7-9 get shorter pop-ups (facts folded up until tapped).
 const setAge = a => {
@@ -273,18 +258,14 @@ function buildWorld() {
 async function arrive() {
   await world.ready;
   $('#countdown').classList.add('hidden'); $('#skip')?.remove();
-  setSound({ scene: 'cruise' });
-  await showMissionPath(F);
-  const fade = $('#fade'), wait = ms => new Promise(r => setTimeout(r, ms));
-  fade.innerHTML = `<p>Seven months later…<br><br>On the trip, your crew soaked up about <b>${F.cruiseDose.value} mSv of radiation every day</b> - about 3 times more than on the surface of Mars.<br><br><span class="source">Source: ${F.cruiseDose.source}</span></p>`;
-  fade.style.opacity = 0; fade.classList.remove('hidden'); void fade.offsetWidth; fade.style.opacity = 1;   // fade in
-  const skipTravel = document.createElement('button'); skipTravel.className = 'travel-dismiss'; skipTravel.textContent = 'Continue to Mars ›'; fade.appendChild(skipTravel);
-  await new Promise(resolve => { const timer = setTimeout(resolve, 7000); skipTravel.onclick = () => { clearTimeout(timer); resolve(); }; });
-  skipTravel.remove();
-  fade.style.opacity = 0; await wait(900);                                                                // fade out slowly
-  fade.classList.add('hidden'); fade.style.opacity = '';
   setSound({ scene: 'arrival' });
-  await showArrival(F, outpost.delayMinutes());
+  const selectedSite = await showArrival(F, outpost.delayMinutes());
+  if (!selectedSite) { location.reload(); return; }
+  state.site = selectedSite;
+  outpost.site = selectedSite;
+  outpost.parts = Math.max(0, outpost.d.parts + SITES[selectedSite].parts);
+  outpost.today = outpost.forecast();
+  world.setLink(outpost.today.link);
   setSound({ scene: 'mars' });
   await weatherReady;
   state.phase = 'mars';
