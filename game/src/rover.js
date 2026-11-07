@@ -14,8 +14,8 @@ const MAX = 15, REVERSE = 4, ACCEL = 6.5, BRAKE = 11;    // m/s and m/s²: about
 const DRAIN = 1 / 150, CHARGE = 1 / 25;                   // battery per second: about 2.5 min of driving, 25 s to fill up
 
 export class Rover {
-  constructor(scene, heightAt, colliders) {
-    this.heightAt = heightAt; this.colliders = colliders;
+  constructor(scene, surfaceAt, colliders) {
+    this.surfaceAt = surfaceAt; this.colliders = colliders;
     this.group = new THREE.Group(); scene.add(this.group);
     this.body = new THREE.Group(); this.group.add(this.body);
     this.pos = new THREE.Vector3(-15, 0, 13); this.yaw = 0.5;
@@ -60,7 +60,8 @@ export class Rover {
         const row = +part[1], side = part[2];
         let w = this.wheels.find(w => w.row === row && w.side === side);
         if (!w) {
-          w = { row, side, steer: new THREE.Group(), spin: new THREE.Group() };
+          const track = (xIn + xOut) / 2 * (side === 'L' ? -1 : 1);
+          w = { row, side, track, axle: axles[row], travel: 0, steer: new THREE.Group(), spin: new THREE.Group() };
           w.steer.position.set(0, r, axles[row]); w.steer.add(w.spin); this.body.add(w.steer); this.wheels.push(w);
         }
         pg.translate(0, -r, -axles[row]);
@@ -114,19 +115,32 @@ export class Rover {
 
   // Sit on the ground: tilt to follow the slope under the wheels, smoothly (the suspension soaks up small bumps).
   place(dt, step = 0) {
-    const h = this.heightAt, s = Math.sin(this.yaw), c = Math.cos(this.yaw), L = 2.2, W = 1.6;
+    const h = this.surfaceAt, s = Math.sin(this.yaw), c = Math.cos(this.yaw), L = 2.2, W = 1.6;
     const at = (f, rgt) => h(this.pos.x + s * f + c * rgt, this.pos.z + c * f - s * rgt);
-    const fr = (at(L, W) + at(L, -W)) / 2, bk = (at(-L, W) + at(-L, -W)) / 2, lf = (at(L, -W) + at(-L, -W)) / 2, rt = (at(L, W) + at(-L, W)) / 2;
+    const fl = at(L, -W), fr = at(L, W), bl = at(-L, -W), br = at(-L, W);
+    const front = (fl + fr) / 2, back = (bl + br) / 2, left = (fl + bl) / 2, right = (fr + br) / 2;
+    for (const w of this.wheels) w.ground = at(w.axle, w.track);
     const k = dt ? 1 - Math.exp(-dt * 6) : 1;
-    this.tilt.pitch += (Math.atan2(bk - fr, 2 * L) - this.tilt.pitch) * k;
-    this.tilt.roll += (Math.atan2(lf - rt, 2 * W) - this.tilt.roll) * k;
-    this.tilt.y += ((fr + bk) / 2 - this.tilt.y) * k;
+    this.tilt.pitch += (Math.atan2(back - front, 2 * L) - this.tilt.pitch) * k;
+    this.tilt.roll += (Math.atan2(right - left, 2 * W) - this.tilt.roll) * k;
+    const wheelHigh = this.wheels.reduce((high, wheel) => Math.max(high, wheel.ground), -Infinity);
+    // A rock can pass between the tyres. Give the underside clearance too.
+    const bellyHigh = Math.max(at(L / 2, 0), at(0, 0), at(-L / 2, 0));
+    const rideHeight = Math.max((front + back) / 2, wheelHigh - 0.45, bellyHigh - 0.35);
+    this.tilt.y += (rideHeight - this.tilt.y) * k;
     this.pos.y = this.tilt.y;
     this.group.position.copy(this.pos);
     this.group.rotation.set(0, this.yaw, 0);
     this.body.rotation.set(this.tilt.pitch, 0, this.tilt.roll);
     this.body.position.y = Math.sin(performance.now() / 90) * 0.012 * Math.min(1, Math.abs(this.speed) / 4);   // engine/terrain buzz
+    const pitch = this.tilt.pitch, roll = this.tilt.roll;
+    const suspensionEase = dt ? 1 - Math.exp(-dt * 18) : 1;
     for (const w of this.wheels) {
+      // Subtract the chassis slope so a wheel can rise independently over a rock.
+      const contact = this.tilt.y + Math.cos(pitch) * Math.sin(roll) * w.track - Math.sin(pitch) * w.axle;
+      const travel = THREE.MathUtils.clamp(w.ground - contact, -0.35, 0.55);
+      w.travel += (travel - w.travel) * suspensionEase;
+      w.steer.position.y = this.r + w.travel;
       w.spin.rotation.x += step / this.r;
       w.steer.rotation.y = (this.steer ?? 0) * 0.32 * w.steers;
     }
