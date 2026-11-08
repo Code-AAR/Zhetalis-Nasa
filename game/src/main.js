@@ -779,17 +779,19 @@ function openBuild() {
     const unlocked=outpost.powerStep>=6&&outpost.baseConnected&&outpost.tier>=r.tier;
     const cost=Object.entries(r.cost).map(([k,n])=>`${k==='parts'?'Parts':ORES[k].name}: <b>${k==='parts'?outpost.parts:s.store[k]}/${n}</b>${k==='parts'?'':` <small>(bag ${s.bag[k]})</small>`}`).join(' · ');
     const spot=key==='greenhouse'?colony.buildSpot(world.player.position,world.yaw):{ok:true};
-    const can=unlocked&&colony.tool==='builder'&&!inside&&spot.ok&&colony.canPay(r.cost,outpost);
-    return `<section class="builder-recipe"><h4>${r.name}</h4><p>${r.description}</p><p>${cost}</p><p>${!unlocked?'Finish starter power and unlock tier '+(r.tier+1):inside?'Go outside to build.':colony.tool!=='builder'?'Equip your builder tool from the belt.':!spot.ok?spot.why:'Materials come from base storage. Unload samples at the locker.'}</p><div class="builder-actions"><button data-track="${key}">${s.buildPlan===key?'Stop tracking':'Track materials & build'}</button><button data-recipe="${key}" ${can?'':'disabled'}>${key==='greenhouse'?'Build here':'Install in power field'}</button></div></section>`;
+    const can=unlocked&&!(key==='panel'&&outpost.panels>=12)&&colony.tool==='builder'&&!inside&&spot.ok&&colony.canPay(r.cost,outpost);
+    return `<section class="builder-recipe"><h4>${r.name}</h4><p>${r.description}</p><p>${cost}</p><p>${key==='panel'&&outpost.panels>=12?'Solar field full: 12 panels installed.':!unlocked?'Finish starter power and unlock tier '+(r.tier+1):inside?'Go outside to build.':colony.tool!=='builder'?'Equip your builder tool from the belt.':!spot.ok?spot.why:'Materials come from base storage. Unload samples at the locker.'}</p><div class="builder-actions"><button data-track="${key}">${s.buildPlan===key?'Stop tracking':'Track materials & build'}</button><button data-recipe="${key}" ${can?'':'disabled'}>${key==='greenhouse'?'Build here':'Install in power field'}</button></div></section>`;
   }).join('');
+  let buildSubmitted=false;
   const close=modal({title:'Builder · choose a project',html:`<p>Collect minerals, unload at the locker, then equip the builder. Track a recipe for one step at a time.</p>${rows}<details><summary>Game rules & starter kits</summary><p>Ore deposits replenish each sol in safe, unoccupied spots. This is a renewable game resource; real minerals do not regrow. Mineral costs represent simplified processing with landed components, not making electronics directly from raw rocks.</p><p>Your first array, battery and charger use landed kits. Assemble those at the workbench and connect their sockets.</p></details>`,choices:[{label:'Back to game',primary:true}]});
   const box=$('#modal .modal-box');
   box.querySelectorAll('[data-track]').forEach(b=>b.onclick=()=>{s.buildPlan=s.buildPlan===b.dataset.track?null:b.dataset.track;missionKey='';saveGame();close();if(s.buildPlan)zhetela(builderQuest(outpost,s)?.step||'Project tracked. Finish the current starter power step first.');});
   box.querySelectorAll('[data-recipe]').forEach(b=>b.onclick=()=>{
     const key=b.dataset.recipe,r=RECIPES[key];
+    if(buildSubmitted)return;
     if(inside||colony.tool!=='builder'||outpost.powerStep<6||!outpost.baseConnected||outpost.tier<r.tier||!colony.canPay(r.cost,outpost))return;
-    if(key==='greenhouse'){const spot=colony.buildSpot(world.player.position,world.yaw);if(!spot.ok){openBuild();return;}colony.pay(r.cost,outpost);colony.build(spot,world.yaw);}
-    else {if(!outpost.buy(key))return;const ores={...r.cost};delete ores.parts;colony.pay(ores,outpost);syncPowerHardware();}
+    if(key==='greenhouse'){const spot=colony.buildSpot(world.player.position,world.yaw);if(!spot.ok){openBuild();return;}buildSubmitted=true;colony.pay(r.cost,outpost);colony.build(spot,world.yaw);}
+    else {if(!outpost.buy(key))return;buildSubmitted=true;const ores={...r.cost};delete ores.parts;colony.pay(ores,outpost);syncPowerHardware();}
     s.buildHistory??={};s.buildHistory[key]=(s.buildHistory[key]||0)+1;if(s.buildPlan===key)s.buildPlan=null;missionKey='';toolbarKey='';saveGame();close();zhetela(r.name+' built. Open Builder (B) to choose your next project.',true);
   });
 }

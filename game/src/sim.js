@@ -224,7 +224,7 @@ export class Outpost {
 
   buy(key) {
     const u = UPGRADES[key];
-    if (!u || !this.unlocked(key) || this.parts < u.parts || ((u.once || u.max) && this.built(key))) return false;
+    if (!u || (key === 'panel' && this.panels >= 12) || !this.unlocked(key) || this.parts < u.parts || ((u.once || u.max) && this.built(key))) return false;
     this.parts -= u.parts;
     if (key === 'panel') this.panels += 1;
     else if (key === 'battery') { this.upgrades.battery += 1; this.battery += TUNED.batteryUpgrade; }
