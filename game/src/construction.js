@@ -55,7 +55,7 @@ export class Construction {
   this.advance(4);this.save();this.sync();this.placeBatteryButton.hidden=true;
   this.guide('Battery placed. Next, connect Solar OUT to Battery controller IN.',true);return true;
  }
- cancel(){this.wire=null;this.held=null;this.preview.visible=false;this.heldDisplay.visible=false;}
+ cancel(){dispatchEvent(new Event('zhetela-dismiss'));this.wire=null;this.held=null;this.preview.visible=false;this.heldDisplay.visible=false;}
  notify(text){this.notice=text;this.noticeUntil=performance.now()+2400;}
  removeRock(id){const w=this.world,m=new THREE.Matrix4(),p=new THREE.Vector3();w.rocks.getMatrixAt(id,m);p.setFromMatrixPosition(m);if(p.y<-1000)return;w.rocks.setMatrixAt(id,new THREE.Matrix4().makeTranslation(p.x,-10000,p.z));w.rocks.instanceMatrix.needsUpdate=true;w.rocks.computeBoundingSphere();w.lowRocks=w.lowRocks.filter(c=>Math.hypot(c.x-p.x,c.z-p.z)>.01);for(let i=w.colliders.length-1;i>=0;i--){const c=w.colliders[i];if(c.rock&&Math.hypot(c.x-p.x,c.z-p.z)<.01)w.colliders.splice(i,1);}}
  update(inside,room,blocked){

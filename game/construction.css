@@ -10,3 +10,5 @@
 .builder-recipe{padding:14px 0;border-bottom:1px solid #77634e}.builder-recipe h4{margin:0 0 6px}.builder-actions{display:flex;flex-wrap:wrap;gap:8px}.builder-actions button{min-height:44px;flex:1 1 160px}
 
 #construction-place-battery{position:fixed;right:18px;bottom:190px;z-index:75;min-height:48px;padding:12px 18px;font-weight:600}#construction-place-battery[hidden]{display:none}@media(max-width:600px){#construction-place-battery{right:10px;bottom:245px;max-width:calc(100vw - 20px)}}
+
+#zhetela-message [data-read-voice]{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:5px 9px;font-size:12px;margin-top:4px}#zhetela-message [data-read-voice] svg{flex:none}

@@ -8,7 +8,7 @@ c.store={...c.bag};c.bag={hematite:0,gypsum:0,iron:0};assert.equal(builderQuest(
 assert.equal(builderQuest({...o,powerStep:2},c),null);
 assert.equal(builderQuest({...o,parts:0},c).target,'build-parts');
 assert.equal(builderQuest(o,{...c,belt:[]}).target,'locker');
-assert.equal(builderQuest({...o,tier:0},{...c,buildPlan:'panel'}).target,'base');
+assert.equal(builderQuest({...o,tier:0},{...c,buildPlan:'panel'}).target,'console');
 const s={mined:[1,2],hits:{1:3,2:3}};
 assert.deepEqual(renewDeposits(s,5,()=>true),[]);
 assert.deepEqual(renewDeposits(s,5,()=>true),[]);

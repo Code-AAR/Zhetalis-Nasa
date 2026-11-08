@@ -1405,7 +1405,7 @@ function setupMissionHud(){
 }
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
-  if(['workbench','greenhouse','locker','water'].includes(kind))return null; // The objective is the indoor station, never the stairs.
+  if(['workbench','greenhouse','locker','water','console'].includes(kind))return null; // The objective is the indoor station, never the stairs.
   if(kind==='ice'||kind==='seed-pod')return world.pickups.filter(p=>kind==='ice'?p.kind==='ice':p.kind==='pod'&&p.cargo?.seeds).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
   if(construction?.wire){const destination={'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[construction.wire];const socket=construction.sockets.find(p=>p.userData.id===destination);if(socket)return socket.position;}
   if(kind==='build-ore'){const ore=builderQuest(outpost,colony.s)?.ore;return colony.deposits.filter(d=>d.ore===ore&&d.group.parent).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;}
@@ -1458,8 +1458,8 @@ function drawMissionHud(){
   const isGrow=task.target==='greenhouse';
   if(isGrow&&!ghRoom.objectiveMarker){ghRoom.objectiveMarker=interior.workbenchMarker.clone();ghRoom.scene.add(ghRoom.objectiveMarker);}
   const grow=ghRoom.objectiveMarker;if(grow){grow.visible=inside&&room===ghRoom&&isGrow&&!isModalOpen();const bedIndex=colony.s.base.findIndex(b=>b.ready)||0;const bed=ghRoom.stations.find(s=>s.type==='gh-bed'&&s.bed===Math.max(0,bedIndex));if(bed)grow.position.set(bed.x,2,bed.z);}
-  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type===(task.target==='water'?'water':task.target==='locker'?'locker':'workbench'));
-  marker.visible=inside&&room===interior&&['workbench','locker','water'].includes(task.target)&&!isModalOpen();
+  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type===(task.target==='water'?'water':task.target==='locker'?'locker':task.target==='console'?'console':'workbench'));
+  marker.visible=inside&&room===interior&&['workbench','locker','water','console'].includes(task.target)&&!isModalOpen();
   if(marker.visible&&bench){marker.position.set(bench.x,2.1+.08*Math.sin(performance.now()/300),bench.z);marker.rotation.y=performance.now()/1000;}
   world.objectiveTarget=missionTarget(task.target);
   const beacon=world.settlement.objectiveBeacon;

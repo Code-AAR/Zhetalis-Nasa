@@ -134,3 +134,11 @@ Mineral deposits are seeded, clustered surface patches. Depleted deposits replen
 Press 1 or 2 / tap a belt slot to equip; repeat to unequip. Q / Empty hands puts away the current tool without removing it from the belt. Equipment choices now save immediately and show a short confirmation. Slot numbers follow your actual belt order.
 
 Open T → Tutorial & current step, or expand the current quest and choose How do I do this? Seven lessons track actual practice: equip, unequip, mine, unload, track a recipe, assemble/connect and build an expansion. The first unfinished lesson opens automatically, and Repeat current hint asks Zhetela to explain the active objective again. Tutorial progress survives reload and never resets mission progress.
+
+## Optional Zhetela speech
+
+Click Listen (speaker icon) below a Zhetela message. She never narrates automatically. One fixed Kokoro voice, af_heart at 0.95 speed, runs through kokoro-js 1.2.1 in a worker using the q8 Kokoro-82M-v1.0 ONNX model. The first click downloads model assets from Hugging Face and runtime code from jsDelivr; no speech service, microphone or API key is used. The browser may cache those downloads. First use can take time and extra memory, especially on phones.
+
+The button becomes Stop while preparing or speaking. Closing the message, dropping a cable, a new message, mute or turning voice off cancels the old speech. Settings → Sound & music includes the voice toggle, volume and Stop speaking. Failures show in voice status and leave text/gameplay available.
+
+Source/runtime: https://github.com/hexgrad/kokoro/tree/main/kokoro.js (Apache-2.0); model: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX . Browser validation generated non-silent 24 kHz speech only after clicking Listen, and checked cancellation during generation.

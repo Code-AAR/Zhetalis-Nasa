@@ -1,3 +1,4 @@
+import {voiceEnabled,setZhetelaVoice,stopZhetelaVoice,voiceStatus} from './zhetela-voice.js';
 import { isPhone, effectiveQuality } from './device-profile.js';
 import {SCREEN_MODES,screenName,screenMode,setScreenMode} from './layout.js';
 import {modal,logbook} from './ui.js';
@@ -23,7 +24,8 @@ export function openSettings({tab='audio',topic=''}={}){
  const draw=section=>{
   tab=section;box.querySelectorAll('[data-settings-tab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.settingsTab===tab));
   if(tab==='audio'){
-   const levels=audioLevels();pane.innerHTML='<h4>Sound & music</h4><p>Soft space music is a soundtrack. Mars wind is a NASA recording; the Moon has no wind.</p>'+Object.entries({master:'Master volume',music:'Music',ambience:'Environment ambience',effects:'Effects & movement',voice:'Voice'}).map(([key,label])=>`<label class="settings-range">${label}<output id="volume-${key}">${Math.round(levels[key]*100)}%</output><input type="range" min="0" max="100" value="${Math.round(levels[key]*100)}" data-audio="${key}" aria-label="${label}"></label>`).join('')+`<label class="settings-mute"><input type="checkbox" data-mute ${audioMuted()?'checked':''}> Mute all sounds</label><button data-preview>Preview music</button>`;
+   const levels=audioLevels();pane.innerHTML='<h4>Sound & music</h4><p>Soft space music is a soundtrack. Mars wind is a NASA recording; the Moon has no wind.</p>'+Object.entries({master:'Master volume',music:'Music',ambience:'Environment ambience',effects:'Effects & movement',voice:'Voice'}).map(([key,label])=>`<label class="settings-range">${label}<output id="volume-${key}">${Math.round(levels[key]*100)}%</output><input type="range" min="0" max="100" value="${Math.round(levels[key]*100)}" data-audio="${key}" aria-label="${label}"></label>`).join('')+`<label class="settings-mute"><input type="checkbox" data-mute ${audioMuted()?'checked':''}> Mute all sounds</label><button data-preview>Preview music</button><h4>Zhetela voice</h4><label><input type="checkbox" data-zhetela-voice ${voiceEnabled()?'checked':''}> Kokoro voice enabled</label><p>Click the speaker button under a Zhetela message to hear it. No automatic narration. One fixed voice. First use downloads the speech model; generation runs on your device. This can take time and extra memory.</p><p data-voice-status role="status"></p><button data-stop-zhetela>Stop speaking</button>`;
+   pane.querySelector('[data-zhetela-voice]').onchange=e=>setZhetelaVoice(e.target.checked);pane.querySelector('[data-stop-zhetela]').onclick=stopZhetelaVoice;pane.querySelector('[data-voice-status]').textContent=voiceStatus();
    pane.querySelectorAll('[data-audio]').forEach(input=>input.oninput=()=>{setAudioLevel(input.dataset.audio,input.value/100);pane.querySelector('#volume-'+input.dataset.audio).textContent=input.value+'%';});pane.querySelector('[data-preview]').onclick=()=>startMusic();pane.querySelector('[data-mute]').onchange=e=>setAudioMuted(e.target.checked);
   }else if(tab==='display'){
    let saved={};try{saved={graphics:localStorage.getItem('mars-graphics'),chunks:localStorage.getItem('mission-world-limit')};}catch{}
@@ -50,3 +52,5 @@ export function openSettings({tab='audio',topic=''}={}){
  if(!ready)dataReady.then(()=>{if(pane.isConnected&&tab==='information')drawInformation();});
 }
 addEventListener('open-settings',e=>openSettings(e.detail||{}));
+
+addEventListener('zhetela-voice-status',e=>{const el=document.querySelector('[data-voice-status]');if(el)el.textContent=e.detail;});

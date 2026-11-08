@@ -11,7 +11,7 @@ export function builderQuest(o,c){
  if(o.powerStep<6||!o.baseConnected)return null; // Preserve the step-by-step starter mission until power is connected.
  if(key==='panel'&&o.panels>=12)return result('Solar field full (12 panels). Choose another project',null);
  if(key==='greenhouse'&&(c.greenhouses||[]).length>=4)return result('Greenhouse limit reached (4). Choose another project',null);
- if(o.tier<r.tier)return result('Send science to Earth to unlock tier '+(r.tier+1),'base');
+ if(o.tier<r.tier)return result('Use the indoor power console: allocate power to Science and Talk to Earth to unlock tier '+(r.tier+1),'console');
  if(!c.belt.includes('builder'))return result('Take the builder tool from the storage locker','locker');
  for(const [ore,n] of Object.entries(r.cost)){
   if(ore==='parts')continue;
