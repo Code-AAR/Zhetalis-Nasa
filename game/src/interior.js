@@ -1,6 +1,7 @@
 // Inside the outpost: a round room you walk around in first person.
 // Each station does one job, so kids can see where each part of the trade-off "lives".
 import * as THREE from 'three';
+import { pressureHatch } from './pressure-hatch.js';
 import { loadModel, replaceLogos } from './nasamodels.js';
 
 const R = 6;   // room radius in metres
@@ -69,9 +70,7 @@ export class Interior {
     const add = (type, label, x, z, group) => { group.position.set(x, 0, z); group.lookAt(0, 0, 0); this.scene.add(group); this.stations.push({ type, label, x, z }); return group; };
 
     // airlock (exit) - same side as the outside door
-    const lock = new THREE.Group();
-    lock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.2, 3, 0.2), lam('#2a2e34')), 0, 1.5, 0));
-    lock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.25), glow('#7dffb2')), 0, 3.1, 0.02));
+    const lock = pressureHatch();
     add('exit', 'go outside (airlock)', 0, R - 0.25, lock);
 
     // control console - the power split. A curved mission-control style desk: sloped keyboard shelf,
