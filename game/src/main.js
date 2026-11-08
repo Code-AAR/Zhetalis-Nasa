@@ -20,7 +20,8 @@ import { Greenhouse } from './greenhouse.js';
 import { showMissionPath } from './missionpath.js';
 import { showArrival } from './arrival.js';
 import { Survival } from './survival.js';
-import { playLanding, playStorm } from './cutscenes.js';
+import { playLanding, playStorm, placeLander } from './cutscenes.js';
+import { devConsole } from './devconsole.js';
 import { resetGame, earn, openPatches, patchCount, PATCHES, setPatchContext, setSoundGate, setDuckHook } from './patches.js';
 import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
 import { noEmoji, $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
@@ -199,7 +200,7 @@ async function resume(d) {
   await world.ready;
   world.settlement.surveys = new Set(d.surveys || []);
   if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
-  world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap();
+  world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap(); placeLander(world);
   world.activeEntrance=world.settlement.entrances[d.entry??0];
   Object.assign(outpost, { powerStep: 6, rations: 0 }, d.outpost); outpost.today = outpost.forecast();
   ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
@@ -999,6 +1000,12 @@ onLayout((mode, used) => {
   pick.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.screen === mode));
   $('#screen-btn').textContent = `Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
 });
+$('#cine-btn').onclick = () => {
+  if (inside) return toast('Go outside to watch a cutscene.');
+  modal({ title: 'Cutscenes', html: '<p>Watch the big moments again. Click, Space or Esc skips them.</p>', choices: [
+    { label: 'Mars landing', primary: true, onPick: () => { playLanding(world).catch(() => {}); } },
+    { label: 'Dust storm', onPick: () => { playStorm(world).catch(() => {}); } }, { label: 'Close' }] });
+};
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
 $('#information-btn').onclick=()=>openSettings({tab:'information'});
 $('#quit-menu-btn').onclick=()=>{
@@ -1143,6 +1150,18 @@ function drawHUD() {
   }
   body.draw({ show: !isModalOpen() && !o.over && !world.cinematic && !$('#hud').classList.contains('menu-open'), suit, outside: !inside && !world.driving, sx, sy, t: clock.elapsedTime });
 }
+
+// Command window: press ` or F2. Fires events on demand so nobody waits for the weather.
+const needOut = () => { if (state.phase !== 'mars') throw new Error('Start the game and reach Mars first.'); if (inside) throw new Error('Go outside first.'); };
+devConsole({
+  landing: { help: 'play the Mars landing cutscene', run: () => { needOut(); playLanding(world).catch(() => {}); return 'landing...'; } },
+  storm: { help: 'play the dust storm cutscene only', run: () => { needOut(); playStorm(world).catch(() => {}); return 'storm rolling in...'; } },
+  dust: { help: 'real dust storm event (cutscene, pop-up, power drop)', run: () => { if (state.phase !== 'mars') throw new Error('Reach Mars first.'); queue.push({ type: 'dust', sols: 3, seen: true }); return 'dust event queued'; } },
+  'dust-end': { help: 'end the dust storm', run: () => { queue.push({ type: 'dust-end' }); return 'queued'; } },
+  conjunction: { help: 'Sun-blocks-Earth pop-up', run: () => { queue.push({ type: 'conjunction' }); return 'queued'; } },
+  'blackout-end': { help: 'Earth can hear you again', run: () => { queue.push({ type: 'blackout-end' }); return 'queued'; } },
+  event: { help: 'event <type> : push any event type by name', run: t => { if (!t) throw new Error('usage: event <type>'); queue.push({ type: t }); return 'queued ' + t; } },
+});
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
