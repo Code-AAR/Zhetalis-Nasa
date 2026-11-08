@@ -18,6 +18,13 @@ export class Minimap {
     const w = this.world, ms = w.mapState, p = w.driving ? w.sev.pos : w.player.position;
     drawMini(this.ctx, this.size, { cx: p.x, cz: p.z, span: this.span, circles: revealCircles(w), layer: ms?.layer, dust: ms?.weather().dust === 'now', overlay: (c,P)=>{
       ms?.draw(c,P,{mini:true});
+      // Deliveries remain visible until opened, including an edge marker beyond map range.
+      for(const pod of w.pickups.filter(k=>k.kind==='pod')){
+        let [x,y]=P.toPx(pod.x,pod.z);const mid=this.size/2,dx=x-mid,dy=y-mid,len=Math.hypot(dx,dy),limit=mid-12;
+        if(len>limit){x=mid+dx/len*limit;y=mid+dy/len*limit;}
+        c.save();c.strokeStyle='#ffad52';c.fillStyle='#ffad52';c.lineWidth=2;c.shadowColor='#ff8c22';c.shadowBlur=7;
+        const r=6+2*Math.sin(performance.now()/300);c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.stroke();c.fillRect(x-3,y-3,6,6);c.restore();
+      }
       if(w.objectiveTarget){const [x,y]=P.toPx(w.objectiveTarget.x,w.objectiveTarget.z),r=5+2*Math.sin(performance.now()/250);c.save();c.strokeStyle='#bf86ff';c.fillStyle='#e0c1ff';c.shadowColor='#b674ff';c.shadowBlur=10;c.lineWidth=2;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.stroke();c.beginPath();c.arc(x,y,2.5,0,Math.PI*2);c.fill();c.restore();}
     } });
   }

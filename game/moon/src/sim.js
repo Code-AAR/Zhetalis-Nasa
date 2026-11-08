@@ -3,7 +3,7 @@
 // Every choice costs something: making oxygen eats power and water, melting ice eats power, the suit heater
 // in the dark crater eats suit power, charging the rover drains the base battery.
 // All rates are GAME RULES tuned for play (per real second), not real engineering numbers.
-import { SITES } from './config.js';
+import { GAME_DAY_SECONDS, SITES } from './config.js';
 
 export const RATES = Object.freeze({
   mastSolar: 0.17,      // battery % per second per lit solar mast
@@ -16,6 +16,7 @@ export const RATES = Object.freeze({
   sepWarning: 40, sepLength: 45, sepDose: 2.2,
 });
 
+export const MISSION_MIN_SECONDS = 4 * GAME_DAY_SECONDS;
 export const TASKS = [
   { id: 'stepDown', title: 'Step onto the Moon', hint: 'Ride the lander elevator down and walk away from the lander.', fact: 'moon-gravity' },
   { id: 'mast', title: 'Raise a second solar mast', hint: 'Walk to a glowing mast marker on the ridge and hold Use.', fact: 'moon-south-pole-light' },
@@ -25,6 +26,10 @@ export const TASKS = [
   { id: 'oxygen', title: 'Make oxygen from water', hint: 'Switch on the oxygen maker at the processor. It needs lots of power.', fact: 'moon-ice' },
   { id: 'samples', title: 'Collect 3 rock samples', hint: 'Scan rocks at the yellow markers, then stow them at the lander.', fact: 'moon-dust' },
   { id: 'instruments', title: 'Set up 2 science instruments', hint: 'Place the seismometer and the laser reflector at the white markers.', fact: 'moon-vacuum' },
+  {id:'expansion',title:'Expand to all three solar masts',hint:'Raise the remaining mast for reserve power.',fact:'moon-south-pole-light'},
+  {id:'survey',title:'Return all four rock types',hint:'Collect the final rock type and stow it in the cabin.',fact:'moon-dust'},
+  {id:'reserves',title:'Build water and oxygen reserves',hint:'Produce 64 water units and 25 oxygen units. Keep drilling and processing ice.',fact:'moon-ice'},
+  {id:'endurance',title:'Prove the outpost over four cycles',hint:'Operate for at least 20 active minutes, then hold at least 25% power, water and oxygen.',fact:'moon-south-pole-light'},
 ];
 
 export function newState(seed = 1) {
@@ -106,6 +111,10 @@ export function tick(s, dt, env = {}) {
     ev.push({ type: 'rescue', text: s.dose >= 60 ? 'Too much radiation - Mission Control called you back to the lander.' : 'Your suit ran out - your crewmate helped you back to the lander.' });
   }
   if (s.oxygen <= 0) { s.status = 'lost'; s.lostReason = 'The base ran out of oxygen.'; ev.push({ type: 'end' }); }
+  if(s.masts.every(Boolean))done(s,'expansion',ev);
+  if(Object.keys(s.samples).length>=4)done(s,'survey',ev);
+  if(s.waterMade>=64&&s.oxygenMade>=25)done(s,'reserves',ev);
+  if(s.t>=MISSION_MIN_SECONDS&&s.battery>=25&&s.water>=25&&s.oxygen>=25)done(s,'endurance',ev);
   if (tasksDone(s) === TASKS.length && s.status === 'playing') { s.status = 'won'; ev.push({ type: 'end' }); }
   return ev;
 }

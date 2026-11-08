@@ -90,3 +90,9 @@ Validation: Moon core/quest and Mars landing/rover tests plus new test-mars-obje
 - Future Mars relay request, delayed acknowledgement, terminal installation, distant constellation markers and a smoothly tracking 3D dish. Select Earth or another Mars outpost and queue messages. Orbits, marker visibility and delivery delays are explicitly illustrative, not live NASA telemetry or an existing Mars Starlink service.
 
 Validation: Mars full power/charger/soil workflow and save/resume; culture water/growth/check/harvest and relay request/install/acquire via browser buttons; 120 stationary panel frames (zero drift/yaw change); interior orientation held for 120 frames; lunar 8 m/s drive and 390px layout without horizontal overflow. Node terrain/objective, lunar simulation/quest and device-profile tests pass. Physical-device frame rate and every interior transition remain unverified.
+
+### Revision 54 — deliveries and longer missions
+- Melting/filtering adds the exact 90% game yield to the base water tank, reports its new level and saves immediately. Oxygen production removes water from that same tank.
+- Unopened cargo pods have persistent pulsing orange squares on the minimap (clamped to its edge when distant). A cargo button reports incoming orders, landed cargo distance and coordinates; markers disappear upon collection and survive saves. Seeds are received when opening the pod, not automatically on landing.
+- Mars campaign lengths: 60/120/240 sols; early settlement victory waits until 75% of the campaign. Existing active saves adopt the longer limit.
+- Moon retains its 300-second full lunar cycle, now labelled in the HUD. Four additional objectives require all masts, all four sample types, 64 water/25 oxygen production and at least 20 active minutes with 25% reserves. Actual lunar solar day remains 29.53 Earth days; polar light is not an equal day/night split.

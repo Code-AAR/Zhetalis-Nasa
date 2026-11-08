@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {DIFFICULTY} from '../game/src/sim.js';
+import {GAME_DAY_SECONDS} from '../game/moon/src/config.js';
+import {newState,tick,TASKS,MISSION_MIN_SECONDS} from '../game/moon/src/sim.js';
+import {currentObjective} from '../game/moon/src/quests.js';
+assert.deepEqual(Object.values(DIFFICULTY).map(d=>d.sols),[60,120,240]);
+assert.equal(GAME_DAY_SECONDS,300);assert.equal(MISSION_MIN_SECONDS,1200);
+const s=newState();for(const t of TASKS)s.tasks[t.id]=!['expansion','survey','reserves','endurance'].includes(t.id);
+s.t=500;tick(s,.1,{place:'hab',lit:1});assert.equal(s.status,'playing');assert.equal(currentObjective(s).id,'expansion');
+s.masts=[true,true,true];s.samples={a:1,b:1,c:1,d:1};s.waterMade=64;s.oxygenMade=25;s.water=70;s.oxygen=70;s.battery=70;
+tick(s,.1,{place:'hab',lit:1});assert.equal(currentObjective(s).id,'endurance');assert.equal(s.status,'playing');
+s.t=1200;s.battery=10;tick(s,.1,{place:'hab',lit:1});assert.equal(s.status,'playing');
+s.battery=70;tick(s,.1,{place:'hab',lit:1});assert.equal(s.status,'won');
+console.log('Longer campaigns, five-minute lunar cycle and reserve/endurance gates passed.');

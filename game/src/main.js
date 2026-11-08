@@ -205,7 +205,7 @@ async function resume(d) {
   if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
   world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap(); placeLander(world);
   world.activeEntrance=world.settlement.entrances[d.entry??0];
-  Object.assign(outpost, { powerStep: 6, rations: 0, baseConnected:true, chargerStep:0, roverCharged:false,soilStep:0,chargeReserve:0 }, d.outpost); outpost.today = outpost.forecast();
+  Object.assign(outpost, { powerStep: 6, rations: 0, baseConnected:true, chargerStep:0, roverCharged:false,soilStep:0,chargeReserve:0 }, d.outpost); outpost.d={...DIFFICULTY[d.difficulty]};outpost.today = outpost.forecast();
   ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
   solClock = (solClock / (d.solSeconds || 37) % 1) * TUNED.solSeconds;
   if (d.body) Object.assign(body, d.body);
@@ -612,8 +612,8 @@ function openWaterPlant() {
     </div>
     ${factHTML(F.electrolysis)}${factHTML(F.waterRecovery)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box');
-  box.querySelector('[data-melt]').onclick = () => { const l = Math.round(s.ice * ICE_TO_WATER); s.tank += l; s.ice = 0; toast(`💧 Melted and filtered: +${l} L of clean water.`); openWaterPlant(); };
-  box.querySelector('[data-split]').onclick = () => { s.tank -= 5; outpost.o2 += 5 * O2_PER_L; toast(`🫁 +${(5 * O2_PER_L).toFixed(1)} kg of oxygen for the crew.`); openWaterPlant(); };
+  box.querySelector('[data-melt]').onclick = () => { const l = s.ice * ICE_TO_WATER; s.tank += l; s.ice = 0; saveGame(); toast(`💧 +${l.toFixed(1)} L into the base tank · now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
+  box.querySelector('[data-split]').onclick = () => { s.tank -= 5; outpost.o2 += 5 * O2_PER_L; saveGame(); toast(`🫁 +${(5 * O2_PER_L).toFixed(1)} kg oxygen · base tank now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
 }
 
 // ---------------- outside work: mining, the locker, trading, greenhouses ----------------
@@ -723,7 +723,7 @@ function openLocker() {
         <button data-fill ${!colony.has('jug') || s.tank <= 0 || s.jug >= JUG_L ? 'disabled' : ''}>Fill the water jug</button>${colony.has('jug') ? '' : '<small> (take the jug first)</small>'}</div>
     </div>
     <h4>📡 Trade with Earth</h4>
-    ${link ? '<p>Scientists on Earth want Mars samples. Pay with samples from storage; your order comes down on a cargo pod in about 3 sols.</p>' : '<p class="neg">The Earth link is off. Give "Talk to Earth" more power at the console to trade.</p>'}
+    ${link ? '<p>Scientists on Earth want Mars samples. Pay with samples from storage; your order comes down on a cargo pod in about 3 sols. Open the pod at the orange square on your minimap to receive the seeds.</p>' : '<p class="neg">The Earth link is off. Give "Talk to Earth" more power at the console to trade.</p>'}
     ${req ? `<div class="hazard"><b>Request:</b> ${req.who} wants <b>${req.n} ${ORES[req.ore].name.toLowerCase()}</b> (until sol ${req.until}). Reward: +${req.reward.science} science and ${cargoWords(req.reward)}. <button data-request ${!link || s.store[req.ore] < req.n ? 'disabled' : ''}>Send samples</button></div>` : ''}
     <div class="shop">${shop}</div>
     ${onWay.length ? `<p class="source">On the way: ${onWay.map(p => `${cargoWords(p.cargo)} (lands sol ${p.sol})`).join('; ')}</p>` : ''}
@@ -899,6 +899,7 @@ function collect(n) {
   if (p.kind === 'metal') { earn('scrap'); outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
   if (p.kind === 'pod' && p.cargo) { colony.receive(p.cargo, outpost); toast(`📦 Your order from Earth: ${cargoWords(p.cargo)}. Seeds go into the storage locker.`, 5000); }
   else if (p.kind === 'pod') { outpost.o2 += 15; outpost.food += 20; outpost.parts += 3; toast('📦 Supplies from Earth: +15 kg oxygen, +20 meals, +3 parts'); }
+  if(p.kind==='pod')saveGame();
 }
 
 function endMission() {
@@ -1307,9 +1308,10 @@ renderer.setAnimationLoop(() => {
         pending = pending.filter(p => {
           if (p.sol > outpost.sol) return true;
           world.dropSupplyPod(); if (p.cargo) world.pickups.at(-1).cargo = p.cargo;
-          toast(p.cargo ? '📦 Your order from Earth landed - follow the orange beam!' : '📦 A supply pod landed near the outpost - follow the orange beam!');
+          toast(p.cargo ? '📦 Your order landed! Orange square on the minimap · press E / Use at the pod to collect seeds.' : '📦 Supplies landed! Follow the orange square on the minimap and open the pod.');
           return false;
         });
+        saveGame();
         world.setLink(outpost.today.link);
         world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
         if (outpost.over) { queue.length = 0; endMission(); }
@@ -1389,6 +1391,11 @@ function performMissionWork(task){
   outpost.today=outpost.forecast();syncPowerHardware();saveGame();toast('Done · '+task.title);
 }
 function drawMissionHud(){
+  let delivery=document.getElementById('delivery-status');
+  if(!delivery){delivery=document.createElement('button');delivery.id='delivery-status';document.getElementById('hud').append(delivery);delivery.onclick=()=>modal({title:'Cargo deliveries',html:`<p>Orange squares on the minimap mark unopened pods. Go to a pod and press E / Use. Seeds enter your locker only after collection.</p><ul>${world.pickups.filter(p=>p.kind==='pod').map(p=>`<li>${p.cargo?cargoWords(p.cargo):'Base supplies'} · ${Math.round(Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z))} m away · map (${Math.round(p.x)}, ${Math.round(p.z)})</li>`).join('')}${pending.filter(p=>p.cargo).map(p=>`<li>${cargoWords(p.cargo)} · lands in ${Math.max(0,p.sol-outpost.sol)} sols</li>`).join('')}</ul>`});}
+  const pods=world.pickups.filter(p=>p.kind==='pod'),orders=pending.filter(p=>p.cargo),nearest=pods.reduce((n,p)=>Math.min(n,Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z)),Infinity);
+  delivery.hidden=(!pods.length&&!orders.length)||isModalOpen();delivery.textContent=pods.length?`▣ Cargo landed · ${Math.round(nearest)} m · map marker`:orders.length?`Cargo incoming · ${Math.max(0,Math.min(...orders.map(p=>p.sol))-outpost.sol)} sols`:'';
+
   if(!missionCard||!world.settlement)return;
   const task=marsObjective(outpost,colony.s);
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');

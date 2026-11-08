@@ -32,6 +32,7 @@ export function currentObjective(s, ctx = {}) {
       if (inHab) { step = 'Walk to the cabin hatch and press E / Use to ride the elevator down.'; sub = 'cabin'; }
       else { step = 'Walk away from the lander.'; go({ x: 0, z: 18 }, 'Clear of the lander'); sub = 'walk'; }
       break;
+    case 'expansion':
     case 'mast': {
       const free = SITES.masts.map((p, i) => ({ ...p, i })).filter(p => !s.masts[p.i]);
       const m = near(me, free); if (m) go(m, 'Solar mast site'); step = 'Walk to the mast marker and hold Use for 2 seconds.';
@@ -55,15 +56,21 @@ export function currentObjective(s, ctx = {}) {
       step = s.electrolysis ? `Oxygen maker running: ${Math.min(10, s.oxygenMade).toFixed(1)} of 10 units made.` : s.water < 1 ? 'No water to split - melt more ice first.' : 'Press Use at the processor (or in the cabin) to switch the oxygen maker on.';
       sub = s.electrolysis ? 'running' : 'switch';
       break;
+    case 'survey':
     case 'samples': {
-      const banked = Object.keys(s.samples).length, needed = 3 - banked;
+      const banked = Object.keys(s.samples).length, needed = (task.id==='survey'?4:3) - banked;
       if (s.carried.length >= Math.max(1, needed) || s.carried.length >= 3) { go(ELEVATOR, 'Lander - stow samples'); step = 'Ride the elevator up to stow your samples.'; sub = 'stow'; }
       else {
         const left = SITES.samples.filter(x => !s.samples[x.id] && !s.carried.includes(x.id));
-        const r = near(me, left); if (r) go(r, r.name); step = `Scan and bag rocks (${banked + s.carried.length}/3). Hold Use at a yellow marker.`; sub = 'collect';
+        const r = near(me, left); if (r) go(r, r.name); step = `Scan and bag rocks (${banked + s.carried.length}/${task.id==='survey'?4:3}). Hold Use at a yellow marker.`; sub = 'collect';
       }
       break;
     }
+    case 'reserves':
+      go(s.waterMade<64?SITES.drill:SITES.processor,s.waterMade<64?'Ice drill site':'Oxygen maker');
+      step=`Produce water ${Math.floor(s.waterMade)}/64 and oxygen ${Math.floor(s.oxygenMade)}/25. Deliver ice to the processor; turn electrolysis off once enough oxygen is made.`;break;
+    case 'endurance':
+      go(SITES.processor,'Manage reserves');step=`Active mission: ${Math.floor(s.t/60)}/20 min. Finish with power, water and oxygen each at least 25%. Explore and keep the base supplied.`;break;
     case 'instruments': {
       const left = ['seismometer', 'reflector'].filter(k => !s.instruments[k]).map(k => ({ ...SITES[k], k }));
       const r = near(me, left); if (r) go(r, r.k === 'seismometer' ? 'Seismometer site' : 'Laser reflector site');

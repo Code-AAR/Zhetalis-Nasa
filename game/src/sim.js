@@ -2,9 +2,9 @@
 // Real values come from data/mars-facts.json; "tuned" values are game balance and labelled as such.
 
 export const DIFFICULTY = {
-  easy:   { label: 'Cadet',     sols: 40,  crew: 2, o2: 30, food: 30, parts: 6, eventRate: 0.7, blurb: '40 sols, 2 crew. Gentle storms.' },
-  normal: { label: 'Explorer',  sols: 80,  crew: 3, o2: 25, food: 25, parts: 3, eventRate: 1.0, blurb: '80 sols, 3 crew. Real trade-offs.' },
-  hard:   { label: 'Commander', sols: 150, crew: 4, o2: 22, food: 22, parts: 0, eventRate: 1.4, blurb: '150 sols, 4 crew. Big storms, long nights.' },
+  easy:   { label: 'Cadet',     sols: 60,  crew: 2, o2: 30, food: 30, parts: 6, eventRate: 0.7, blurb: '60 sols, 2 crew. Gentle storms.' },
+  normal: { label: 'Explorer',  sols: 120,  crew: 3, o2: 25, food: 25, parts: 3, eventRate: 1.0, blurb: '120 sols, 3 crew. Real trade-offs.' },
+  hard:   { label: 'Commander', sols: 240, crew: 4, o2: 22, food: 22, parts: 0, eventRate: 1.4, blurb: '240 sols, 4 crew. Big storms, long nights.' },
 };
 
 // Where you land changes the game. Each site is a real place on Mars; the numbers (solar, ice, dose...) are
@@ -208,8 +208,8 @@ export class Outpost {
     if (!fed) { if (++this.hungry >= 3) this.over = { win: false, why: 'food' }; } else this.hungry = 0;
     if (this.dose >= this.limit) this.over = { win: false, why: 'radiation' };
     const t = this.forecast();
-    if (!this.over && this.tier === 3 && this.reactors > 0 && t.o2Net >= 0 && this.harvestMeals / this.sol >= this.crew && this.sol >= this.d.sols / 2)
-      this.over = { win: true, why: 'settlement' };   // self-sufficient, and it has proved it for half the mission
+    if (!this.over && this.tier === 3 && this.reactors > 0 && t.o2Net >= 0 && this.harvestMeals / this.sol >= this.crew && this.sol >= this.d.sols * .75)
+      this.over = { win: true, why: 'settlement' };   // self-sufficient, and it has proved it for three quarters of the mission
     if (!this.over && this.sol >= this.d.sols) this.over = { win: true, why: 'complete' };
     this.today = t;
     return events;
