@@ -1,13 +1,12 @@
 // Human-scale pressure links and stair access, shared by rendering and movement.
 import * as THREE from 'three';
+import { pressureHatch } from './pressure-hatch.js';
 
 export function installHabitatAccess(world, model, layout) {
   model.getObjectByName('Object_15')?.removeFromParent(); // replace decorative stairs
   const group = new THREE.Group(); group.name = 'habitat-access'; world.scene.add(group);
   const metal = new THREE.MeshStandardMaterial({color:'#6b7375',roughness:.7,metalness:.55});
   const shell = new THREE.MeshStandardMaterial({color:'#d8cfb7',roughness:.8});
-  const dark = new THREE.MeshStandardMaterial({color:'#29383c',roughness:.65});
-  const light = new THREE.MeshBasicMaterial({color:'#9cf1bc'});
   const entrances = layout.moduleColliders.map((c,index) => {
     c.habitatIndex=index;
     const doorZ=c.z+c.r+.15, landingEnd=doorZ+2, bottom=landingEnd+4.8, height=2.4;
@@ -33,12 +32,10 @@ export function installHabitatAccess(world, model, layout) {
       addBox(.07,1.05,.07,c.x+side*1.15,height+.525,doorZ+.1);
       for(const z of[doorZ+.2,landingEnd-.2])addBox(.1,height,.1,c.x+side*1.05,height/2,z);
     }
-    for(const side of[-1,1])addBox(.25,3.05,1.1,c.x+side*1.2,height+1.525,doorZ-.4,shell);
-    addBox(2.65,.22,1.1,c.x,height+2.94,doorZ-.4,shell);
-    addBox(2.65,.12,1.1,c.x,height-.06,doorZ-.4,shell);
-    addBox(2.05,2.65,.12,c.x,height+1.325,doorZ+.22,dark);
-    addBox(2.25,.13,.2,c.x,height+2.86,doorZ+.18,light);
-    entrance.handle=addBox(.19,.55,.22,c.x+.78,height+1.2,doorZ+.33,light);
+    const hatch=pressureHatch({entry:true});hatch.scale.setScalar(.9);
+    hatch.position.set(c.x,height,doorZ+.12);
+    hatch.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    group.add(hatch);entrance.handle=hatch.userData.handle;
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#26353a';ctx.fillRect(0,0,512,96);ctx.fillStyle='#c9f5db';ctx.font='30px system-ui';ctx.textAlign='center';ctx.fillText(`AIRLOCK ${String(index+1).padStart(2,'0')} · E`,256,61);
     const sign=new THREE.Mesh(new THREE.PlaneGeometry(2,.375),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));

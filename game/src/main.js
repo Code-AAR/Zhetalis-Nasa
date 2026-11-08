@@ -1110,7 +1110,7 @@ function drawHUD() {
     }
   }
   if(!near && !isModalOpen() && !world.driving){
-    const atDoor=!inside && world.settlement.entrances.some(e=>world.player.position.distanceTo(e.handle.position)<2.1);
+    const atDoor=!inside && world.settlement.entrances.some(e=>world.player.position.distanceTo(e.handle.getWorldPosition(new THREE.Vector3()))<2.1);
     if(atDoor)hint=keyWord('Aim at the green handle · E to open','Tap the green handle, then Use');
     else if(!quest?.rewarded)hint=questBearing();
   }

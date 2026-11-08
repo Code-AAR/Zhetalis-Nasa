@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // Closed pressure hatch: solid geometry seals the bulkhead. Interaction cycles the
 // airlock before the existing scene transition; it is not an open door to vacuum.
-export function pressureHatch() {
+export function pressureHatch({ entry = false } = {}) {
   const g = new THREE.Group(); g.name = 'Pressure airlock hatch';
   const shell = new THREE.MeshStandardMaterial({color:'#c9cec9',roughness:.65,metalness:.2});
   const door = new THREE.MeshStandardMaterial({color:'#82969b',roughness:.5,metalness:.45});
@@ -29,13 +29,13 @@ export function pressureHatch() {
     add(new THREE.BoxGeometry(.18,.25,.13),steel,x,y,.25);
     add(new THREE.CylinderGeometry(.035,.035,.035,12),seal,x,y,.33).rotation.x=Math.PI/2;
   }
-  add(new THREE.BoxGeometry(.09,.4,.1),steel,.7,1.28,.35);
+  g.userData.handle=add(new THREE.BoxGeometry(.09,.4,.1),entry?green:steel,.7,1.28,.35);
   add(new THREE.BoxGeometry(.3,.07,.09),steel,.6,1.46,.39);
   add(new THREE.BoxGeometry(2.3,.075,.12),green,0,3.02,.15);
   const c=document.createElement('canvas');c.width=1024;c.height=256;const ctx=c.getContext('2d');
   ctx.fillStyle='#162c34';ctx.fillRect(0,0,c.width,c.height);ctx.textAlign='center';
-  ctx.fillStyle='#e9f4ef';ctx.font='bold 66px system-ui';ctx.fillText('AIRLOCK · EXIT',512,86);
-  ctx.fillStyle='#8fe6bf';ctx.font='48px system-ui';ctx.fillText('E / USE · GO OUTSIDE',512,170);
+  ctx.fillStyle='#e9f4ef';ctx.font='bold 66px system-ui';ctx.fillText(entry?'AIRLOCK · ENTER':'AIRLOCK · EXIT',512,86);
+  ctx.fillStyle='#8fe6bf';ctx.font='48px system-ui';ctx.fillText(entry?'E / USE · GO INSIDE':'E / USE · GO OUTSIDE',512,170);
   ctx.fillStyle='#b9cdd2';ctx.font='30px system-ui';ctx.fillText('Pressure cycle handled automatically',512,222);
   const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
   add(new THREE.PlaneGeometry(1.7,.425),new THREE.MeshBasicMaterial({map:texture}),0,.68,.3);
