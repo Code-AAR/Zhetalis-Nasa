@@ -192,8 +192,20 @@ export function rockGeometry(seed, { detail = 3, squash = 1, rough = .3 } = {}) 
 }
 function makeRocks(rng) {
   const count = 520;
-  const geo = new THREE.DodecahedronGeometry(1, 0);
+  const geo = SURFACE_DETAIL.texture >= 1024
+    ? rockGeometry(73, {detail: 5, rough: .35})
+    : new THREE.DodecahedronGeometry(1, 0);
+  // Spherical coordinates keep the fine mineral relief attached to the mesh.
+  if (!geo.attributes.uv) {
+    const positions=geo.attributes.position,uv=new Float32Array(positions.count*2);
+    for(let i=0;i<positions.count;i++){
+      const x=positions.getX(i),y=positions.getY(i),z=positions.getZ(i),r=Math.hypot(x,y,z);
+      uv[i*2]=.5+Math.atan2(z,x)/(Math.PI*2);uv[i*2+1]=.5+Math.asin(y/r)/Math.PI;
+    }
+    geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  }
   const mat = rockMaterial();
+  mat.vertexColors=!!geo.attributes.color;mat.flatShading=!geo.attributes.color;
   const rocks = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
   const tints = ['#786454', '#98795f', '#55514b', '#ad8a6d'].map(c => new THREE.Color(c));

@@ -33,8 +33,9 @@ export function makeTerrainChunks(heightAt,colourAt) {
     geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));geo.setAttribute('normal',new THREE.Float32BufferAttribute(no,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(co,3));geo.setIndex(indices);geo.computeBoundingSphere();
     const mesh=new THREE.Mesh(geo,material);mesh.receiveShadow=true;mesh.name=`Terrain ${ix},${iz} (${n})`;return mesh;
   }
-  // A tiny horizon mesh remains available while detailed tiles are generated.
-  for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,4);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
+  // Preserve the hill silhouette on Full; only phone Lite uses the coarse horizon.
+  const horizonSegments=SURFACE_DETAIL.texture>=1024?24:4;
+  for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,horizonSegments);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
   group.userData.hasDetail=(x,z)=>loaded.has(`${Math.floor((x+320)/CHUNK_SIZE)},${Math.floor((z+320)/CHUNK_SIZE)}`);
   group.userData.revision=0;
   group.userData.stats={loaded:0,queued:0,limit:WORLD_LIMIT==='map'?36:(WORLD_RADIUS*2+1)**2,segments};

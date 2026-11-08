@@ -16,79 +16,79 @@
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="menu.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="loading-screen.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="phone.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="briefing.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="mobile.css?v=mars-grounding-39">
-  <link rel="stylesheet" href="settings.css?v=mars-grounding-39">
+  <link rel="stylesheet" href="style.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="menu.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="loading-screen.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="phone.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="briefing.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="mobile.css?v=mars-full-detail-40">
+  <link rel="stylesheet" href="settings.css?v=mars-full-detail-40">
   <script type="importmap">{
   "imports": {
-    "./src/settings.js": "./src/settings.js?v=mars-grounding-39",
-    "./src/audio-preferences.js": "./src/audio-preferences.js?v=mars-grounding-39",
-    "./src/ambient-music.js": "./src/ambient-music.js?v=mars-grounding-39",
-    "./src/chunk-plan.js": "./src/chunk-plan.js?v=mars-grounding-39",
-    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=mars-grounding-39",
-    "./src/surface-detail.js": "./src/surface-detail.js?v=mars-grounding-39",
+    "./src/settings.js": "./src/settings.js?v=mars-full-detail-40",
+    "./src/audio-preferences.js": "./src/audio-preferences.js?v=mars-full-detail-40",
+    "./src/ambient-music.js": "./src/ambient-music.js?v=mars-full-detail-40",
+    "./src/chunk-plan.js": "./src/chunk-plan.js?v=mars-full-detail-40",
+    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=mars-full-detail-40",
+    "./src/surface-detail.js": "./src/surface-detail.js?v=mars-full-detail-40",
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "./src/access.js": "./src/access.js?v=mars-grounding-39",
-    "./src/arrival-globe.js": "./src/arrival-globe.js?v=mars-grounding-39",
-    "./src/arrival.js": "./src/arrival.js?v=mars-grounding-39",
-    "./src/art.js": "./src/art.js?v=mars-grounding-39",
-    "./src/briefing.js": "./src/briefing.js?v=mars-grounding-39",
-    "./src/cable-crossings.js": "./src/cable-crossings.js?v=mars-grounding-39",
-    "./src/capsule.js": "./src/capsule.js?v=mars-grounding-39",
-    "./src/chart.js": "./src/chart.js?v=mars-grounding-39",
-    "./src/colony.js": "./src/colony.js?v=mars-grounding-39",
-    "./src/crew-interior.js": "./src/crew-interior.js?v=mars-grounding-39",
-    "./src/cutscenes.js": "./src/cutscenes.js?v=mars-grounding-39",
-    "./src/exploration-layout.js": "./src/exploration-layout.js?v=mars-grounding-39",
-    "./src/exterior-view.js": "./src/exterior-view.js?v=mars-grounding-39",
-    "./src/fieldmap.js": "./src/fieldmap.js?v=mars-grounding-39",
-    "./src/globe.js": "./src/globe.js?v=mars-grounding-39",
-    "./src/greenhouse.js": "./src/greenhouse.js?v=mars-grounding-39",
-    "./src/interior.js": "./src/interior.js?v=mars-grounding-39",
-    "./src/journey-visual.js": "./src/journey-visual.js?v=mars-grounding-39",
-    "./src/launch.js": "./src/launch.js?v=mars-grounding-39",
-    "./src/layout.js": "./src/layout.js?v=mars-grounding-39",
-    "./src/loading-screen.js": "./src/loading-screen.js?v=mars-grounding-39",
-    "./src/lookouts.js": "./src/lookouts.js?v=mars-grounding-39",
-    "./src/main.js": "./src/main.js?v=mars-grounding-39",
-    "./src/mapstate.js": "./src/mapstate.js?v=mars-grounding-39",
-    "./src/menu.js": "./src/menu.js?v=mars-grounding-39",
-    "./src/minimap.js": "./src/minimap.js?v=mars-grounding-39",
-    "./src/missionpath.js": "./src/missionpath.js?v=mars-grounding-39",
-    "./src/mist.js": "./src/mist.js?v=mars-grounding-39",
-    "./src/models.js": "./src/models.js?v=mars-grounding-39",
-    "./src/nasaimages.js": "./src/nasaimages.js?v=mars-grounding-39",
-    "./src/nasamodels.js": "./src/nasamodels.js?v=mars-grounding-39",
-    "./src/panel-contact.js": "./src/panel-contact.js?v=mars-grounding-39",
-    "./src/patch-art.js": "./src/patch-art.js?v=mars-grounding-39",
-    "./src/patch-fx.js": "./src/patch-fx.js?v=mars-grounding-39",
-    "./src/patches.js": "./src/patches.js?v=mars-grounding-39",
-    "./src/pedia.js": "./src/pedia.js?v=mars-grounding-39",
-    "./src/phone-layout.js": "./src/phone-layout.js?v=mars-grounding-39",
-    "./src/quiz.js": "./src/quiz.js?v=mars-grounding-39",
-    "./src/reveal.js": "./src/reveal.js?v=mars-grounding-39",
-    "./src/rock-contact.js": "./src/rock-contact.js?v=mars-grounding-39",
-    "./src/rover-terrain.js": "./src/rover-terrain.js?v=mars-grounding-39",
-    "./src/rover.js": "./src/rover.js?v=mars-grounding-39",
-    "./src/scancine.js": "./src/scancine.js?v=mars-grounding-39",
-    "./src/settlement.js": "./src/settlement.js?v=mars-grounding-39",
-    "./src/sim.js": "./src/sim.js?v=mars-grounding-39",
-    "./src/sky.js": "./src/sky.js?v=mars-grounding-39",
-    "./src/sound.js": "./src/sound.js?v=mars-grounding-39",
-    "./src/spaceweather.js": "./src/spaceweather.js?v=mars-grounding-39",
-    "./src/starship-landing.js": "./src/starship-landing.js?v=mars-grounding-39",
-    "./src/suit.js": "./src/suit.js?v=mars-grounding-39",
-    "./src/survival.js": "./src/survival.js?v=mars-grounding-39",
-    "./src/touch.js": "./src/touch.js?v=mars-grounding-39",
-    "./src/ui.js": "./src/ui.js?v=mars-grounding-39",
-    "./src/world.js": "./src/world.js?v=mars-grounding-39",
-    "./src/device-profile.js": "./src/device-profile.js?v=mars-grounding-39",
-    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=mars-grounding-39"
+    "./src/access.js": "./src/access.js?v=mars-full-detail-40",
+    "./src/arrival-globe.js": "./src/arrival-globe.js?v=mars-full-detail-40",
+    "./src/arrival.js": "./src/arrival.js?v=mars-full-detail-40",
+    "./src/art.js": "./src/art.js?v=mars-full-detail-40",
+    "./src/briefing.js": "./src/briefing.js?v=mars-full-detail-40",
+    "./src/cable-crossings.js": "./src/cable-crossings.js?v=mars-full-detail-40",
+    "./src/capsule.js": "./src/capsule.js?v=mars-full-detail-40",
+    "./src/chart.js": "./src/chart.js?v=mars-full-detail-40",
+    "./src/colony.js": "./src/colony.js?v=mars-full-detail-40",
+    "./src/crew-interior.js": "./src/crew-interior.js?v=mars-full-detail-40",
+    "./src/cutscenes.js": "./src/cutscenes.js?v=mars-full-detail-40",
+    "./src/exploration-layout.js": "./src/exploration-layout.js?v=mars-full-detail-40",
+    "./src/exterior-view.js": "./src/exterior-view.js?v=mars-full-detail-40",
+    "./src/fieldmap.js": "./src/fieldmap.js?v=mars-full-detail-40",
+    "./src/globe.js": "./src/globe.js?v=mars-full-detail-40",
+    "./src/greenhouse.js": "./src/greenhouse.js?v=mars-full-detail-40",
+    "./src/interior.js": "./src/interior.js?v=mars-full-detail-40",
+    "./src/journey-visual.js": "./src/journey-visual.js?v=mars-full-detail-40",
+    "./src/launch.js": "./src/launch.js?v=mars-full-detail-40",
+    "./src/layout.js": "./src/layout.js?v=mars-full-detail-40",
+    "./src/loading-screen.js": "./src/loading-screen.js?v=mars-full-detail-40",
+    "./src/lookouts.js": "./src/lookouts.js?v=mars-full-detail-40",
+    "./src/main.js": "./src/main.js?v=mars-full-detail-40",
+    "./src/mapstate.js": "./src/mapstate.js?v=mars-full-detail-40",
+    "./src/menu.js": "./src/menu.js?v=mars-full-detail-40",
+    "./src/minimap.js": "./src/minimap.js?v=mars-full-detail-40",
+    "./src/missionpath.js": "./src/missionpath.js?v=mars-full-detail-40",
+    "./src/mist.js": "./src/mist.js?v=mars-full-detail-40",
+    "./src/models.js": "./src/models.js?v=mars-full-detail-40",
+    "./src/nasaimages.js": "./src/nasaimages.js?v=mars-full-detail-40",
+    "./src/nasamodels.js": "./src/nasamodels.js?v=mars-full-detail-40",
+    "./src/panel-contact.js": "./src/panel-contact.js?v=mars-full-detail-40",
+    "./src/patch-art.js": "./src/patch-art.js?v=mars-full-detail-40",
+    "./src/patch-fx.js": "./src/patch-fx.js?v=mars-full-detail-40",
+    "./src/patches.js": "./src/patches.js?v=mars-full-detail-40",
+    "./src/pedia.js": "./src/pedia.js?v=mars-full-detail-40",
+    "./src/phone-layout.js": "./src/phone-layout.js?v=mars-full-detail-40",
+    "./src/quiz.js": "./src/quiz.js?v=mars-full-detail-40",
+    "./src/reveal.js": "./src/reveal.js?v=mars-full-detail-40",
+    "./src/rock-contact.js": "./src/rock-contact.js?v=mars-full-detail-40",
+    "./src/rover-terrain.js": "./src/rover-terrain.js?v=mars-full-detail-40",
+    "./src/rover.js": "./src/rover.js?v=mars-full-detail-40",
+    "./src/scancine.js": "./src/scancine.js?v=mars-full-detail-40",
+    "./src/settlement.js": "./src/settlement.js?v=mars-full-detail-40",
+    "./src/sim.js": "./src/sim.js?v=mars-full-detail-40",
+    "./src/sky.js": "./src/sky.js?v=mars-full-detail-40",
+    "./src/sound.js": "./src/sound.js?v=mars-full-detail-40",
+    "./src/spaceweather.js": "./src/spaceweather.js?v=mars-full-detail-40",
+    "./src/starship-landing.js": "./src/starship-landing.js?v=mars-full-detail-40",
+    "./src/suit.js": "./src/suit.js?v=mars-full-detail-40",
+    "./src/survival.js": "./src/survival.js?v=mars-full-detail-40",
+    "./src/touch.js": "./src/touch.js?v=mars-full-detail-40",
+    "./src/ui.js": "./src/ui.js?v=mars-full-detail-40",
+    "./src/world.js": "./src/world.js?v=mars-full-detail-40",
+    "./src/device-profile.js": "./src/device-profile.js?v=mars-full-detail-40",
+    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=mars-full-detail-40"
   }
 }</script>
 </head>
@@ -194,8 +194,8 @@
   <div id="toast"></div>
   <div id="loading">Loading Mars…</div>
 
-  <script type="module" src="src/loading-screen.js?v=mars-grounding-39"></script>
-  <script type="module" src="src/main.js?v=mars-grounding-39"></script>
-  <script type="module" src="src/phone-layout.js?v=mars-grounding-39"></script>
+  <script type="module" src="src/loading-screen.js?v=mars-full-detail-40"></script>
+  <script type="module" src="src/main.js?v=mars-full-detail-40"></script>
+  <script type="module" src="src/phone-layout.js?v=mars-full-detail-40"></script>
 </body>
 </html>
