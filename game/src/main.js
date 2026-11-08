@@ -1,3 +1,4 @@
+import {RECIPES,builderQuest} from './builder-recipes.js';
 import { Construction } from './construction.js';
 import { firstMissionReport } from './construction-state.js';
 import { zhetela, zhetelaPortraitHTML } from './zhetela.js';
@@ -220,6 +221,7 @@ async function resume(d) {
   world.pickups.slice().forEach(p => world.removePickup(p));
   w.pickups.forEach(([kind, x, z, cargo]) => { world.addPickup(kind, x, z); if (cargo) world.pickups.at(-1).cargo = cargo; });
   if (d.colony) { colony.s = Object.assign(newColony(), d.colony); colony.restore(); }
+  colony.renewOres(outpost.sol);
   if (w.rover) { world.rover.salvaged = true; world.rover.group.children[0].visible = false; }
   world.heli.seen = w.heli; world.sevShown = w.sevShown;
   world.player.position.set(w.player[0], 0, w.player[1]); world.yaw = w.yaw;
@@ -277,7 +279,7 @@ function buildWorld() {
   outpost = new Outpost(state.difficulty, F, state.site);
   world.setPanels(outpost.panels);
   world.setLink(outpost.today.link);
-  colony = new Colony(world);                                 // tools, ores, trading and greenhouses
+  colony = new Colony(world); colony.renewOres(outpost.sol);                                 // tools, ores, trading and greenhouses
   renderer.localClippingEnabled=true;
   world.ready = Promise.all([installSettlement(world),ghRoom.walkwayReady]).then(() => {
     world.settlement.bindGreenhouse(ghRoom);
@@ -772,17 +774,24 @@ function openGreenhouse(h) {
 
 // Building with the builder tool: a greenhouse goes a few metres in front of you.
 function openBuild() {
-  const spot = colony.buildSpot(world.player.position, world.yaw), cost = GREENHOUSE.cost, s = colony.s;
-  const have = Object.entries(cost).map(([k, n]) => `${k === 'parts' ? '🔩' : oreDot(k)} ${n} ${k === 'parts' ? 'parts' : ORES[k].name.toLowerCase()} <small>(have ${k === 'parts' ? outpost.parts : s.store[k]})</small>`).join(' · ');
-  const can = spot.ok && colony.canPay(cost, outpost);
-  modal({ pause: false, title: '🛠 Build a greenhouse', html: `
-    <p>An inflatable greenhouse with hydroponic racks and pink LED lights. It needs: ${have}. Samples must be in the base storage (unload your bag at the locker first).</p>
-    ${spot.ok ? '<p class="pos">✅ Good spot - flat, clear and close to the outpost.</p>' : `<p class="neg">${spot.why}</p>`}
-    ${factHTML(F.perchlorate)}`,
-    choices: [can ? { label: '🛠 Build it here', primary: true, onPick: () => {
-      colony.pay(cost, outpost); colony.build(spot, world.yaw);
-      modal({ pause: false, title: '🏕 Greenhouse built!', html: `<p>Now plant seeds and fill its water tank: carry water from the base tank in the jug. Plants grow every sol while they have water.</p>${factHTML(F.veggie)}` });
-    } } : { label: 'OK', primary: true }] });
+  const s=colony.s;
+  const rows=Object.entries(RECIPES).map(([key,r])=>{
+    const unlocked=outpost.powerStep>=6&&outpost.baseConnected&&outpost.tier>=r.tier;
+    const cost=Object.entries(r.cost).map(([k,n])=>`${k==='parts'?'Parts':ORES[k].name}: <b>${k==='parts'?outpost.parts:s.store[k]}/${n}</b>${k==='parts'?'':` <small>(bag ${s.bag[k]})</small>`}`).join(' · ');
+    const spot=key==='greenhouse'?colony.buildSpot(world.player.position,world.yaw):{ok:true};
+    const can=unlocked&&colony.tool==='builder'&&!inside&&spot.ok&&colony.canPay(r.cost,outpost);
+    return `<section class="builder-recipe"><h4>${r.name}</h4><p>${r.description}</p><p>${cost}</p><p>${!unlocked?'Finish starter power and unlock tier '+(r.tier+1):inside?'Go outside to build.':colony.tool!=='builder'?'Equip your builder tool from the belt.':!spot.ok?spot.why:'Materials come from base storage. Unload samples at the locker.'}</p><div class="builder-actions"><button data-track="${key}">${s.buildPlan===key?'Stop tracking':'Track materials & build'}</button><button data-recipe="${key}" ${can?'':'disabled'}>${key==='greenhouse'?'Build here':'Install in power field'}</button></div></section>`;
+  }).join('');
+  const close=modal({title:'Builder · choose a project',html:`<p>Collect minerals, unload at the locker, then equip the builder. Track a recipe for one step at a time.</p>${rows}<details><summary>Game rules & starter kits</summary><p>Ore deposits replenish each sol in safe, unoccupied spots. This is a renewable game resource; real minerals do not regrow. Mineral costs represent simplified processing with landed components, not making electronics directly from raw rocks.</p><p>Your first array, battery and charger use landed kits. Assemble those at the workbench and connect their sockets.</p></details>`,choices:[{label:'Back to game',primary:true}]});
+  const box=$('#modal .modal-box');
+  box.querySelectorAll('[data-track]').forEach(b=>b.onclick=()=>{s.buildPlan=s.buildPlan===b.dataset.track?null:b.dataset.track;missionKey='';saveGame();close();if(s.buildPlan)zhetela(builderQuest(outpost,s)?.step||'Project tracked. Finish the current starter power step first.');});
+  box.querySelectorAll('[data-recipe]').forEach(b=>b.onclick=()=>{
+    const key=b.dataset.recipe,r=RECIPES[key];
+    if(inside||colony.tool!=='builder'||outpost.powerStep<6||!outpost.baseConnected||outpost.tier<r.tier||!colony.canPay(r.cost,outpost))return;
+    if(key==='greenhouse'){const spot=colony.buildSpot(world.player.position,world.yaw);if(!spot.ok){openBuild();return;}colony.pay(r.cost,outpost);colony.build(spot,world.yaw);}
+    else {if(!outpost.buy(key))return;const ores={...r.cost};delete ores.parts;colony.pay(ores,outpost);syncPowerHardware();}
+    s.buildHistory??={};s.buildHistory[key]=(s.buildHistory[key]||0)+1;if(s.buildPlan===key)s.buildPlan=null;missionKey='';toolbarKey='';saveGame();close();zhetela(r.name+' built. Open Builder (B) to choose your next project.',true);
+  });
 }
 
 // ---------------- events from the simulation ----------------
@@ -863,7 +872,7 @@ function collect(n) {
   if (n.type === 'door') return goInside(n.entrance);
   if (n.type === 'ship') return goInShip();
   if (n.type === 'ghdoor') return goInGreenhouse('out');
-  if (n.type === 'ore') { if(isTouch())mine(n.deposit); return; }
+  if (n.type === 'ore') { mine(n.deposit); return; }
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
   if (n.type === 'sev') {
     world.enterRover(); roverFrom = world.sev.pos.clone();
@@ -932,6 +941,7 @@ function endMission() {
 function pressKey(code) {
   if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
+  if (code === 'KeyB') { openBuild(); return; }
   if (code === 'KeyR') { construction?.cancel(); return; }
   if (code === 'KeyE') {
     if(construction?.use()) return;
@@ -942,7 +952,6 @@ function pressKey(code) {
   if(code==='KeyQ'&&colony){colony.select(-1);toolbarKey='';}
   if(code==='KeyT')openMissionLog();
   if (code === 'KeyG') $('#map-btn').click();
-  if (code === 'KeyB' && !inside && world?.mapState) { const f = world.mapState.addFlag(); if (f) toast(`${f.n} planted. Rename it on the map (G).`); }
   if (code === 'KeyP') openPower();
   if (code === 'KeyL') openLogbook();
   if (code === 'KeyM') muteButton();
@@ -969,6 +978,7 @@ document.addEventListener('pointerlockchange',()=>{if(world)world.aimPoint=null;
 $('#view').addEventListener('click', () => {
   if (lastPointer==='touch')return;
   if(state.phase==='mars'&&!isModalOpen()&&construction?.use()){captureMouse();return;}
+  if(state.phase==='mars' && colony.tool==='builder' && !world.driving && !isModalOpen()){openBuild();return;}
   if(state.phase==='mars' && !inside && !world.driving && !isModalOpen()){
     const target=world.nearest();if(target?.type==='panels')collect(target);else if(target?.type==='ore')mine(target.deposit);
   }
@@ -1300,6 +1310,7 @@ renderer.setAnimationLoop(() => {
       if (solClock >= TUNED.solSeconds) {
         solClock -= TUNED.solSeconds;
         queue.push(...outpost.tick());
+        const renewed=colony.renewOres(outpost.sol);if(renewed)toast(`${renewed} ore deposits replenished · new sol`,3500);
         const notes = colony.tickSol(outpost);
         if(activeBed && isModalOpen() && $('[data-bed-controls]'))openGreenhouse(activeBed);
         const ripe = notes.filter(n => n.type === 'ripe'), dry = notes.filter(n => n.type === 'thirsty');
@@ -1372,6 +1383,7 @@ function setupMissionHud(){
   if(missionCard)return;
   missionCard=document.createElement('details');missionCard.id='mission-objective';missionCard.innerHTML='<summary></summary><small class="mission-progress"></small><p></p><button type="button">Quest log (T)</button>';
   $('#hud').appendChild(missionCard);missionCard.querySelector('button').onclick=openMissionLog;
+  const buildButton=document.createElement('button');buildButton.textContent='Builder (B)';buildButton.onclick=openBuild;$('#map-btn').after(buildButton);
   const button=document.createElement('button');button.textContent='Quest log (T)';button.onclick=openMissionLog;$('#map-btn').after(button);
 }
 function missionTarget(kind){
@@ -1379,6 +1391,8 @@ function missionTarget(kind){
   if(['workbench','greenhouse','locker','water'].includes(kind))return null; // The objective is the indoor station, never the stairs.
   if(kind==='ice'||kind==='seed-pod')return world.pickups.filter(p=>kind==='ice'?p.kind==='ice':p.kind==='pod'&&p.cargo?.seeds).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
   if(construction?.wire){const destination={'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[construction.wire];const socket=construction.sockets.find(p=>p.userData.id===destination);if(socket)return socket.position;}
+  if(kind==='build-ore'){const ore=builderQuest(outpost,colony.s)?.ore;return colony.deposits.filter(d=>d.ore===ore&&d.group.parent).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;}
+  if(kind==='build-parts')return world.pickups.filter(p=>p.kind==='pod'||p.kind==='parts').sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
   if(kind==='power')return {x:47,z:-17};
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
@@ -1413,7 +1427,7 @@ function drawMissionHud(){
   if(!missionCard||!world.settlement)return;
   const q=colony.s.farmQuest??={};
   if(!q.seedsCollected){const seedOrder=pending.find(p=>p.cargo?.seeds);if(seedOrder)q.seedArrival=seedOrder.sol;q.seedsLanded=world.pickups.some(p=>p.kind==='pod'&&p.cargo?.seeds);}
-  const task=marsObjective(outpost,colony.s);
+  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s);
   const milestones=firstMissionReport(outpost,colony.s);
   missionCard.querySelector('.mission-progress').textContent=`First base: ${milestones.filter(m=>m.done).length}/4 milestones · E / Use to interact`;
   if(milestones.every(m=>m.done)&&!outpost.firstBaseDebrief){outpost.firstBaseDebrief=true;saveGame();zhetela('First base mission complete! Open the quest log for your learning debrief. The rover, shielding and relay are your next projects.',true);}
@@ -1438,8 +1452,8 @@ function drawMissionHud(){
 function researchMenu(){openResearch(outpost,colony,world,saveGame);}
 function openMissionLog(){
   if(!outpost||!colony)return;
-  const task=marsObjective(outpost,colony.s);
-  modal({title:'Mission objectives',choices:[{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
+  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s);
+  modal({title:'Mission objectives',choices:[{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><p>Builder projects completed: ${Object.entries(colony.s.buildHistory||{}).map(([k,n])=>`${RECIPES[k]?.name||k} × ${n}`).join(', ')||'none yet'}.</p><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
 }
 function updateMissionPower(dt){
   if(!outpost||!world.settlement)return;

@@ -2,6 +2,7 @@
 // and the greenhouses you build and farm. The real science behind each part is in data/mars-facts.json
 // (hematite, gypsum, meteorites, perchlorate soil, NASA's Veggie garden). Numbers marked "game" are balance.
 import * as THREE from 'three';
+import {renewDeposits} from './builder-recipes.js';
 import { heightAt } from './world.js';
 import { loadModel } from './nasamodels.js';
 
@@ -227,8 +228,9 @@ export class Colony {
     const kinds = [...Array(12).fill('hematite'), ...Array(9).fill('gypsum'), ...Array(5).fill('iron')];
     kinds.forEach((ore, id) => {
       let x, z, tries = 0;
-      do { const a = rng() * Math.PI * 2, d = 32 + rng() * (ore === 'iron' ? 190 : 150); x = Math.cos(a) * d; z = Math.sin(a) * d; tries++; }
-      while (tries < 40 && (heightAt(x, z) > 38 || ((x>38&&x<61&&z>-24&&z<-5)||(x>-38&&x<24&&z>15&&z<54)) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
+      do { const cluster=Math.floor(id/3),a=cluster*2.3999632297+(rng()-.5)*.24,d=42+(cluster%4)*24+rng()*16; x = Math.cos(a) * d+(rng()-.5)*14; z = Math.sin(a) * d+(rng()-.5)*14; tries++; }
+      while (tries < 120 && (this.deposits.some(d=>Math.hypot(d.x-x,d.z-z)<3)||heightAt(x, z) > 38 || ((x>38&&x<61&&z>-24&&z<-5)||(x>-38&&x<24&&z>15&&z<54)) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
+      if(tries>=120) return;
       const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
       const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
       group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);
@@ -242,6 +244,7 @@ export class Colony {
       group.updateMatrixWorld(true);
       this.deposits.push({ id, ore, x, z, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
     });
+    for(const d of this.deposits){d.startPosition=d.group.position.clone();d.startQuaternion=d.group.quaternion.clone();d.startTop=d.collider.top;}
     this.restore();
     world.extraTargets = p => this.targets(p);
   }
@@ -307,10 +310,21 @@ export class Colony {
   }
   has(tool) { return this.s.belt.includes(tool); }
 
+  renewOres(sol) {
+    const ids=renewDeposits(this.s,sol,id=>{
+      const d=this.deposits.find(d=>d.id===id);if(!d)return false;
+      const p=this.world.player.position;
+      return Math.hypot(p.x-d.x,p.z-d.z)>8 && !this.world.colliders.some(c=>c!==d.collider&&Math.hypot(c.x-d.x,c.z-d.z)<c.r+2);
+    });
+    for(const id of ids){const d=this.deposits.find(d=>d.id===id);d.group.position.copy(d.startPosition);d.group.quaternion.copy(d.startQuaternion);d.collider.top=d.startTop;this.world.scene.add(d.group);if(!this.world.colliders.includes(d.collider))this.world.colliders.push(d.collider);}
+    return ids.length;
+  }
+
   // ---------- mining ----------
   bagCount() { return count(this.s.bag); }
   // One pickaxe strike. Returns { broke, ore, got, full }.
   strike(dep) {
+    if(this.s.mined.includes(dep.id))return {broke:false,full:false,left:0};
     const o = ORES[dep.ore];
     const hits = (this.s.hits[dep.id] || 0) + 1; this.s.hits[dep.id] = hits;
     dep.collider.top -= 0.05; dep.group.position.y -= 0.05; dep.group.rotation.y += 0.04;            // chips fly, the rock settles

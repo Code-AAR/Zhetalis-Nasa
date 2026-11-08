@@ -7,7 +7,7 @@ export function fieldMapHTML(world) {
   return `<p>The crater around your outpost, from NASA's 3D model of Spirit's landing site. Blank paper is <b>uncharted</b>: climb a <b>lookout tower</b> (triangles), drive the <b>crew rover</b> or send <b>Ingenuity</b> on a scout flight to chart more. Diamonds are survey finds.</p>
   <div class="fm-tabs" role="group" aria-label="Map layer">${LAYERS.map(([id, name]) => `<button type="button" data-layer="${id}" aria-pressed="${(ms?.layer || 'relief') === id}">${name}</button>`).join('')}</div>
   <div id="fm-wrap" style="display:flex;justify-content:center"></div>
-  <div class="fm-actions"><button type="button" id="fm-flag">Plant a flag here (B)</button><span id="fm-stats"></span></div>
+  <div class="fm-actions"><button type="button" id="fm-flag">Plant a flag here</button><span id="fm-stats"></span></div>
   <div id="fm-flags"></div>
   <div id="fm-lm"></div>
   <p>Each first survey stores <b>8 science</b> for transmission to Earth, each new lookout tower <b>4</b> and each survey find <b>3</b>. Take the <b>crew rover</b> for the more distant sites; suit oxygen and the return trip matter.</p>

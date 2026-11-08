@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {builderQuest,renewDeposits} from '../game/src/builder-recipes.js';
+const o={powerStep:6,baseConnected:true,tier:1,parts:5};
+const c={buildPlan:'battery',belt:['builder','pickaxe'],store:{hematite:0,iron:0,gypsum:0},bag:{hematite:0,iron:0,gypsum:0}};
+assert.equal(builderQuest(o,c).ore,'hematite');
+c.bag={hematite:2,gypsum:1,iron:1};assert.equal(builderQuest(o,c).target,'locker');
+c.store={...c.bag};c.bag={hematite:0,gypsum:0,iron:0};assert.equal(builderQuest(o,c).target,'build-ready');
+assert.equal(builderQuest({...o,powerStep:2},c),null);
+assert.equal(builderQuest({...o,parts:0},c).target,'build-parts');
+assert.equal(builderQuest(o,{...c,belt:[]}).target,'locker');
+assert.equal(builderQuest({...o,tier:0},{...c,buildPlan:'panel'}).target,'base');
+const s={mined:[1,2],hits:{1:3,2:3}};
+assert.deepEqual(renewDeposits(s,5,()=>true),[]);
+assert.deepEqual(renewDeposits(s,5,()=>true),[]);
+assert.deepEqual(renewDeposits(s,6,id=>id===1),[1]);assert.deepEqual(s.mined,[2]);assert.equal(s.hits[1],undefined);
+const saved=JSON.parse(JSON.stringify(s));assert.deepEqual(renewDeposits(saved,6,()=>true),[]);assert.deepEqual(renewDeposits(saved,7,()=>true),[2]);
+console.log('Builder stages, starter gates, missing materials, daily renewal, blocked deposits and saved day passed.');

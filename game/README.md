@@ -38,7 +38,7 @@ References: [NASA's Observation Mountain sand ripples](https://science.nasa.gov/
 
 - WASD / arrows: walk. Shift: run. Space: jump. Click the game: mouse look.
 - Esc or C: release/capture the mouse. V: first/third person. E: interact.
-- B: plant a map flag. Hold F indoors or in the pressurised rover to eat.
+- B: open the builder recipe menu. Plant flags from the map (G). Hold F indoors or in the pressurised rover to eat.
 - G: surface operations map. P: power. L: Settings information library. M: mute.
 - Enter the green-marked airlock for the six linked crew modules. Power, storage,
   workshop, life support, shelter, observation and hazard stations are inside.
@@ -122,3 +122,9 @@ The Moon uses 1.62 m/s² gravity and no wind. Dust follows ballistic paths. Its 
 
 
 Auto graphics now uses full quality on computers/tablets and phone-only Lite. A narrow desktop window still stays full quality. Choose Full quality in Settings to override Lite on a phone. The Moon flyby uses NASA LRO topographic geometry and an 8K texture (unchanged original for full quality), plus NASA Orion capsule geometry. Sources: [NASA Moon model](https://svs.gsfc.nasa.gov/14959/) and [NASA Orion capsule](https://science.nasa.gov/3d-resources/orion-capsule/). See moon/assets/nasa/MODELS.md for original and Lite asset details.
+
+## Builder recipes and renewable ore
+
+Equip the builder from the locker, or open its menu with B / Menu → Builder. Choose greenhouse, extra battery or extra solar panel and Track materials & build. The tracked quest shows missing ore counts, points to the nearest matching deposit, then asks you to unload at the locker, find parts and build. Starter power quests retain priority until the habitat is connected. The existing landed-kit assembly remains unchanged.
+
+Mineral deposits are seeded, clustered surface patches. Depleted deposits replenish once per game sol at their original positions, except occupied spots near the player or structures; these wait for another sol. Mined scenery boulders stay cleared. Reloading during the same sol does not renew deposits. This is explicitly a game rule, not real mineral regrowth; recipe costs abstract processing and imported electronics.

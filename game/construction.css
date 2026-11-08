@@ -6,3 +6,5 @@
 
 /* Keep the next step beneath its title, including narrow phone screens. */
 #mission-objective summary{display:block}#mission-objective summary .mission-next-step{display:block;width:100%}
+
+.builder-recipe{padding:14px 0;border-bottom:1px solid #77634e}.builder-recipe h4{margin:0 0 6px}.builder-actions{display:flex;flex-wrap:wrap;gap:8px}.builder-actions button{min-height:44px;flex:1 1 160px}
