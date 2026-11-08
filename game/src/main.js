@@ -297,13 +297,34 @@ function buildWorld() {
     ms.sync(true);
     return world.settlement;
   });
+  world.ready.catch(() => {}); // Report failures in the arrival loading panel, not an unhandled rejection.
   loadMarsToday().then(t => (marsNow = t)).catch(() => {});   // real Curiosity weather for the visor and monitor
 }
 
 // ---------------- after lift-off: how we get there, then arrival ----------------
+async function waitForBase(ready) {
+  const panel=document.createElement('section');panel.id='base-loading';
+  panel.setAttribute('role','status');
+  Object.assign(panel.style,{position:'fixed',inset:'0',zIndex:'110',background:'#0b1119',color:'#f4f1e8',display:'grid',placeContent:'center',gap:'16px',padding:'24px',textAlign:'center',fontFamily:'system-ui'});
+  panel.innerHTML='<h2>Preparing your Mars base</h2><p>Downloading the habitat and walkway models…</p><button type="button">Back to menu</button>';
+  panel.querySelector('button').onclick=()=>location.reload();document.body.append(panel);
+  let timer;
+  try {
+    await Promise.race([ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Base download timed out')),60000);})]);
+    panel.remove();return true;
+  } catch(error) {
+    console.error('Mars base loading failed',error);
+    panel.querySelector('h2').textContent='The base could not finish loading';
+    panel.querySelector('p').textContent='A model download failed or took too long. Retry to download it again.';
+    panel.querySelector('button').textContent='Retry';return false;
+  } finally {clearTimeout(timer);}
+}
+
 async function arrive() {
-  await world.ready;
   $('#countdown').classList.add('hidden'); $('#skip')?.remove();
+  // Clear launch captions before waiting for network-dependent base assets.
+  const ready = await waitForBase(world.ready);
+  if (!ready) return;
   setSound({ scene: 'arrival' });
   const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>playLanding(world)});
   if (!selectedSite) { location.reload(); return; }

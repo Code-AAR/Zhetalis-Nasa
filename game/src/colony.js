@@ -230,6 +230,15 @@ export class Colony {
       do { const a = rng() * Math.PI * 2, d = 32 + rng() * (ore === 'iron' ? 190 : 150); x = Math.cos(a) * d; z = Math.sin(a) * d; tries++; }
       while (tries < 40 && (heightAt(x, z) > 38 || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
       const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
+      const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
+      group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);
+      const stone=group.children[0],v=new THREE.Vector3();stone.updateMatrix();let support=Infinity;
+      for(let i=0;i<stone.geometry.attributes.position.count;i++){
+        if(stone.geometry.attributes.position.getY(i)>-.25)continue;
+        v.fromBufferAttribute(stone.geometry.attributes.position,i).applyMatrix4(stone.matrix).applyQuaternion(group.quaternion);
+        support=Math.min(support,heightAt(x+v.x,z+v.z)-v.y);
+      }
+      group.position.y=support-.08;
       group.updateMatrixWorld(true);
       this.deposits.push({ id, ore, x, z, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
     });

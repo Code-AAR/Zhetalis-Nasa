@@ -35,16 +35,18 @@ export function makeTerrainChunks(heightAt,colourAt) {
   }
   // A tiny horizon mesh remains available while detailed tiles are generated.
   for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,4);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
+  group.userData.hasDetail=(x,z)=>loaded.has(`${Math.floor((x+320)/CHUNK_SIZE)},${Math.floor((z+320)/CHUNK_SIZE)}`);
+  group.userData.revision=0;
   group.userData.stats={loaded:0,queued:0,limit:WORLD_LIMIT==='map'?36:(WORLD_RADIUS*2+1)**2,segments};
   group.userData.update=(focus)=>{
     const plan=chunkPlan(focus.x,focus.z,WORLD_LIMIT),signature=plan.map(c=>c.key).join(';');
     if(signature!==last){
       last=signature;const wanted=new Set(plan.map(c=>c.key));
-      for(const [key,mesh] of loaded)if(!wanted.has(key)){group.remove(mesh);mesh.geometry.dispose();loaded.delete(key);coarse.get(key).visible=true;}
+      for(const [key,mesh] of loaded)if(!wanted.has(key)){group.remove(mesh);mesh.geometry.dispose();loaded.delete(key);coarse.get(key).visible=true;group.userData.revision++;}
       queue=plan.filter(c=>!loaded.has(c.key));
     }
     // At most one allocation per frame: never generate an entire ring in one hitch.
-    const next=queue.shift();if(next){const mesh=tile(next.x,next.z,segments);loaded.set(next.key,mesh);group.add(mesh);coarse.get(next.key).visible=false;}
+    const next=queue.shift();if(next){const mesh=tile(next.x,next.z,segments);loaded.set(next.key,mesh);group.add(mesh);coarse.get(next.key).visible=false;group.userData.revision++;}
     Object.assign(group.userData.stats,{loaded:loaded.size,queued:queue.length});
   };
   group.userData.dispose=()=>{for(const m of [...coarse.values(),...loaded.values()])m.geometry.dispose();material.dispose();group.clear();};
@@ -52,14 +54,14 @@ export function makeTerrainChunks(heightAt,colourAt) {
 }
 
 // Keep the original collision mesh untouched, and submit only nearby rock instances.
-export function nearbyRocks(source) {
+export function nearbyRocks(source,terrain) {
   const render=new THREE.InstancedMesh(source.geometry,source.material,source.count);
-  render.castShadow=render.receiveShadow=true;render.name='Nearby rocks';render.frustumCulled=false;
+  render.count=0;render.castShadow=render.receiveShadow=true;render.name='Nearby rocks';render.frustumCulled=false;
   const matrix=new THREE.Matrix4(),point=new THREE.Vector3(),colour=new THREE.Color();let last='';
   render.userData.update=focus=>{
-    const key=`${Math.floor(focus.x/16)},${Math.floor(focus.z/16)},${source.instanceMatrix.version}`;if(key===last)return;last=key;
+    const key=`${Math.floor(focus.x/16)},${Math.floor(focus.z/16)},${source.instanceMatrix.version},${terrain.userData.revision}`;if(key===last)return;last=key;
     let count=0;const radius=WORLD_LIMIT==='map'?MINIMAP_SPAN/2:(WORLD_RADIUS+1)*CHUNK_SIZE+24;
-    for(let i=0;i<source.count;i++){source.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);if(point.y < -1000 || Math.hypot(point.x-focus.x,point.z-focus.z)>radius)continue;render.setMatrixAt(count,matrix);source.getColorAt(i,colour);render.setColorAt(count,colour);count++;}
+    for(let i=0;i<source.count;i++){source.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);if(!terrain.userData.hasDetail(point.x,point.z) || point.y < -1000 || Math.hypot(point.x-focus.x,point.z-focus.z)>radius)continue;render.setMatrixAt(count,matrix);source.getColorAt(i,colour);render.setColorAt(count,colour);count++;}
     render.count=count;render.instanceMatrix.needsUpdate=true;if(render.instanceColor)render.instanceColor.needsUpdate=true;
   };
   return render;

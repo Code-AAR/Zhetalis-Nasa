@@ -205,12 +205,17 @@ function makeRocks(rng) {
     s.set(size * (0.8 + rng()), slab ? size * 0.18 : size * (0.6 + rng() * 0.5), size * (0.8 + rng()));
     p.set(x, heightAt(x, z) + s.y * 0.35, z);
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
-    let contact = Infinity;
+    // Follow the local slope, then embed the whole lower cap rather than
+    // balancing a wide slab on its single highest contact point.
+    const normal=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
+    q.premultiply(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),normal));
+    let support=Infinity;
     for(let j=0;j<vertices.count;j++){
+      if(vertices.getY(j)>-.25)continue;
       vertex.fromBufferAttribute(vertices,j).multiply(s).applyQuaternion(q);
-      contact=Math.min(contact,vertex.y-heightAt(x+vertex.x,z+vertex.z));
+      support=Math.min(support,heightAt(x+vertex.x,z+vertex.z)-vertex.y);
     }
-    p.y=-contact-Math.min(.3,s.y*.2);
+    p.y=support-Math.max(.08,Math.min(.25,s.y*.15));
     rocks.setMatrixAt(i, m.compose(p, q, s));
     rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
     let top = -Infinity, radiusSq = 0;
@@ -396,7 +401,7 @@ export class World {
     const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks); this.rocks=rocks;
     this.lowRocks = lowRocks;
     this.rockContact = createRockContact(rocks);
-    rocks.visible=false;this.rockDisplay=nearbyRocks(rocks);this.scene.add(this.rockDisplay);
+    rocks.visible=false;this.rockDisplay=nearbyRocks(rocks,this.terrain);this.scene.add(this.rockDisplay);
     this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
     this.solar = makeSolarField(); this.scene.add(this.solar.group);
     this.colliders = [...colliders, ...this.outpost.colliders];
