@@ -169,7 +169,7 @@ function saveGame() {
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
     colony: colony?.s, surveys: [...(world.settlement?.surveys || [])], lookouts: [...(world.lookouts?.got || [])], map: world.mapState?.save(),
   };
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage blocked: no saving */ }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; } catch { return false; }
 }
 function readSave() {
   try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d?.v === 1 && DIFFICULTY[d.difficulty] ? d : null; } catch { return null; }
@@ -1000,6 +1000,15 @@ onLayout((mode, used) => {
   $('#screen-btn').textContent = `Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
 });
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
+$('#information-btn').onclick=()=>openSettings({tab:'information'});
+$('#quit-menu-btn').onclick=()=>{
+  if(!outpost?.over && !saveGame()){
+    modal({title:'Could not save your mission',html:'<p>Your browser could not store the save. Your game is still open; free some browser storage and try again.</p>',choices:[{label:'Back to game'}]});
+    return;
+  }
+  document.exitPointerLock?.();
+  const url=new URL(location.href);url.hash='';location.assign(url.href);
+};
 
 // Full screen: hides the browser's bars so the game fills the phone like an app. (iPhones don't allow
 // this for web pages - there, "Add to Home Screen" gives the same thing, thanks to manifest.webmanifest.)
