@@ -107,3 +107,8 @@ Removed the soil-bag sphere rows that crossed the greenhouse connection. Numeric
 
 ### Revision 58 — charger feedback and matching airlocks
 Expanded docking detection to the painted bay rectangle with a parking tolerance. Connection is acknowledged even with an empty reserve; charging still requires stored energy, and never invents power at night. Persistent nearby status shows rover percentage, charger state and reserve while on foot or driving. Indoor greenhouse/locker goals no longer mark exterior stairs. Grow beds now have an indoor marker. Airlock collars and outer hatch surrounds share warm ochre tones and the soil-layer finish, while operational door hardware stays distinct.
+
+## Revision 59
+- First-meal objective keeps the next action visible: ice, water plant, seed request, delivery, collection, planting, watering, harvest and preparation. Existing crops retain progress.
+- Free starter seed delivery takes three game sols; orange minimap pod markers persist until collection. Short landing toast and cargo notice can be dismissed.
+- Moving relay dish collision covers its full bounds; greenhouse tank blocks the astronaut. Greenhouse glass has a subtle blue-green tint.

@@ -240,7 +240,7 @@ function equipmentContact(model){
       const span=cells.get(key(x,z));
       if(!span || pos.y>span.high+.04 || pos.y+1.85<span.low)continue;
       const dx=pos.x-x*pitch,dz=pos.z-z*pitch,d=Math.hypot(dx,dz),r=pitch*.5+.35;
-      if(d>0 && d<r){pos.x+=dx*(r/d-1);pos.z+=dz*(r/d-1);}
+      if(d<r){if(d<1e-6){pos.x+=r;}else{pos.x+=dx*(r/d-1);pos.z+=dz*(r/d-1);}}
     }
   };
 }

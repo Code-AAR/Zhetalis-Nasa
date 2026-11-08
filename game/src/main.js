@@ -613,7 +613,7 @@ function openWaterPlant() {
     </div>
     ${factHTML(F.electrolysis)}${factHTML(F.waterRecovery)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box');
-  box.querySelector('[data-melt]').onclick = () => { const l = s.ice * ICE_TO_WATER; s.tank += l; s.ice = 0; saveGame(); toast(`💧 +${l.toFixed(1)} L into the base tank · now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
+  box.querySelector('[data-melt]').onclick = () => { const l = s.ice * ICE_TO_WATER; s.tank += l; s.ice = 0; if(l>0)(s.farmQuest??={}).waterMade=true; saveGame(); toast(`💧 +${l.toFixed(1)} L into the base tank · now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
   box.querySelector('[data-split]').onclick = () => { s.tank -= 5; outpost.o2 += 5 * O2_PER_L; saveGame(); toast(`🫁 +${(5 * O2_PER_L).toFixed(1)} kg oxygen · base tank now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
 }
 
@@ -724,12 +724,18 @@ function openLocker() {
         <button data-fill ${!colony.has('jug') || s.tank <= 0 || s.jug >= JUG_L ? 'disabled' : ''}>Fill the water jug</button>${colony.has('jug') ? '' : '<small> (take the jug first)</small>'}</div>
     </div>
     <h4>📡 Trade with Earth</h4>
+    ${!s.farmQuest?.seedsCollected && !s.farmQuest?.seedsLanded && s.farmQuest?.seedArrival==null ? `<button data-starter ${!link?'disabled':''}>Request starter seeds · free training supply</button><small>Arrives near the base in 3 sols. Orange minimap marker on landing.</small>` : ''}
     ${link ? '<p>Scientists on Earth want Mars samples. Pay with samples from storage; your order comes down on a cargo pod in about 3 sols. Open the pod at the orange square on your minimap to receive the seeds.</p>' : '<p class="neg">The Earth link is off. Give "Talk to Earth" more power at the console to trade.</p>'}
     ${req ? `<div class="hazard"><b>Request:</b> ${req.who} wants <b>${req.n} ${ORES[req.ore].name.toLowerCase()}</b> (until sol ${req.until}). Reward: +${req.reward.science} science and ${cargoWords(req.reward)}. <button data-request ${!link || s.store[req.ore] < req.n ? 'disabled' : ''}>Send samples</button></div>` : ''}
     <div class="shop">${shop}</div>
     ${onWay.length ? `<p class="source">On the way: ${onWay.map(p => `${cargoWords(p.cargo)} (lands sol ${p.sol})`).join('; ')}</p>` : ''}
     ${factHTML(F.samples)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box'), again = () => { toolbarKey = ''; openLocker(); };
+  box.querySelector('[data-starter]')?.addEventListener('click',()=>{
+    const q=s.farmQuest??={};if(q.seedArrival!=null||!o.today.link)return;
+    q.seedArrival=o.sol+3;pending.push({sol:q.seedArrival,type:'pod',cargo:{seeds:{lettuce:2},starter:true}});
+    saveGame();toast(`Seeds requested · lands sol ${q.seedArrival} near base.`);again();
+  });
   box.querySelector('[data-kits]')?.addEventListener('click', () => { advancePower(0); again(); });
   box.querySelector('[data-prepare]')?.addEventListener('click', () => {
     o.food += s.produce; s.freshMeals = (s.freshMeals || 0) + s.produce; s.produce = 0; farmProgress('prepared'); again();
@@ -898,7 +904,7 @@ function collect(n) {
   const p = n.pickup; world.removePickup(p);
   if (p.kind === 'ice') { earn('ice'); const kg = Math.round(8 * outpost.s.ice); colony.s.ice = (colony.s.ice || 0) + kg; toast(`🧊 Ice! +${kg} kg of dirty ice for the water plant inside the outpost${outpost.s.ice > 1 ? ' (thick ice here!)' : outpost.s.ice < 1 ? ' (ice is thin here)' : ''}.`); }
   if (p.kind === 'metal') { earn('scrap'); outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
-  if (p.kind === 'pod' && p.cargo) { colony.receive(p.cargo, outpost); toast(`📦 Your order from Earth: ${cargoWords(p.cargo)}. Seeds go into the storage locker.`, 5000); }
+  if (p.kind === 'pod' && p.cargo) { colony.receive(p.cargo, outpost); if(p.cargo.seeds)(colony.s.farmQuest??={}).seedsCollected=true; toast(`📦 Your order from Earth: ${cargoWords(p.cargo)}. Seeds go into the storage locker.`, 5000); }
   else if (p.kind === 'pod') { outpost.o2 += 15; outpost.food += 20; outpost.parts += 3; toast('📦 Supplies from Earth: +15 kg oxygen, +20 meals, +3 parts'); }
   if(p.kind==='pod')saveGame();
 }
@@ -1068,23 +1074,23 @@ addEventListener('resize',resizeGame);window.visualViewport?.addEventListener('r
 
 // ---------------- HUD ----------------
 function questBearing(){
-  const task=marsObjective(outpost,colony.s),step=outpost.powerStep,exterior=['power','base','charger','shelter','soil'].includes(task.target);
+  const task=marsObjective(outpost,colony.s),step=outpost.powerStep,exterior=['power','base','charger','shelter','soil','ice','seed-pod'].includes(task.target);
   let target,label;
   const galley=step===6 && colony.s.produce>0;
-  if(!inside&&['workbench','greenhouse','locker'].includes(task.target))return ({workbench:'Workbench',greenhouse:'Grow beds',locker:'Storage locker'})[task.target]+' · inside the base';
+  if(!inside&&['workbench','greenhouse','locker','water'].includes(task.target))return ({workbench:'Workbench',greenhouse:'Grow beds',locker:'Storage locker',water:'Water plant'})[task.target]+' · inside the base';
   if(!inside){
     target=exterior?missionTarget(task.target):missionTarget(task.target)||world.settlement.entrances[1];
     label=exterior?task.title:'Airlock';
   }else{
-    let station=room===capsule?'ship-exit':room===ghRoom?'gh-out':exterior?'exit':task.target==='locker'?'locker':task.target==='workbench'?'workbench':'greenhouse';
-    if(step===6&&room===ghRoom)station=galley?'tunnel':'gh-bed';
+    let station=room===capsule?'ship-exit':room===ghRoom?'gh-out':exterior?'exit':task.target==='water'?'water':task.target==='locker'?'locker':task.target==='workbench'?'workbench':'greenhouse';
+    if(step===6&&room===ghRoom)station=task.target==='greenhouse'?'gh-bed':'tunnel';
     if(galley&&room===interior)station='locker';
     target=station==='tunnel'?{x:0,z:18.5}:room.stations.find(s=>s.type===station);
     if(station==='gh-bed'){
       const beds=colony.s.base, i=beds.findIndex(b=>b.ready), growing=beds.findIndex(b=>b.crop);
       target=room.stations.find(s=>s.type==='gh-bed' && s.bed===Math.max(0,i>=0?i:growing));
     }
-    label=({tunnel:'Habitat tunnel','ship-exit':'Hatch','gh-out':'Airlock',exit:'Airlock',locker:'Locker',workbench:'Workbench',greenhouse:'Grow beds','gh-bed':'Grow beds'})[station];
+    label=({tunnel:'Habitat tunnel','ship-exit':'Hatch','gh-out':'Airlock',exit:'Airlock',water:'Water plant',locker:'Locker',workbench:'Workbench',greenhouse:'Grow beds','gh-bed':'Grow beds'})[station];
   }
   if(!target)return 'Map';
   const pos=inside?room.pos:world.player.position, camera=inside?room.camera:world.camera;
@@ -1309,7 +1315,8 @@ renderer.setAnimationLoop(() => {
         pending = pending.filter(p => {
           if (p.sol > outpost.sol) return true;
           world.dropSupplyPod(); if (p.cargo) world.pickups.at(-1).cargo = p.cargo;
-          toast(p.cargo ? '📦 Your order landed! Orange square on the minimap · press E / Use at the pod to collect seeds.' : '📦 Supplies landed! Follow the orange square on the minimap and open the pod.');
+          if(p.cargo?.seeds)(colony.s.farmQuest??={}).seedsLanded=true;
+          toast(p.cargo?.seeds ? 'Seeds arrived near base · orange map square.' : 'Supplies landed · orange map square.');
           return false;
         });
         saveGame();
@@ -1376,7 +1383,8 @@ function setupMissionHud(){
 }
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
-  if(['workbench','greenhouse','locker'].includes(kind))return null; // The objective is the indoor station, never the stairs.
+  if(['workbench','greenhouse','locker','water'].includes(kind))return null; // The objective is the indoor station, never the stairs.
+  if(kind==='ice'||kind==='seed-pod')return world.pickups.filter(p=>kind==='ice'?p.kind==='ice':p.kind==='pod'&&p.cargo?.seeds).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
   if(kind==='power')return m.powerSite;
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
@@ -1402,12 +1410,17 @@ function drawMissionHud(){
   let delivery=document.getElementById('delivery-status');
   if(!delivery){delivery=document.createElement('button');delivery.id='delivery-status';document.getElementById('hud').append(delivery);delivery.onclick=()=>modal({title:'Cargo deliveries',html:`<p>Orange squares on the minimap mark unopened pods. Go to a pod and press E / Use. Seeds enter your locker only after collection.</p><ul>${world.pickups.filter(p=>p.kind==='pod').map(p=>`<li>${p.cargo?cargoWords(p.cargo):'Base supplies'} · ${Math.round(Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z))} m away · map (${Math.round(p.x)}, ${Math.round(p.z)})</li>`).join('')}${pending.filter(p=>p.cargo).map(p=>`<li>${cargoWords(p.cargo)} · lands in ${Math.max(0,p.sol-outpost.sol)} sols</li>`).join('')}</ul>`});}
   const pods=world.pickups.filter(p=>p.kind==='pod'),orders=pending.filter(p=>p.cargo),nearest=pods.reduce((n,p)=>Math.min(n,Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z)),Infinity);
-  delivery.hidden=(!pods.length&&!orders.length)||isModalOpen();delivery.textContent=pods.length?`▣ Cargo landed · ${Math.round(nearest)} m · map marker`:orders.length?`Cargo incoming · ${Math.max(0,Math.min(...orders.map(p=>p.sol))-outpost.sol)} sols`:'';
+  let dismiss=document.getElementById('delivery-dismiss');
+  if(!dismiss){dismiss=document.createElement('button');dismiss.id='delivery-dismiss';dismiss.textContent='×';dismiss.setAttribute('aria-label','Dismiss cargo notice');delivery.after(dismiss);dismiss.onclick=()=>{delivery.dataset.dismissed=delivery.dataset.key;};}
+  delivery.dataset.key=pods.map(p=>`${p.x},${p.z}`).join('|')+';'+orders.map(p=>p.sol).join('|');
+  delivery.hidden=(!pods.length&&!orders.length)||isModalOpen()||delivery.dataset.dismissed===delivery.dataset.key;dismiss.hidden=delivery.hidden;if(!delivery.hidden){const rect=delivery.getBoundingClientRect();dismiss.style.top=rect.top+'px';dismiss.style.right=(innerWidth-rect.right)+'px';dismiss.style.bottom='auto';}delivery.textContent=pods.length?`▣ Cargo landed · ${Math.round(nearest)} m · map marker`:orders.length?`Cargo incoming · ${Math.max(0,Math.min(...orders.map(p=>p.sol))-outpost.sol)} sols`:'';
 
   if(!missionCard||!world.settlement)return;
+  const q=colony.s.farmQuest??={};
+  if(!q.seedsCollected){const seedOrder=pending.find(p=>p.cargo?.seeds);if(seedOrder)q.seedArrival=seedOrder.sol;q.seedsLanded=world.pickups.some(p=>p.kind==='pod'&&p.cargo?.seeds);}
   const task=marsObjective(outpost,colony.s);
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');
-  if(task.id!==missionKey){missionKey=task.id;missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
+  if(task.id+'|'+(task.step||'')!==missionKey){missionKey=task.id+'|'+(task.step||'');missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;if(task.step){const next=document.createElement('small');next.className='mission-next-step';next.textContent=task.step;missionCard.querySelector('summary').append(next);}missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
   if(missionCollapseAt&&performance.now()>missionCollapseAt){missionCard.open=false;missionCollapseAt=0;}
   if(!interior.workbenchMarker){
     const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.16),new THREE.MeshBasicMaterial({color:'#c995ff',depthTest:false,depthWrite:false}));
@@ -1415,9 +1428,9 @@ function drawMissionHud(){
   }
   const isGrow=task.target==='greenhouse';
   if(isGrow&&!ghRoom.objectiveMarker){ghRoom.objectiveMarker=interior.workbenchMarker.clone();ghRoom.scene.add(ghRoom.objectiveMarker);}
-  const grow=ghRoom.objectiveMarker;if(grow){grow.visible=inside&&room===ghRoom&&isGrow&&!isModalOpen();const bed=ghRoom.stations.find(s=>s.type==='gh-bed');if(bed)grow.position.set(bed.x,2,bed.z);}
-  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type===(task.target==='locker'?'locker':'workbench'));
-  marker.visible=inside&&room===interior&&['workbench','locker'].includes(task.target)&&!isModalOpen();
+  const grow=ghRoom.objectiveMarker;if(grow){grow.visible=inside&&room===ghRoom&&isGrow&&!isModalOpen();const bedIndex=colony.s.base.findIndex(b=>b.ready)||0;const bed=ghRoom.stations.find(s=>s.type==='gh-bed'&&s.bed===Math.max(0,bedIndex));if(bed)grow.position.set(bed.x,2,bed.z);}
+  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type===(task.target==='water'?'water':task.target==='locker'?'locker':'workbench'));
+  marker.visible=inside&&room===interior&&['workbench','locker','water'].includes(task.target)&&!isModalOpen();
   if(marker.visible&&bench){marker.position.set(bench.x,2.1+.08*Math.sin(performance.now()/300),bench.z);marker.rotation.y=performance.now()/1000;}
   world.objectiveTarget=missionTarget(task.target);
   const beacon=world.settlement.objectiveBeacon;

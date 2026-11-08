@@ -24,7 +24,7 @@ export function tickResearch(dt,o,colony,world){
  if(!world.relayDish){
   const assembly=dishAssembly(1.6),base=assembly.group;base.position.set(-25,world.groundHeightAt(-25,18),18);world.scene.add(base);
   world.relayDish=assembly.el;
-  world.clearRocksAround?.(-25,18,2);world.colliders.push({x:-25,z:18,r:.45,object:base});
+  world.clearRocksAround?.(-25,18,3);world.relayCollider={x:-25,z:18,halfX:2,halfZ:2,minY:base.position.y,maxY:base.position.y+5,object:base};world.colliders.push(world.relayCollider);
  }
 
  if(!world.trainingRelays){
@@ -37,4 +37,8 @@ export function tickResearch(dt,o,colony,world){
  const target=r.destination==='earth'?new THREE.Vector3(pts.getX(0),pts.getY(0),pts.getZ(0)):new THREE.Vector3(pts.getX(2),pts.getY(2),pts.getZ(2));
  const here=dish.getWorldPosition(new THREE.Vector3()),direction=target.sub(here).normalize();
  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction);dish.quaternion.slerp(q,1-Math.exp(-dt*2));
+ // Track the whole moving dish, not just the mast.
+ const bounds=new THREE.Box3().setFromObject(world.relayCollider.object),c=world.relayCollider;
+ c.x=(bounds.min.x+bounds.max.x)/2;c.z=(bounds.min.z+bounds.max.z)/2;
+ c.halfX=(bounds.max.x-bounds.min.x)/2;c.halfZ=(bounds.max.z-bounds.min.z)/2;c.minY=bounds.min.y;c.maxY=bounds.max.y;
 }

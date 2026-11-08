@@ -32,7 +32,7 @@ export class Greenhouse {
     const sun = new THREE.DirectionalLight('#fff1dc', 1.2); sun.position.set(6, 10, 4); this.scene.add(sun);
 
     // the dome: clear panels on a white frame (long ribs and rings)
-    const glass = new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.13, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false });
+    const glass = new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false });
     this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(R, SEG, 24, 0, Math.PI * 2, 0, Math.PI / 2), glass));
     const frame = std('#eceae4', { metalness: 0.3, roughness: 0.4 });
     const finishes=[regolithFinish(glass),regolithFinish(frame)];this.setRegolith=n=>finishes.forEach(f=>f(n));this.regolithMaterials=[glass,frame];
@@ -128,6 +128,7 @@ export class Greenhouse {
   }
 
   update(dt, keys, active) {
+    dt=Math.min(dt,.05); // A stalled frame must not tunnel through furniture.
     let wx = 0, wz = 0;
     if (active) {
       const speed = keys.ShiftLeft || keys.ShiftRight ? 4 : 2.6;
@@ -152,6 +153,9 @@ export class Greenhouse {
         if (hx - Math.abs(dx) < hz - Math.abs(dz)) this.pos.x = x + Math.sign(dx || 1) * hx; else this.pos.z = Math.sign(dz || 1) * hz;
       }
     }
+    // Tank shell plus astronaut radius. Stop the body before the camera enters glass.
+    const tx=this.pos.x+4.4,tz=this.pos.z+4.4,td=Math.hypot(tx,tz),clearance=.58+.32;
+    if(td<clearance){const nx=td>1e-6?tx/td:Math.SQRT1_2,nz=td>1e-6?tz/td:Math.SQRT1_2;this.pos.x=-4.4+nx*clearance;this.pos.z=-4.4+nz*clearance;this.vel.x=0;this.vel.z=0;}
     const bob = (Math.cos(this.step * 2) - 1) * 0.012 * Math.min(1, sp / 2.6);
     const eye = new THREE.Vector3(this.pos.x, 1.65 + bob, this.pos.z);
     this.camera.position.copy(eye);

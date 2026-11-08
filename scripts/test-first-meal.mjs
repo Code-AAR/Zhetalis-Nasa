@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {firstMealObjective} from '../game/src/mars-objectives.js';
+const o={sol:4},c={farmQuest:{},ice:0,base:[]};
+const task=()=>firstMealObjective(o,c);
+assert.equal(task().target,'ice');c.ice=8;assert.equal(task().target,'water');
+c.farmQuest.waterMade=true;assert.equal(task().target,'locker');
+c.farmQuest.seedArrival=7;assert.match(task().step,/3 sols/);assert.equal(task().target,null);
+c.farmQuest.seedsLanded=true;assert.equal(task().target,'seed-pod');
+c.farmQuest.seedsCollected=true;assert.equal(task().target,'greenhouse');
+c.farmQuest.planted=true;c.base=[{crop:'lettuce',tank:0}];assert.match(task().step,/Water/);
+c.farmQuest.watered=true;c.base[0].tank=6;assert.match(task().step,/wait/);
+c.base[0].ready=true;assert.match(task().step,/Harvest/);
+c.produce=8;assert.equal(task().target,'locker');
+assert.deepEqual(firstMealObjective(o,JSON.parse(JSON.stringify(c))),task());
+assert.match(firstMealObjective(o,{base:[{crop:'lettuce',ready:true}]}).step,/Harvest/);
+console.log('First-meal steps, delivery ETA, collection, water, harvest and saved progress passed.');

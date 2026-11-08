@@ -569,3 +569,8 @@ body.layout-phone #minimap, body.touch #minimap { display: none; }
 #delivery-status{bottom:calc(18px + 190px);z-index:12}
 
 #rover-charge-status{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);max-width:85vw;padding:8px 12px;border:1px solid #63c7c2;border-radius:12px;background:#142626ed;color:#e4ffff;font-size:13px;pointer-events:none}#rover-charge-status[hidden]{display:none}
+
+#mission-objective summary .mission-next-step{display:block;font-size:12px;font-weight:400;line-height:1.4;margin-top:5px;color:#e0d8ea;max-width:310px}
+#toast{font-size:14px;max-width:min(360px,calc(100vw - 32px));padding:10px 12px}
+
+#delivery-status{font-size:12px!important;max-width:240px!important;padding:8px 34px 8px 10px!important}#delivery-dismiss{position:fixed;right:10px;bottom:182px;z-index:40;width:32px;height:32px;padding:0;font-size:20px}#delivery-dismiss[hidden]{display:none}
