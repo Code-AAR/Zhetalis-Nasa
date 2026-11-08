@@ -57,3 +57,18 @@ Animation handoff: showArrival's optional third argument accepts {scanVideo: 'as
 
 
 Follow-up: the automatic slide deck and timed cruise card were removed from the launch-to-Mars path. The mission explanation now sits beneath the interactive globe. Selecting a region focuses the globe and eases its zoom before explicit confirmation. The landing vehicle is an original procedural Starship-inspired concept (not a downloaded/validated SpaceX model); its Mars gear and flight path are illustrative. The optional title-screen journey explainer remains available. Browser verification confirmed the polar selection produces 5 kWh heater demand, reaches surface gameplay and persists as polar in the save, with no runtime errors. Phone layout and immediate scan/descent skipping were checked.
+
+## Cutscenes and the command window
+
+The landing after the region scan follows NASA's Curiosity and Perseverance
+sequence: cruise stage separation, heat shield entry, parachute, rocket descent
+stage and sky crane (`src/edl.js`, played by `src/cutscenes.js`). The dust storm
+cutscene plays from the dust event. The Cutscenes button in the menu replays
+both. Badge pop-ups and toasts wait until a cutscene ends.
+
+Press the backtick key or F2 to open the command window (`src/devconsole.js`).
+Type `help`. It can play the landing or storm, queue a dust storm, and push any
+event by name.
+
+The earlier Starship landing is kept in the git history (commit bfbc8da and
+before). `src/starship-landing.js` is still the arrival screen's fallback visual.

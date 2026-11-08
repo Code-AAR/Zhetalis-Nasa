@@ -22,8 +22,10 @@ export const setPatchContext = fn => { context = fn; };
 
 // awards play one at a time
 const queue = []; let showing = false;
+let held = false;
+export const holdAwards = on => { held = !!on; if (!held) next(); };   // cutscenes pause badge pop-ups
 function next() {
-  if (showing || !queue.length) return;
+  if (held || showing || !queue.length) return;
   showing = true;
   showAward(queue.shift()).catch(() => {}).then(() => { showing = false; next(); });
 }
