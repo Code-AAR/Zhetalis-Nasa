@@ -527,6 +527,11 @@ function advancePower(expected) {
   saveGame();
   toast(powerSteps[outpost.powerStep] || 'Power online. Walk through Life support to plant your first crop.');
 }
+function suitAirSeconds(){
+  const running=!!world&&(world.keys.ShiftLeft||world.keys.ShiftRight)&&!world.noRun&&world.move.lengthSq()>4;
+  const rate=(world?.night?TUNED.coldSuit:1)*(running?1.5:1)*(body?.starving?1.5:1);
+  return Math.max(40,outpost.suitSeconds()/rate);
+}
 function syncPowerHardware(){
   world.setPanels(outpost.panels + (outpost.powerStep >= 3 && outpost.powerStep < 6 ? 1 : 0));
   if(world.settlement){
@@ -859,6 +864,7 @@ function collect(n) {
   }
   if (n.type === 'sev-exit') { world.exitRover(); toast('🧑‍🚀 Out through the suitport at the back of the rover.'); return; }
   if (n.type === 'panels') {
+    if(outpost.clean>=.999)return toast('Solar panels are already clean.');
     outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false; earn('dust');
     modal({ title: '🧽 Solar panels cleaned!', html: `<p>Back to full power. Dust settles on them a little every sol - and a lot during dust storms - so check them often.</p>${factHTML(F.dustPanels)}` });
     return;
@@ -949,7 +955,7 @@ document.addEventListener('pointerlockchange',()=>{if(world)world.aimPoint=null;
 $('#view').addEventListener('click', () => {
   if (lastPointer==='touch')return;
   if(state.phase==='mars' && !inside && !world.driving && !isModalOpen()){
-    const target=world.nearest();if(target?.type==='ore')mine(target.deposit);
+    const target=world.nearest();if(target?.type==='panels')collect(target);else if(target?.type==='ore')mine(target.deposit);
   }
   captureMouse();
 });
@@ -1060,12 +1066,12 @@ function drawHUD() {
   meter('#m-power', f.total / (o.panels * TUNED.kWhPerPanel + o.reactors * TUNED.reactorKWh), `${f.total.toFixed(0)} kWh${o.dust ? ' · dust!' : ''}`);
   meter('#m-rad', o.dose / o.limit, `${o.dose.toFixed(1)} mSv`, true);
   $('#m-suit').classList.toggle('hidden', inside);
-  meter('#m-suit', suit, `${Math.round(suit * o.suitSeconds())} s`);
+  meter('#m-suit', suit, `${Math.round(suit * suitAirSeconds())} s`);
   $('#m-o2').title = `Oxygen: ${o.o2.toFixed(1)} kg · ${o2Left === null ? 'steady' : o2Left + ' sols left'}`;
   $('#m-food').title = `Food: ${o.food.toFixed(0)} meals · ${foodLeft === null ? 'steady' : foodLeft + ' sols left'}`;
   $('#m-power').title = `Power today: ${f.total.toFixed(0)} kWh/sol · panels ${Math.round(o.clean * 100)}% clean${o.dust ? ' · dust storm!' : ''}`;
   $('#m-rad').title = `Radiation badge: ${o.dose.toFixed(1)} of ${o.limit} mSv`;
-  $('#m-suit').title = `Suit oxygen: ${Math.round(suit * o.suitSeconds())} s of air left`;
+  $('#m-suit').title = `Suit oxygen: ${Math.round(suit * suitAirSeconds())} s of air left`;
   $('#sol').textContent = `Sol ${o.sol} of ${o.d.sols}`;
   // A sol uses a 24-hour Mars clock; its real duration is about 24.66 Earth hours. Battery gauge: charges in daylight, the heater drains it at night
   const ph = solClock / TUNED.solSeconds, hour = Math.floor(ph * 24), isDay = ph > TUNED.dayStart && ph < TUNED.dayEnd;
@@ -1214,7 +1220,7 @@ renderer.setAnimationLoop(() => {
       } else if (!inside) {
         // Outside, the suit uses air (faster in the freezing night) and the outpost's shielding isn't protecting you.
         const runningNow = (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun && world.move.lengthSq() > 4;
-        suit -= step / outpost.suitSeconds() * (world.night ? TUNED.coldSuit : 1) * (runningNow ? 1.5 : 1) * (body.starving ? 1.5 : 1);   // breathing harder (game balance)
+        suit -= dt / suitAirSeconds();   // breathing harder (game balance)
         const f = outpost.today, perSol = step / TUNED.solSeconds;
         outpost.dose += F.surfaceDose.value * f.protection * perSol;   // the part the shield would have blocked
         if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection;

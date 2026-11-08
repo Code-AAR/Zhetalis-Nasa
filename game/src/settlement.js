@@ -13,6 +13,36 @@ export async function installSettlement(world){
   model.scale.setScalar(102/Math.max(size.x,size.z));
   const box=new THREE.Box3().setFromObject(model),centre=box.getCenter(new THREE.Vector3());model.position.set(-centre.x,-box.min.y,-centre.z);
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.name==='Object_16')o.visible=false;}});world.scene.add(model);
+  // The imported base also contains solar tables. Make their visible footprints
+  // serviceable and reserve them just like the deployable array.
+  model.updateMatrixWorld(true);world.fixedSolar=[];
+  const cells=model.getObjectByName('Object_14');
+  if(cells?.isMesh){
+    const geo=cells.geometry,pos=geo.attributes.position,idx=geo.index,count=(idx?.count??pos.count)/3;
+    const parent=Array.from({length:count},(_,i)=>i),owners=new Map(),v=new THREE.Vector3();
+    const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+    for(let t=0;t<count;t++)for(let j=0;j<3;j++){
+      v.fromBufferAttribute(pos,idx?idx.getX(t*3+j):t*3+j);
+      const key=[v.x,v.y,v.z].map(n=>n.toFixed(4)).join(',');
+      if(owners.has(key))parent[root(t)]=root(owners.get(key));else owners.set(key,t);
+    }
+    const boxes=new Map();for(let t=0;t<count;t++){
+      const id=root(t);if(!boxes.has(id))boxes.set(id,new THREE.Box3());
+      for(let j=0;j<3;j++)boxes.get(id).expandByPoint(v.fromBufferAttribute(pos,idx?idx.getX(t*3+j):t*3+j).applyMatrix4(cells.matrixWorld));
+    }
+    const footMat=new THREE.MeshStandardMaterial({color:'#77766e',roughness:.95});
+    for(const box of boxes.values()){
+      const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+      if(size.x*size.z<.2)continue;
+      world.fixedSolar.push({x:center.x,z:center.z,halfX:size.x/2,halfZ:size.z/2,y:heightAt(center.x,center.z)});
+      world.clearRocksAround(center.x,center.z,Math.hypot(size.x,size.z)/2+.6);
+      for(const x of [box.min.x+.15,box.max.x-.15])for(const z of [box.min.z+.15,box.max.z-.15]){
+        const ground=heightAt(x,z),top=Math.max(ground+.18,box.min.y);
+        const foot=new THREE.Mesh(new THREE.BoxGeometry(.4,top-ground+.04,.4),footMat);
+        foot.position.set(x,(top+ground)/2-.02,z);foot.castShadow=foot.receiveShadow=true;world.scene.add(foot);
+      }
+    }
+  }
   const staticCrew=model.getObjectByName('Object_16');staticCrew?.removeFromParent();
   model.updateMatrixWorld(true);model.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
   const layout=await createOpenLayout(world,model);
@@ -64,7 +94,17 @@ export async function installSettlement(world){
   if(keepLander){keepLander.x=40;keepLander.z=-50;}
   world.sev.pos.set(-42,heightAt(-42,32),32);world.sev.place(0);world.sevCollider.x=-42;world.sevCollider.z=32;
   world.solar.group.position.set(42,heightAt(42,-20),-20);
-  for(const panel of world.solar.panels){panel.position.y=heightAt(42+panel.position.x,-20+panel.position.z)-world.solar.group.position.y;}
+  for(const panel of world.solar.panels){
+    const x=42+panel.position.x,z=-20+panel.position.z;
+    panel.position.y=heightAt(x,z)-world.solar.group.position.y;
+    world.clearRocksAround(x,z,2.8);
+    for(const foot of panel.userData.feet||[]){
+      const ground=heightAt(x+foot.position.x,z+foot.position.z)-heightAt(x,z);
+      // Ballast extends down to local soil instead of hovering over a slope.
+      const bottom=Math.min(-.02,ground-.04),top=Math.max(.14,ground+.12);
+      foot.scale.y=(top-bottom)/.16;foot.position.y=(top+bottom)/2;
+    }
+  }
   world.colliders.splice(0,world.colliders.length,...layout.colliders,...(keepLander?[keepLander]:[]));
   world.clearRocksAround(GH.x,GH.z,GH.r+3);
   world.player.position.set(28,heightAt(28,-35),-35);world.yaw=Math.atan2(layout.door.x-28,layout.door.z+35);world.move.set(0,0,0);world.vel.set(0,0,0);

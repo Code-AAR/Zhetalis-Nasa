@@ -228,7 +228,7 @@ export class Colony {
     kinds.forEach((ore, id) => {
       let x, z, tries = 0;
       do { const a = rng() * Math.PI * 2, d = 32 + rng() * (ore === 'iron' ? 190 : 150); x = Math.cos(a) * d; z = Math.sin(a) * d; tries++; }
-      while (tries < 40 && (heightAt(x, z) > 38 || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
+      while (tries < 40 && (heightAt(x, z) > 38 || ((x>38&&x<61&&z>-24&&z<-5)||(x>-38&&x<24&&z>15&&z<54)) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
       const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
       const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
       group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);

@@ -846,7 +846,7 @@ export class World {
     else list.push({type:'door',d:Math.hypot(p.x-this.door.x,p.z-this.door.z)});
     list.push({type:'ghdoor',d:Math.hypot(p.x-(GH.x-GH.r-2.6),p.z-GH.z)});
     if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start
-    if (this.panelsDirty) {
+    { // Panels remain usable with any tool, even before dust becomes severe.
       const point = this.panelPoint ??= new THREE.Vector3();
       for (const panel of this.solar.panels) if (panel.visible) {
         panel.getWorldPosition(point);
@@ -854,11 +854,13 @@ export class World {
         list.push({type:'panels',d:Math.hypot(dx,dz,p.y-point.y),range:2});
       }
     }
+    for(const panel of this.fixedSolar||[]){const dx=Math.max(0,Math.abs(p.x-panel.x)-panel.halfX),dz=Math.max(0,Math.abs(p.z-panel.z)-panel.halfZ);list.push({type:'panels',d:Math.hypot(dx,dz,p.y-panel.y),range:2});}
     if (!this.rover.salvaged) list.push({ type: 'rover', d: Math.hypot(p.x - this.rover.x, p.z - this.rover.z) - 1.5 });
     if (this.heli.model && !this.heli.seen) list.push({ type: 'heli', d: Math.hypot(p.x - this.heli.x, p.z - this.heli.z) });
     for (const pk of this.pickups) list.push({ type: pk.kind, pickup: pk, d: Math.hypot(p.x - pk.x, p.z - pk.z) });
     if (this.extraTargets) list.push(...this.extraTargets(p));   // ore rocks and greenhouses (colony.js)
     list.sort((a, b) => a.d - b.d);
+    const panel=list.find(n=>n.type==='panels'&&n.d<1.25);if(panel)return panel;
     return list.find(n=>n.d<(n.range??3.2))||null;
   }
 

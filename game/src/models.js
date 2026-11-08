@@ -45,11 +45,12 @@ export function solarPanel(cellMat, { w = 3.2, d = 2, tilt = .5, low = .6 } = {}
   tilted.add(fasteners);
   tilted.add(box(.28, .1, .2, MAT.dark, w * .3, -.1, d * .28));   // junction box on the back
   for (const k of [-.3, .3]) { const along = k * d, rail = cyl(.035, w * .96, MAT.steel, 6); rail.rotation.z = Math.PI / 2; rail.position.set(0, -.1, along); tilted.add(rail); }
+  g.userData.feet=[];
   // legs: from the rails straight down to ballast blocks on the ground
   for (const k of [-.3, .3]) for (const x of [-.36, .36]) {
     const z = k * d * c, top = hc + k * d * s - .1 * c;
     g.add(tube([x * w, top, z], [x * w, 0, z], .035, MAT.steel));
-    g.add(box(.3, .16, .3, MAT.concrete, x * w, .06, z));
+    const foot=box(.3,.16,.3,MAT.concrete,x*w,.06,z);g.add(foot);g.userData.feet.push(foot);
   }
   g.add(tube([-.36 * w, low + .2, -.3 * d * c], [-.36 * w, 0.1, .3 * d * c], .02, MAT.steel, 4), tube([.36 * w, low + .2, -.3 * d * c], [.36 * w, 0.1, .3 * d * c], .02, MAT.steel, 4));
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
