@@ -1,3 +1,7 @@
+import { Construction } from './construction.js';
+import { firstMissionReport } from './construction-state.js';
+import { zhetela, zhetelaPortraitHTML } from './zhetela.js';
+let construction;
 import { waitForBase } from './base-loading.js';
 import {chargeRover} from './rover-charging.js';
 import { heightAt } from './world.js';
@@ -280,11 +284,11 @@ function buildWorld() {
     const targets = world.extraTargets;
     world.extraTargets = p => {
       const list = targets(p), step = outpost.powerStep;
-      if ([2,4,5].includes(step)) list.push({ type:'power-site', step, range:2.6, d:Math.hypot(p.x-world.settlement.powerSite.x,p.z-world.settlement.powerSite.z) });
       const task=marsObjective(outpost,colony.s),target=missionTarget(task.target);
       if(['base','charger','shelter','soil'].includes(task.target)&&target&&task.id!=='charge')list.unshift({type:'mission-work',task,range:2.8,d:Math.hypot(p.x-target.x,p.z-target.z)});
       return list;
     };
+    construction = new Construction(world,interior,{state:()=>outpost,colony:()=>colony,save:saveGame,sync:syncPowerHardware,advance:advancePower,guide:zhetela});
     setupMissionHud();syncPowerHardware();
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
     // the crater map: charted ground, trail, flags, survey finds, Ingenuity scout flights, Gusev landmarks
@@ -527,9 +531,9 @@ function syncPowerHardware(){
   world.setPanels(outpost.powerStep>=6?outpost.panels:outpost.powerStep>=3?3:0);
   if(world.settlement){
     world.settlement.pack.visible = outpost.powerStep >= 5;
-    world.settlement.cable.visible = outpost.powerStep >= 6 && outpost.baseConnected;
+    world.settlement.cable.visible = false;
     world.settlement.charging.visible=outpost.chargerStep>=2;
-    world.settlement.chargerCable.visible=outpost.chargerStep>=3;
+    world.settlement.chargerCable.visible=false;
   }
 }
 function openWorkbench() {
@@ -542,7 +546,7 @@ function openWorkbench() {
     }).join('');
     return `<h4>${i <= outpost.tier ? '' : '🔒 '}Tier ${i + 1}: ${t.name}</h4><div class="shop">${items}</div>`;
   }).join('');
-  modal({ title: '🔧 Workbench', pause: false, html: `
+  const closeWorkbench=modal({ title: '🔧 Workbench', pause: false, html: `
     ${[1,3].includes(outpost.powerStep)?`<button data-assemble>${outpost.powerStep===1?'Mount photovoltaic modules on their frame':'Fit battery pack and charge controller'}</button><p>These flight-built components arrived with the lander. The crew assembles and connects them on site. <a href="https://www.nasa.gov/lunar-surface-technology/" target="_blank" rel="noopener">NASA surface power research</a></p>`:''}
     ${outpost.baseConnected&&outpost.chargerStep===0?'<button data-charger>Assemble landed rover charger kit</button>':''}
     ${outpost.soilStep===2&&!outpost.upgrades.regolith?'<button data-soil>Fill and seal regolith shielding bags</button>':''}
@@ -550,9 +554,9 @@ function openWorkbench() {
     <p class="source">Your base is a <b>${TIERS[outpost.tier].name}</b>. Science sent to Earth: <b>${outpost.scienceSent}</b>.</p>${byTier}`,
     choices: [{ label: 'Done', primary: true }] });
   const step = outpost.powerStep, box=$('#modal .modal-box');
-  box.querySelector('[data-charger]')?.addEventListener('click',()=>{outpost.chargerStep=1;syncPowerHardware();saveGame();openWorkbench();});
+  box.querySelector('[data-charger]')?.addEventListener('click',()=>{closeWorkbench();construction.begin('charger');});
   box.querySelector('[data-soil]')?.addEventListener('click',()=>{outpost.soilStep=3;saveGame();openWorkbench();});
-  $('#modal [data-assemble]')?.addEventListener('click', () => { advancePower(step); openWorkbench(); });
+  $('#modal [data-assemble]')?.addEventListener('click', () => { closeWorkbench();construction.begin(step===1?'array':'battery'); });
   $('#modal .modal-box').querySelectorAll('[data-build]').forEach(b => b.onclick = () => {
     const key = b.dataset.build;
     if (outpost.buy(key)) {
@@ -783,7 +787,7 @@ function openBuild() {
 
 // ---------------- events from the simulation ----------------
 // Mission Control's portrait + an event picture, when the team has added them (assets/art/)
-const eventArt = (type, alt) => speakerHTML('mission-control', 'Mission Control') + artHTML('event-' + type, alt, 'event-art');
+const eventArt = (type, alt) => zhetelaPortraitHTML() + artHTML('event-' + type, alt, 'event-art');
 
 function handle(ev) {
   switch (ev.type) {
@@ -844,7 +848,7 @@ function handle(ev) {
 
 function collect(n) {
   if(n.type==='mission-work')return performMissionWork(n.task);
-  if(n.type==='power-site') return advancePower(n.step);
+  if(n.type==='power-site') return zhetela('Aim at a highlighted placement slot or cable socket and press E / Use.');
   if (n.type === 'lookout') return world.lookouts?.use(n.i);
   if (n.type === 'find') return world.mapState?.collect(n.id);
   if (n.type === 'scout') return world.mapState?.openScout();
@@ -907,7 +911,7 @@ function endMission() {
     radiation: `Your radiation badge reached NASA's ${F.careerLimit.value} mSv limit, so the crew had to go home. Try more shielding, or hiding in the shelter during solar storms.`,
   }[o.why];
   modal({ title: o.win ? '🏆 Mission complete!' : '🚀 Mission over', html: `
-    <p>${why}</p>
+    ${zhetelaPortraitHTML()}<p>${why}</p>${firstMissionReport(outpost,colony.s).filter(m=>m.done).map(m=>`<p>✓ ${m.title}: ${m.lesson}</p>`).join('')}
     <p>Sols survived: <b>${outpost.sol}</b> · Science sent to Earth: <b>${outpost.scienceSent}</b> · Radiation: <b>${outpost.dose.toFixed(0)} mSv</b> · Score: <b>${outpost.score()}</b></p>
     ${factHTML(F.roundTrip)}
     <h4>📒 You collected ${logbook.size} real NASA fact cards. Quick quiz for your badge:</h4>
@@ -928,7 +932,9 @@ function endMission() {
 function pressKey(code) {
   if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
+  if (code === 'KeyR') { construction?.cancel(); return; }
   if (code === 'KeyE') {
+    if(construction?.use()) return;
     if (inside) { const s = room.nearest(); if (s) stationAction(s); }
     else { const n = world.nearest(); if (n) collect(n); else if (colony.tool === 'builder' && !world.driving) openBuild(); }
   }
@@ -962,6 +968,7 @@ $('#view').addEventListener('pointermove', e => {
 document.addEventListener('pointerlockchange',()=>{if(world)world.aimPoint=null;});
 $('#view').addEventListener('click', () => {
   if (lastPointer==='touch')return;
+  if(state.phase==='mars'&&!isModalOpen()&&construction?.use()){captureMouse();return;}
   if(state.phase==='mars' && !inside && !world.driving && !isModalOpen()){
     const target=world.nearest();if(target?.type==='panels')collect(target);else if(target?.type==='ore')mine(target.deposit);
   }
@@ -1152,6 +1159,7 @@ function drawHUD() {
   if(world.driving&&outpost.chargerStep>=3&&world.settlement){
     if(world.chargingStatus?.inBay)hint=`Charging bay · ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus.status} · E / Use to exit`;
   }
+  if(construction?.hint&&!isModalOpen())hint=construction.hint;
   hint = noEmoji(hint);
   if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
   else hintEl.classList.add('gone');
@@ -1180,7 +1188,7 @@ devConsole({
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
 setPatchContext(() => ({ sol: outpost?.sol }));
 setSoundGate(() => !isMuted());
@@ -1250,6 +1258,7 @@ renderer.setAnimationLoop(() => {
     }
     if (inside && room === ghRoom) ghRoom.draw(colony.s.base, GREENHOUSE.tank, outpost.today.total*outpost.split.life>=1);
     if (!inside) world.update(dt, !isModalOpen());
+    construction?.update(inside,room,isModalOpen()||world.cinematic);
     if(!isModalOpen())updateMissionPower(dt);
     if (!paused && !outpost.over) {
       const step = dt * state.speed;
@@ -1361,7 +1370,7 @@ $("#moon-mission").onclick=()=>{saveGame();location.assign(new URL("moon/",locat
 let missionCard,missionKey='',missionCollapseAt=0;
 function setupMissionHud(){
   if(missionCard)return;
-  missionCard=document.createElement('details');missionCard.id='mission-objective';missionCard.innerHTML='<summary></summary><p></p><button type="button">Quest log (T)</button>';
+  missionCard=document.createElement('details');missionCard.id='mission-objective';missionCard.innerHTML='<summary></summary><small class="mission-progress"></small><p></p><button type="button">Quest log (T)</button>';
   $('#hud').appendChild(missionCard);missionCard.querySelector('button').onclick=openMissionLog;
   const button=document.createElement('button');button.textContent='Quest log (T)';button.onclick=openMissionLog;$('#map-btn').after(button);
 }
@@ -1369,7 +1378,8 @@ function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
   if(['workbench','greenhouse','locker','water'].includes(kind))return null; // The objective is the indoor station, never the stairs.
   if(kind==='ice'||kind==='seed-pod')return world.pickups.filter(p=>kind==='ice'?p.kind==='ice':p.kind==='pod'&&p.cargo?.seeds).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
-  if(kind==='power')return m.powerSite;
+  if(construction?.wire){const destination={'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[construction.wire];const socket=construction.sockets.find(p=>p.userData.id===destination);if(socket)return socket.position;}
+  if(kind==='power')return {x:47,z:-17};
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
   if(kind==='shelter')return m.shelterSite;if(kind==='soil')return m.soilSite;
@@ -1379,7 +1389,8 @@ function missionTarget(kind){
 }
 function performMissionWork(task){
   if(marsObjective(outpost,colony.s).id!==task.id)return;
-  if(task.id==='base'){outpost.baseConnected=true;outpost.today=outpost.forecast();}
+  if(task.id==='charger-1'){zhetela('Aim at the highlighted charging-post slot in the parking bay and press E / Use.');return;}
+  if(task.id==='base'||task.id==='charger-2'){zhetela('Select the output socket, then walk to the matching input socket and press E / Use.');return;}
   else if(task.id.startsWith('charger-'))outpost.chargerStep++;
   else if(task.id==='soil-0')outpost.soilStep=1;
   else if(task.id==='soil-1')outpost.soilStep=2;
@@ -1403,8 +1414,11 @@ function drawMissionHud(){
   const q=colony.s.farmQuest??={};
   if(!q.seedsCollected){const seedOrder=pending.find(p=>p.cargo?.seeds);if(seedOrder)q.seedArrival=seedOrder.sol;q.seedsLanded=world.pickups.some(p=>p.kind==='pod'&&p.cargo?.seeds);}
   const task=marsObjective(outpost,colony.s);
+  const milestones=firstMissionReport(outpost,colony.s);
+  missionCard.querySelector('.mission-progress').textContent=`First base: ${milestones.filter(m=>m.done).length}/4 milestones · E / Use to interact`;
+  if(milestones.every(m=>m.done)&&!outpost.firstBaseDebrief){outpost.firstBaseDebrief=true;saveGame();zhetela('First base mission complete! Open the quest log for your learning debrief. The rover, shielding and relay are your next projects.',true);}
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');
-  if(task.id+'|'+(task.step||'')!==missionKey){missionKey=task.id+'|'+(task.step||'');missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;if(task.step){const next=document.createElement('small');next.className='mission-next-step';next.textContent=task.step;missionCard.querySelector('summary').append(next);}missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
+  if(task.id+'|'+(task.step||'')!==missionKey){missionKey=task.id+'|'+(task.step||'');zhetela(task.step||task.detail);missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;if(task.step){const next=document.createElement('small');next.className='mission-next-step';next.textContent=task.step;missionCard.querySelector('summary').append(next);}missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
   if(missionCollapseAt&&performance.now()>missionCollapseAt){missionCard.open=false;missionCollapseAt=0;}
   if(!interior.workbenchMarker){
     const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.16),new THREE.MeshBasicMaterial({color:'#c995ff',depthTest:false,depthWrite:false}));
@@ -1425,7 +1439,7 @@ function researchMenu(){openResearch(outpost,colony,world,saveGame);}
 function openMissionLog(){
   if(!outpost||!colony)return;
   const task=marsObjective(outpost,colony.s);
-  modal({title:'Mission objectives',choices:[{label:'Food cultures & relay network',onPick:researchMenu}],html:`<h4>${task.title}</h4><p>${task.detail}</p><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
+  modal({title:'Mission objectives',choices:[{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
 }
 function updateMissionPower(dt){
   if(!outpost||!world.settlement)return;

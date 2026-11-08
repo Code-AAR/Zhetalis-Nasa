@@ -1,3 +1,4 @@
+import { zhetela } from '../../src/zhetela.js';
 // Moon mission: boot, menu, Orion flyby, lander descent, surface play, cabin, saving and the HUD.
 // Shared (read-only) modules: src/settings.js (Settings + Information wiki), src/ui.js (modal),
 // src/ambient-music.js (music), src/audio-preferences.js (levels), src/suit.js + src/nasamodels.js (3D models).
@@ -524,6 +525,7 @@ function updateObjective() {
     $('#obj-detail').textContent = o.detail;
     // A new objective shows its full explanation for a few seconds, then folds down to its title.
     if (newTask || first) {
+      zhetela(o.detail);
       setObjectiveOpen(true); objUntil = state.t + (innerWidth<600?4:9);   // game seconds: pausing or Settings does not eat the reading time
       const card = $('#task'); card.classList.remove('fresh'); void card.offsetWidth; if (!reducedMotion.matches) card.classList.add('fresh');
     }

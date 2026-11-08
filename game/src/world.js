@@ -497,7 +497,7 @@ export class World {
     this.placeViewSlot();
     this.vel = new THREE.Vector3(); this.onGround = true; this.pitch = 0.25;
     this.move = new THREE.Vector3(); this.gait = 0; this.swing = 0; this.squash = 0; this.lean = { x: 0, z: 0 };   // animation state
-    this.firstPerson = false; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
+    this.firstPerson = true; this.lookPitch = 0;   // V switches view; lookPitch is up/down in first person
     this.keys = {}; this.time = 0; this.panelsDirty = false;
     this.setTime(this.phase);
   }

@@ -16,90 +16,94 @@
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=surface-missions-61">
-  <link rel="stylesheet" href="menu.css?v=surface-missions-61">
-  <link rel="stylesheet" href="loading-screen.css?v=surface-missions-61">
-  <link rel="stylesheet" href="phone.css?v=surface-missions-61">
-  <link rel="stylesheet" href="briefing.css?v=surface-missions-61">
-  <link rel="stylesheet" href="mobile.css?v=surface-missions-61">
-  <link rel="stylesheet" href="settings.css?v=surface-missions-61">
+  <link rel="stylesheet" href="style.css?v=surface-missions-62">
+  <link rel="stylesheet" href="menu.css?v=surface-missions-62">
+  <link rel="stylesheet" href="loading-screen.css?v=surface-missions-62">
+  <link rel="stylesheet" href="phone.css?v=surface-missions-62">
+  <link rel="stylesheet" href="briefing.css?v=surface-missions-62">
+  <link rel="stylesheet" href="mobile.css?v=surface-missions-62">
+  <link rel="stylesheet" href="settings.css?v=surface-missions-62">
   <script type="importmap">{
   "imports": {
-    "./src/settings.js": "./src/settings.js?v=surface-missions-61",
-    "./src/audio-preferences.js": "./src/audio-preferences.js?v=surface-missions-61",
-    "./src/ambient-music.js": "./src/ambient-music.js?v=surface-missions-61",
-    "./src/chunk-plan.js": "./src/chunk-plan.js?v=surface-missions-61",
-    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=surface-missions-61",
-    "./src/surface-detail.js": "./src/surface-detail.js?v=surface-missions-61",
-    "./src/mars-objectives.js": "./src/mars-objectives.js?v=surface-missions-61",
+    "./src/construction.js": "./src/construction.js?v=surface-missions-62",
+    "./src/construction-state.js": "./src/construction-state.js?v=surface-missions-62",
+    "./src/zhetela.js": "./src/zhetela.js?v=surface-missions-62",
+    "./src/settings.js": "./src/settings.js?v=surface-missions-62",
+    "./src/audio-preferences.js": "./src/audio-preferences.js?v=surface-missions-62",
+    "./src/ambient-music.js": "./src/ambient-music.js?v=surface-missions-62",
+    "./src/chunk-plan.js": "./src/chunk-plan.js?v=surface-missions-62",
+    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=surface-missions-62",
+    "./src/surface-detail.js": "./src/surface-detail.js?v=surface-missions-62",
+    "./src/mars-objectives.js": "./src/mars-objectives.js?v=surface-missions-62",
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "./src/access.js": "./src/access.js?v=surface-missions-61",
-    "./src/arrival-globe.js": "./src/arrival-globe.js?v=surface-missions-61",
-    "./src/arrival.js": "./src/arrival.js?v=surface-missions-61",
-    "./src/art.js": "./src/art.js?v=surface-missions-61",
-    "./src/briefing.js": "./src/briefing.js?v=surface-missions-61",
-    "./src/cable-crossings.js": "./src/cable-crossings.js?v=surface-missions-61",
-    "./src/capsule.js": "./src/capsule.js?v=surface-missions-61",
-    "./src/chart.js": "./src/chart.js?v=surface-missions-61",
-    "./src/colony.js": "./src/colony.js?v=surface-missions-61",
-    "./src/crew-interior.js": "./src/crew-interior.js?v=surface-missions-61",
-    "./src/cutscenes.js": "./src/cutscenes.js?v=surface-missions-61",
-    "./src/devconsole.js": "./src/devconsole.js?v=surface-missions-61",
-    "./src/edl.js": "./src/edl.js?v=surface-missions-61",
-    "./src/exploration-layout.js": "./src/exploration-layout.js?v=surface-missions-61",
-    "./src/exterior-view.js": "./src/exterior-view.js?v=surface-missions-61",
-    "./src/fieldmap.js": "./src/fieldmap.js?v=surface-missions-61",
-    "./src/globe.js": "./src/globe.js?v=surface-missions-61",
-    "./src/greenhouse.js": "./src/greenhouse.js?v=surface-missions-61",
-    "./src/interior.js": "./src/interior.js?v=surface-missions-61",
-    "./src/journey-visual.js": "./src/journey-visual.js?v=surface-missions-61",
-    "./src/launch.js": "./src/launch.js?v=surface-missions-61",
-    "./src/layout.js": "./src/layout.js?v=surface-missions-61",
-    "./src/loading-screen.js": "./src/loading-screen.js?v=surface-missions-61",
-    "./src/lookouts.js": "./src/lookouts.js?v=surface-missions-61",
-    "./src/asset-loading.js": "./src/asset-loading.js?v=surface-missions-61",
-    "./src/base-loading.js": "./src/base-loading.js?v=surface-missions-61",
-    "./src/main.js": "./src/main.js?v=surface-missions-61",
-    "./src/mapstate.js": "./src/mapstate.js?v=surface-missions-61",
-    "./src/menu.js": "./src/menu.js?v=surface-missions-61",
-    "./src/minimap.js": "./src/minimap.js?v=surface-missions-61",
-    "./src/missionpath.js": "./src/missionpath.js?v=surface-missions-61",
-    "./src/mist.js": "./src/mist.js?v=surface-missions-61",
-    "./src/models.js": "./src/models.js?v=surface-missions-61",
-    "./src/nasaimages.js": "./src/nasaimages.js?v=surface-missions-61",
-    "./src/nasamodels.js": "./src/nasamodels.js?v=surface-missions-61",
-    "./src/panel-contact.js": "./src/panel-contact.js?v=surface-missions-61",
-    "./src/patch-art.js": "./src/patch-art.js?v=surface-missions-61",
-    "./src/patch-fx.js": "./src/patch-fx.js?v=surface-missions-61",
-    "./src/patches.js": "./src/patches.js?v=surface-missions-61",
-    "./src/pedia.js": "./src/pedia.js?v=surface-missions-61",
-    "./src/phone-layout.js": "./src/phone-layout.js?v=surface-missions-61",
-    "./src/quiz.js": "./src/quiz.js?v=surface-missions-61",
-    "./src/reveal.js": "./src/reveal.js?v=surface-missions-61",
-    "./src/rock-contact.js": "./src/rock-contact.js?v=surface-missions-61",
-    "./src/rover-terrain.js": "./src/rover-terrain.js?v=surface-missions-61",
-    "./src/rover.js": "./src/rover.js?v=surface-missions-61",
-    "./src/scancine.js": "./src/scancine.js?v=surface-missions-61",
-    "./src/settlement.js": "./src/settlement.js?v=surface-missions-61",
-    "./src/surface-research.js": "./src/surface-research.js?v=surface-missions-61",
-    "./src/regolith-finish.js": "./src/regolith-finish.js?v=surface-missions-61",
-    "./src/rover-charging.js": "./src/rover-charging.js?v=surface-missions-61",
-    "./src/sim.js": "./src/sim.js?v=surface-missions-61",
-    "./src/sky.js": "./src/sky.js?v=surface-missions-61",
-    "./src/sound.js": "./src/sound.js?v=surface-missions-61",
-    "./src/spaceweather.js": "./src/spaceweather.js?v=surface-missions-61",
-    "./src/starship-landing.js": "./src/starship-landing.js?v=surface-missions-61",
-    "./src/suit.js": "./src/suit.js?v=surface-missions-61",
-    "./src/survival.js": "./src/survival.js?v=surface-missions-61",
-    "./src/touch.js": "./src/touch.js?v=surface-missions-61",
-    "./src/ui.js": "./src/ui.js?v=surface-missions-61",
-    "./src/measured-terrain.js": "./src/measured-terrain.js?v=surface-missions-61",
-    "./src/world.js": "./src/world.js?v=surface-missions-61",
-    "./src/device-profile.js": "./src/device-profile.js?v=surface-missions-61",
-    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=surface-missions-61"
+    "./src/access.js": "./src/access.js?v=surface-missions-62",
+    "./src/arrival-globe.js": "./src/arrival-globe.js?v=surface-missions-62",
+    "./src/arrival.js": "./src/arrival.js?v=surface-missions-62",
+    "./src/art.js": "./src/art.js?v=surface-missions-62",
+    "./src/briefing.js": "./src/briefing.js?v=surface-missions-62",
+    "./src/cable-crossings.js": "./src/cable-crossings.js?v=surface-missions-62",
+    "./src/capsule.js": "./src/capsule.js?v=surface-missions-62",
+    "./src/chart.js": "./src/chart.js?v=surface-missions-62",
+    "./src/colony.js": "./src/colony.js?v=surface-missions-62",
+    "./src/crew-interior.js": "./src/crew-interior.js?v=surface-missions-62",
+    "./src/cutscenes.js": "./src/cutscenes.js?v=surface-missions-62",
+    "./src/devconsole.js": "./src/devconsole.js?v=surface-missions-62",
+    "./src/edl.js": "./src/edl.js?v=surface-missions-62",
+    "./src/exploration-layout.js": "./src/exploration-layout.js?v=surface-missions-62",
+    "./src/exterior-view.js": "./src/exterior-view.js?v=surface-missions-62",
+    "./src/fieldmap.js": "./src/fieldmap.js?v=surface-missions-62",
+    "./src/globe.js": "./src/globe.js?v=surface-missions-62",
+    "./src/greenhouse.js": "./src/greenhouse.js?v=surface-missions-62",
+    "./src/interior.js": "./src/interior.js?v=surface-missions-62",
+    "./src/journey-visual.js": "./src/journey-visual.js?v=surface-missions-62",
+    "./src/launch.js": "./src/launch.js?v=surface-missions-62",
+    "./src/layout.js": "./src/layout.js?v=surface-missions-62",
+    "./src/loading-screen.js": "./src/loading-screen.js?v=surface-missions-62",
+    "./src/lookouts.js": "./src/lookouts.js?v=surface-missions-62",
+    "./src/asset-loading.js": "./src/asset-loading.js?v=surface-missions-62",
+    "./src/base-loading.js": "./src/base-loading.js?v=surface-missions-62",
+    "./src/main.js": "./src/main.js?v=surface-missions-62",
+    "./src/mapstate.js": "./src/mapstate.js?v=surface-missions-62",
+    "./src/menu.js": "./src/menu.js?v=surface-missions-62",
+    "./src/minimap.js": "./src/minimap.js?v=surface-missions-62",
+    "./src/missionpath.js": "./src/missionpath.js?v=surface-missions-62",
+    "./src/mist.js": "./src/mist.js?v=surface-missions-62",
+    "./src/models.js": "./src/models.js?v=surface-missions-62",
+    "./src/nasaimages.js": "./src/nasaimages.js?v=surface-missions-62",
+    "./src/nasamodels.js": "./src/nasamodels.js?v=surface-missions-62",
+    "./src/panel-contact.js": "./src/panel-contact.js?v=surface-missions-62",
+    "./src/patch-art.js": "./src/patch-art.js?v=surface-missions-62",
+    "./src/patch-fx.js": "./src/patch-fx.js?v=surface-missions-62",
+    "./src/patches.js": "./src/patches.js?v=surface-missions-62",
+    "./src/pedia.js": "./src/pedia.js?v=surface-missions-62",
+    "./src/phone-layout.js": "./src/phone-layout.js?v=surface-missions-62",
+    "./src/quiz.js": "./src/quiz.js?v=surface-missions-62",
+    "./src/reveal.js": "./src/reveal.js?v=surface-missions-62",
+    "./src/rock-contact.js": "./src/rock-contact.js?v=surface-missions-62",
+    "./src/rover-terrain.js": "./src/rover-terrain.js?v=surface-missions-62",
+    "./src/rover.js": "./src/rover.js?v=surface-missions-62",
+    "./src/scancine.js": "./src/scancine.js?v=surface-missions-62",
+    "./src/settlement.js": "./src/settlement.js?v=surface-missions-62",
+    "./src/surface-research.js": "./src/surface-research.js?v=surface-missions-62",
+    "./src/regolith-finish.js": "./src/regolith-finish.js?v=surface-missions-62",
+    "./src/rover-charging.js": "./src/rover-charging.js?v=surface-missions-62",
+    "./src/sim.js": "./src/sim.js?v=surface-missions-62",
+    "./src/sky.js": "./src/sky.js?v=surface-missions-62",
+    "./src/sound.js": "./src/sound.js?v=surface-missions-62",
+    "./src/spaceweather.js": "./src/spaceweather.js?v=surface-missions-62",
+    "./src/starship-landing.js": "./src/starship-landing.js?v=surface-missions-62",
+    "./src/suit.js": "./src/suit.js?v=surface-missions-62",
+    "./src/survival.js": "./src/survival.js?v=surface-missions-62",
+    "./src/touch.js": "./src/touch.js?v=surface-missions-62",
+    "./src/ui.js": "./src/ui.js?v=surface-missions-62",
+    "./src/measured-terrain.js": "./src/measured-terrain.js?v=surface-missions-62",
+    "./src/world.js": "./src/world.js?v=surface-missions-62",
+    "./src/device-profile.js": "./src/device-profile.js?v=surface-missions-62",
+    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=surface-missions-62"
   }
 }</script>
+<link rel="stylesheet" href="construction.css?v=surface-missions-62">
 </head>
 <body>
   <canvas id="view"></canvas>
@@ -206,8 +210,8 @@
   <div id="toast"></div>
   <div id="loading">Loading Mars…</div>
 
-  <script type="module" src="src/loading-screen.js?v=surface-missions-61"></script>
-  <script type="module" src="src/main.js?v=surface-missions-61"></script>
-  <script type="module" src="src/phone-layout.js?v=surface-missions-61"></script>
+  <script type="module" src="src/loading-screen.js?v=surface-missions-62"></script>
+  <script type="module" src="src/main.js?v=surface-missions-62"></script>
+  <script type="module" src="src/phone-layout.js?v=surface-missions-62"></script>
 </body>
 </html>

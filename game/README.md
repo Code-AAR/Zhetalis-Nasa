@@ -10,6 +10,16 @@ The launcher serves only this folder at `http://127.0.0.1:8777/`.
 The new `Downloads/UNITY/game` browser build is merged into this game. See
 [INTEGRATION.md](INTEGRATION.md) for features, retained fixes and validation.
 
+## Hands-on first base mission
+
+New Mars missions begin in first person (V switches view). Collect the landed kits at the locker, open the workbench and fit the three parts into their matching highlighted slots in order. At the remote power field, equip the pickaxe (1), clear four marked rocks, then place the three panels. Assemble and place the battery, select Solar OUT then Battery IN, and connect Battery OUT to Base IN. Use E, click, or touch Use; R or the Drop button releases a held part/cable without losing fitted parts.
+
+Most ordinary surface rocks can be cleared with several strikes; the largest boulders remain obstacles. Only identified mineral deposits yield samples. Fitted parts, site clearance and removed rocks persist in saves. Previously commissioned bases retain their progress. The charger has its own assembly, placement and socket connection steps after the first food mission.
+
+Zhetela uses the team's original sprite artwork for short, dismissible guidance on Mars and Moon, respecting reduced-motion preferences. Mars's first-base milestones cover power, habitat connection, processed water and a prepared meal. The quest log contains the learning debrief. Assembly, rock breaking and mission times are simplified training interactions, not engineering procedures. Moon receives the shared guide; the new physical construction system is currently Mars-only.
+
+Validation: construction state/circuit/save tests, Mars objectives, first-meal delivery, rover charging and Moon quest regressions pass. Browser checks exercised assembly, site clearance, placement, all three cables, ordinary-rock ray picking/removal and reload persistence. Phone layout and 44 px dismiss controls were checked at 390 x 844; physical-phone play testing is still needed.
+
 ## Graphics detail
 
 Use **Settings → Display & world** on the title screen or in the mission menu. **Low memory** reduces terrain detail, procedural texture size, dust particles and pixel resolution, and disables shadows and antialiasing. Auto picks a device-appropriate budget; Balanced and High offer more detail.
