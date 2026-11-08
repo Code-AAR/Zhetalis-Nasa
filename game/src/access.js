@@ -36,21 +36,49 @@ export function installHabitatAccess(world, model, layout) {
     hatch.position.set(c.x,height,doorZ+.12);
     hatch.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
     group.add(hatch);entrance.handle=hatch.userData.handle;
-    // A sealed collar bridges the hatch to the curved habitat shell.
-    const ray=new THREE.Raycaster(new THREE.Vector3(c.x,height+1.5,doorZ+1),new THREE.Vector3(0,0,-1));
-    const hit=ray.intersectObject(model,true)[0];
-    const depth=Math.max(.5,Math.min(4,doorZ-(hit?.point.z??doorZ-1)+.25));
-    const collarZ=doorZ+.05-depth/2;
-    for(const side of [-1,1])addBox(.2,2.94,depth,c.x+side*1.475,height+1.47,collarZ,shell);
-    addBox(3.15,.18,depth,c.x,height+2.85,collarZ,shell);
-    addBox(3.15,.18,depth,c.x,height-.02,collarZ,shell);
+    // Fit the entire rounded perimeter to the imported curved shell, rather
+    // than extending a rectangular box by one centre-ray measurement.
+    model.updateWorldMatrix(true,true);
+    const perimeter=[];
+    const halfW=1.305, halfH=1.485, radius=.35, centreY=height+1.35;
+    for(let corner=0;corner<4;corner++){
+      const angle=corner*Math.PI/2;
+      const cx=(corner===0||corner===3)?halfW-radius:-halfW+radius;
+      const cy=corner<2?halfH-radius:-halfH+radius;
+      for(let j=0;j<=12;j++){
+        const t=angle+j*Math.PI/24;
+        perimeter.push(new THREE.Vector2(cx+Math.cos(t)*radius,cy+Math.sin(t)*radius));
+      }
+    }
+    const front=[],rear=[],vertices=[];
+    const ray=new THREE.Raycaster();
+    for(const p of perimeter){
+      const x=c.x+p.x*1.08,y=centreY+p.y*(p.y>0?1.55:1.04);
+      ray.set(new THREE.Vector3(x,y,doorZ+1),new THREE.Vector3(0,0,-1));
+      const hit=ray.intersectObject(model,true).find(h=>h.distance<6);
+      front.push(new THREE.Vector3(c.x+p.x,centreY+p.y,doorZ+.08));
+      rear.push(new THREE.Vector3(x,y,(hit?.point.z??doorZ-1.5)-.16));
+    }
+    for(let i=0;i<front.length;i++){
+      const j=(i+1)%front.length;
+      for(const v of [front[i],rear[i],front[j],front[j],rear[i],rear[j]])vertices.push(v.x,v.y,v.z);
+    }
+    const collarGeo=new THREE.BufferGeometry();
+    collarGeo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    collarGeo.computeVertexNormals();
+    const collar=new THREE.Mesh(collarGeo,shell.clone());collar.material.side=THREE.DoubleSide;
+    collar.name='Fitted airlock collar';collar.castShadow=true;collar.receiveShadow=true;group.add(collar);
+    // Continuous rubber gasket at the wall junction hides the construction seam.
+    const gasketPath=new THREE.CatmullRomCurve3(rear.map(p=>p.clone().add(new THREE.Vector3(0,0,.13))),true,'centripetal');
+    const gasket=new THREE.Mesh(new THREE.TubeGeometry(gasketPath,104,.045,8,true),metal);
+    group.add(gasket);
     // The ramp bypasses the habitat cylinder, but must never bypass its hatch.
     layout.colliders.push({x:c.x,z:doorZ+.26,r:1.65,halfX:1.575,halfZ:.28,
       minY:height-.1,maxY:height+2.94,airlock:true,object:hatch});
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#26353a';ctx.fillRect(0,0,512,96);ctx.fillStyle='#c9f5db';ctx.font='30px system-ui';ctx.textAlign='center';ctx.fillText(`AIRLOCK ${String(index+1).padStart(2,'0')} · E`,256,61);
-    const sign=new THREE.Mesh(new THREE.PlaneGeometry(2,.375),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));
-    sign.position.set(c.x,height+3.3,doorZ+.16);group.add(sign);
+    const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.253),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));
+    sign.position.set(c.x,height+2.66,doorZ+.32);group.add(sign);
     return entrance;
   });
   for(let i=0;i<layout.moduleColliders.length-1;i++){

@@ -16,80 +16,80 @@
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="menu.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="loading-screen.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="phone.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="briefing.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="mobile.css?v=mola-terrain-49">
-  <link rel="stylesheet" href="settings.css?v=mola-terrain-49">
+  <link rel="stylesheet" href="style.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="menu.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="loading-screen.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="phone.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="briefing.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="mobile.css?v=fitted-airlock-50">
+  <link rel="stylesheet" href="settings.css?v=fitted-airlock-50">
   <script type="importmap">{
   "imports": {
-    "./src/settings.js": "./src/settings.js?v=mola-terrain-49",
-    "./src/audio-preferences.js": "./src/audio-preferences.js?v=mola-terrain-49",
-    "./src/ambient-music.js": "./src/ambient-music.js?v=mola-terrain-49",
-    "./src/chunk-plan.js": "./src/chunk-plan.js?v=mola-terrain-49",
-    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=mola-terrain-49",
-    "./src/surface-detail.js": "./src/surface-detail.js?v=mola-terrain-49",
+    "./src/settings.js": "./src/settings.js?v=fitted-airlock-50",
+    "./src/audio-preferences.js": "./src/audio-preferences.js?v=fitted-airlock-50",
+    "./src/ambient-music.js": "./src/ambient-music.js?v=fitted-airlock-50",
+    "./src/chunk-plan.js": "./src/chunk-plan.js?v=fitted-airlock-50",
+    "./src/terrain-chunks.js": "./src/terrain-chunks.js?v=fitted-airlock-50",
+    "./src/surface-detail.js": "./src/surface-detail.js?v=fitted-airlock-50",
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "./src/access.js": "./src/access.js?v=mola-terrain-49",
-    "./src/arrival-globe.js": "./src/arrival-globe.js?v=mola-terrain-49",
-    "./src/arrival.js": "./src/arrival.js?v=mola-terrain-49",
-    "./src/art.js": "./src/art.js?v=mola-terrain-49",
-    "./src/briefing.js": "./src/briefing.js?v=mola-terrain-49",
-    "./src/cable-crossings.js": "./src/cable-crossings.js?v=mola-terrain-49",
-    "./src/capsule.js": "./src/capsule.js?v=mola-terrain-49",
-    "./src/chart.js": "./src/chart.js?v=mola-terrain-49",
-    "./src/colony.js": "./src/colony.js?v=mola-terrain-49",
-    "./src/crew-interior.js": "./src/crew-interior.js?v=mola-terrain-49",
-    "./src/cutscenes.js": "./src/cutscenes.js?v=mola-terrain-49",
-    "./src/exploration-layout.js": "./src/exploration-layout.js?v=mola-terrain-49",
-    "./src/exterior-view.js": "./src/exterior-view.js?v=mola-terrain-49",
-    "./src/fieldmap.js": "./src/fieldmap.js?v=mola-terrain-49",
-    "./src/globe.js": "./src/globe.js?v=mola-terrain-49",
-    "./src/greenhouse.js": "./src/greenhouse.js?v=mola-terrain-49",
-    "./src/interior.js": "./src/interior.js?v=mola-terrain-49",
-    "./src/journey-visual.js": "./src/journey-visual.js?v=mola-terrain-49",
-    "./src/launch.js": "./src/launch.js?v=mola-terrain-49",
-    "./src/layout.js": "./src/layout.js?v=mola-terrain-49",
-    "./src/loading-screen.js": "./src/loading-screen.js?v=mola-terrain-49",
-    "./src/lookouts.js": "./src/lookouts.js?v=mola-terrain-49",
-    "./src/main.js": "./src/main.js?v=mola-terrain-49",
-    "./src/mapstate.js": "./src/mapstate.js?v=mola-terrain-49",
-    "./src/menu.js": "./src/menu.js?v=mola-terrain-49",
-    "./src/minimap.js": "./src/minimap.js?v=mola-terrain-49",
-    "./src/missionpath.js": "./src/missionpath.js?v=mola-terrain-49",
-    "./src/mist.js": "./src/mist.js?v=mola-terrain-49",
-    "./src/models.js": "./src/models.js?v=mola-terrain-49",
-    "./src/nasaimages.js": "./src/nasaimages.js?v=mola-terrain-49",
-    "./src/nasamodels.js": "./src/nasamodels.js?v=mola-terrain-49",
-    "./src/panel-contact.js": "./src/panel-contact.js?v=mola-terrain-49",
-    "./src/patch-art.js": "./src/patch-art.js?v=mola-terrain-49",
-    "./src/patch-fx.js": "./src/patch-fx.js?v=mola-terrain-49",
-    "./src/patches.js": "./src/patches.js?v=mola-terrain-49",
-    "./src/pedia.js": "./src/pedia.js?v=mola-terrain-49",
-    "./src/phone-layout.js": "./src/phone-layout.js?v=mola-terrain-49",
-    "./src/quiz.js": "./src/quiz.js?v=mola-terrain-49",
-    "./src/reveal.js": "./src/reveal.js?v=mola-terrain-49",
-    "./src/rock-contact.js": "./src/rock-contact.js?v=mola-terrain-49",
-    "./src/rover-terrain.js": "./src/rover-terrain.js?v=mola-terrain-49",
-    "./src/rover.js": "./src/rover.js?v=mola-terrain-49",
-    "./src/scancine.js": "./src/scancine.js?v=mola-terrain-49",
-    "./src/settlement.js": "./src/settlement.js?v=mola-terrain-49",
-    "./src/sim.js": "./src/sim.js?v=mola-terrain-49",
-    "./src/sky.js": "./src/sky.js?v=mola-terrain-49",
-    "./src/sound.js": "./src/sound.js?v=mola-terrain-49",
-    "./src/spaceweather.js": "./src/spaceweather.js?v=mola-terrain-49",
-    "./src/starship-landing.js": "./src/starship-landing.js?v=mola-terrain-49",
-    "./src/suit.js": "./src/suit.js?v=mola-terrain-49",
-    "./src/survival.js": "./src/survival.js?v=mola-terrain-49",
-    "./src/touch.js": "./src/touch.js?v=mola-terrain-49",
-    "./src/ui.js": "./src/ui.js?v=mola-terrain-49",
-    "./src/measured-terrain.js": "./src/measured-terrain.js?v=mola-terrain-49",
-    "./src/world.js": "./src/world.js?v=mola-terrain-49",
-    "./src/device-profile.js": "./src/device-profile.js?v=mola-terrain-49",
-    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=mola-terrain-49"
+    "./src/access.js": "./src/access.js?v=fitted-airlock-50",
+    "./src/arrival-globe.js": "./src/arrival-globe.js?v=fitted-airlock-50",
+    "./src/arrival.js": "./src/arrival.js?v=fitted-airlock-50",
+    "./src/art.js": "./src/art.js?v=fitted-airlock-50",
+    "./src/briefing.js": "./src/briefing.js?v=fitted-airlock-50",
+    "./src/cable-crossings.js": "./src/cable-crossings.js?v=fitted-airlock-50",
+    "./src/capsule.js": "./src/capsule.js?v=fitted-airlock-50",
+    "./src/chart.js": "./src/chart.js?v=fitted-airlock-50",
+    "./src/colony.js": "./src/colony.js?v=fitted-airlock-50",
+    "./src/crew-interior.js": "./src/crew-interior.js?v=fitted-airlock-50",
+    "./src/cutscenes.js": "./src/cutscenes.js?v=fitted-airlock-50",
+    "./src/exploration-layout.js": "./src/exploration-layout.js?v=fitted-airlock-50",
+    "./src/exterior-view.js": "./src/exterior-view.js?v=fitted-airlock-50",
+    "./src/fieldmap.js": "./src/fieldmap.js?v=fitted-airlock-50",
+    "./src/globe.js": "./src/globe.js?v=fitted-airlock-50",
+    "./src/greenhouse.js": "./src/greenhouse.js?v=fitted-airlock-50",
+    "./src/interior.js": "./src/interior.js?v=fitted-airlock-50",
+    "./src/journey-visual.js": "./src/journey-visual.js?v=fitted-airlock-50",
+    "./src/launch.js": "./src/launch.js?v=fitted-airlock-50",
+    "./src/layout.js": "./src/layout.js?v=fitted-airlock-50",
+    "./src/loading-screen.js": "./src/loading-screen.js?v=fitted-airlock-50",
+    "./src/lookouts.js": "./src/lookouts.js?v=fitted-airlock-50",
+    "./src/main.js": "./src/main.js?v=fitted-airlock-50",
+    "./src/mapstate.js": "./src/mapstate.js?v=fitted-airlock-50",
+    "./src/menu.js": "./src/menu.js?v=fitted-airlock-50",
+    "./src/minimap.js": "./src/minimap.js?v=fitted-airlock-50",
+    "./src/missionpath.js": "./src/missionpath.js?v=fitted-airlock-50",
+    "./src/mist.js": "./src/mist.js?v=fitted-airlock-50",
+    "./src/models.js": "./src/models.js?v=fitted-airlock-50",
+    "./src/nasaimages.js": "./src/nasaimages.js?v=fitted-airlock-50",
+    "./src/nasamodels.js": "./src/nasamodels.js?v=fitted-airlock-50",
+    "./src/panel-contact.js": "./src/panel-contact.js?v=fitted-airlock-50",
+    "./src/patch-art.js": "./src/patch-art.js?v=fitted-airlock-50",
+    "./src/patch-fx.js": "./src/patch-fx.js?v=fitted-airlock-50",
+    "./src/patches.js": "./src/patches.js?v=fitted-airlock-50",
+    "./src/pedia.js": "./src/pedia.js?v=fitted-airlock-50",
+    "./src/phone-layout.js": "./src/phone-layout.js?v=fitted-airlock-50",
+    "./src/quiz.js": "./src/quiz.js?v=fitted-airlock-50",
+    "./src/reveal.js": "./src/reveal.js?v=fitted-airlock-50",
+    "./src/rock-contact.js": "./src/rock-contact.js?v=fitted-airlock-50",
+    "./src/rover-terrain.js": "./src/rover-terrain.js?v=fitted-airlock-50",
+    "./src/rover.js": "./src/rover.js?v=fitted-airlock-50",
+    "./src/scancine.js": "./src/scancine.js?v=fitted-airlock-50",
+    "./src/settlement.js": "./src/settlement.js?v=fitted-airlock-50",
+    "./src/sim.js": "./src/sim.js?v=fitted-airlock-50",
+    "./src/sky.js": "./src/sky.js?v=fitted-airlock-50",
+    "./src/sound.js": "./src/sound.js?v=fitted-airlock-50",
+    "./src/spaceweather.js": "./src/spaceweather.js?v=fitted-airlock-50",
+    "./src/starship-landing.js": "./src/starship-landing.js?v=fitted-airlock-50",
+    "./src/suit.js": "./src/suit.js?v=fitted-airlock-50",
+    "./src/survival.js": "./src/survival.js?v=fitted-airlock-50",
+    "./src/touch.js": "./src/touch.js?v=fitted-airlock-50",
+    "./src/ui.js": "./src/ui.js?v=fitted-airlock-50",
+    "./src/measured-terrain.js": "./src/measured-terrain.js?v=fitted-airlock-50",
+    "./src/world.js": "./src/world.js?v=fitted-airlock-50",
+    "./src/device-profile.js": "./src/device-profile.js?v=fitted-airlock-50",
+    "./src/pressure-hatch.js": "./src/pressure-hatch.js?v=fitted-airlock-50"
   }
 }</script>
 </head>
@@ -197,8 +197,8 @@
   <div id="toast"></div>
   <div id="loading">Loading Mars…</div>
 
-  <script type="module" src="src/loading-screen.js?v=mola-terrain-49"></script>
-  <script type="module" src="src/main.js?v=mola-terrain-49"></script>
-  <script type="module" src="src/phone-layout.js?v=mola-terrain-49"></script>
+  <script type="module" src="src/loading-screen.js?v=fitted-airlock-50"></script>
+  <script type="module" src="src/main.js?v=fitted-airlock-50"></script>
+  <script type="module" src="src/phone-layout.js?v=fitted-airlock-50"></script>
 </body>
 </html>
