@@ -1,3 +1,4 @@
+import { loadAssetWithRetry } from './asset-loading.js';
 import * as THREE from 'three';
 import {regolithFinish} from './regolith-finish.js';
 import { layServiceCables, cableCrossings } from './cable-crossings.js';
@@ -9,7 +10,7 @@ import { GREENHOUSE } from './colony.js';
 import { GH, heightAt } from './world.js';
 
 export async function installSettlement(world){
-  const gltf=await new GLTFLoader().loadAsync('assets/mars-base/scene.gltf'),model=gltf.scene;
+  const gltf=await loadAssetWithRetry(new GLTFLoader(), 'assets/mars-base/scene.gltf'),model=gltf.scene;
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   model.scale.setScalar(102/Math.max(size.x,size.z));
   const box=new THREE.Box3().setFromObject(model),centre=box.getCenter(new THREE.Vector3());model.position.set(-centre.x,-box.min.y,-centre.z);
@@ -64,7 +65,7 @@ export async function installSettlement(world){
   const greenhouse=makeBaseGreenhouse(world);
 
   const start=new THREE.Vector3(anchor.x,4,anchor.z-anchor.r+.6),end=new THREE.Vector3(GH.x,2.1,GH.z+GH.r-.5);
-  const asset=await loadModel('greenhouse-walkway.glb');
+  const asset=await loadModel('greenhouse-walkway.glb', { required: true });
   if(!asset)throw new Error('Greenhouse walkway unavailable');
   const glassTunnel=asset.scene.clone(true);
   const lower=new THREE.Vector3(GH.x,.1,GH.z+5);

@@ -1,3 +1,4 @@
+import { loadAssetWithRetry } from './asset-loading.js';
 // Official NASA 3D models (NASA 3D Resources, free and without copyright):
 // https://github.com/nasa/NASA-3D-Resources
 //   assets/sls.glb              - SLS Block 1, from NASA's 3D-printing model, split into stages by scripts/build-sls-model.py
@@ -43,7 +44,12 @@ export async function replaceLogos(tex, spots) {
 
 const cache = {};
 // Resolves to the loaded glTF, or null if it couldn't load (the game then keeps its simple shapes).
-export function loadModel(file) {
-  cache[file] ??= loader.loadAsync('assets/' + file).catch(err => { console.warn('NASA model failed to load:', file, err); return null; });
-  return cache[file];
+export function loadModel(file, { required = false } = {}) {
+  cache[file] ??= loadAssetWithRetry(loader, 'assets/' + file).catch(error => {
+    delete cache[file]; // A failed download must not poison later attempts.
+    throw error;
+  });
+  return required ? cache[file] : cache[file].catch(error => {
+    console.warn('NASA model failed to load:', file, error); return null;
+  });
 }

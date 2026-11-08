@@ -86,7 +86,7 @@ export class Greenhouse {
 
     // The pressure tunnel runs toward the habitat (+z). The exterior airlock faces west.
 
-    this.walkwayReady = loadModel('greenhouse-walkway.glb').then(asset=>{
+    this.walkwayReady = loadModel('greenhouse-walkway.glb', { required: true }).then(asset=>{
       if(!asset)throw new Error('Greenhouse walkway unavailable');
       const walkway=asset.scene.clone(true);
       walkway.position.z=5;

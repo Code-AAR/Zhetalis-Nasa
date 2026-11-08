@@ -1,3 +1,4 @@
+import { loadAssetWithRetry } from './asset-loading.js';
 // Mars surface mission layout. Real source geometry
 // stays intact; this arranges human-scale modules and mission survey sites.
 import * as THREE from 'three';
@@ -29,7 +30,7 @@ export async function createOpenLayout(world, habitat) {
   }
   // The NASA-supplied meteorite is only high detail up close. Distant copies
   // use a cheap silhouette so exploration does not render 143k triangles each.
-  const rockGeo=await new STLLoader().loadAsync('assets/block-island.stl');
+  const rockGeo=await loadAssetWithRetry(new STLLoader(), 'assets/block-island.stl');
   rockGeo.rotateX(-Math.PI/2);rockGeo.computeBoundingBox();
   const box=rockGeo.boundingBox,size=box.getSize(new THREE.Vector3()),mid=box.getCenter(new THREE.Vector3());
   rockGeo.translate(-mid.x,-box.min.y,-mid.z);rockGeo.scale(.7/Math.max(size.x,size.y,size.z),.7/Math.max(size.x,size.y,size.z),.7/Math.max(size.x,size.y,size.z));rockGeo.computeVertexNormals();

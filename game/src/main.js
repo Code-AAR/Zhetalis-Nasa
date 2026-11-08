@@ -1,3 +1,4 @@
+import { waitForBase } from './base-loading.js';
 import {chargeRover} from './rover-charging.js';
 import { heightAt } from './world.js';
 import { marsObjective, missionLog } from './mars-objectives.js';
@@ -201,7 +202,7 @@ async function resume(d) {
   $('#title').classList.add('hidden');
   state.difficulty = d.difficulty; state.site = SITES[d.outpost.site] ? d.outpost.site : 'plains'; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
   buildWorld();
-  await world.ready;
+  if (!await waitForBase(world.ready)) return;
   world.settlement.surveys = new Set(d.surveys || []);
   if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
   world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap(); placeLander(world);
@@ -311,23 +312,6 @@ function buildWorld() {
 }
 
 // ---------------- after lift-off: how we get there, then arrival ----------------
-async function waitForBase(ready) {
-  const panel=document.createElement('section');panel.id='base-loading';
-  panel.setAttribute('role','status');
-  Object.assign(panel.style,{position:'fixed',inset:'0',zIndex:'110',background:'#0b1119',color:'#f4f1e8',display:'grid',placeContent:'center',gap:'16px',padding:'24px',textAlign:'center',fontFamily:'system-ui'});
-  panel.innerHTML='<h2>Preparing your Mars base</h2><p>Downloading the habitat and walkway models…</p><button type="button">Back to menu</button>';
-  panel.querySelector('button').onclick=()=>location.reload();document.body.append(panel);
-  let timer;
-  try {
-    await Promise.race([ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Base download timed out')),60000);})]);
-    panel.remove();return true;
-  } catch(error) {
-    console.error('Mars base loading failed',error);
-    panel.querySelector('h2').textContent='The base could not finish loading';
-    panel.querySelector('p').textContent='A model download failed or took too long. Retry to download it again.';
-    panel.querySelector('button').textContent='Retry';return false;
-  } finally {clearTimeout(timer);}
-}
 
 async function arrive() {
   $('#countdown').classList.add('hidden'); $('#skip')?.remove(); $('#retry-launch')?.remove();

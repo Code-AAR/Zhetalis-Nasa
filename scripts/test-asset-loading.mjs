@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {loadAssetWithRetry, AssetLoadError} from '../game/src/asset-loading.js';
+let calls=0;
+const model={scene:'unchanged full-quality model'};
+assert.equal(await loadAssetWithRetry({loadAsync:async()=>{calls++;if(calls<3)throw new Error('temporary disconnect');return model;}},'habitat.glb',{delay:0}),model);
+assert.equal(calls,3);
+calls=0;
+await assert.rejects(loadAssetWithRetry({loadAsync:async()=>{calls++;throw new Error('missing');}},'missing.glb',{delay:0}),error=>error instanceof AssetLoadError&&error.asset==='missing.glb'&&error.cause.message==='missing');
+assert.equal(calls,3);
+console.log('Transient failures recover with original asset; permanent failures are bounded and identify the asset.');
