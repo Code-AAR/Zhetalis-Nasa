@@ -5,10 +5,16 @@ Python 3 and an internet connection are needed: Python serves the files locally,
 and the game loads Three.js, Draco decoders and optional live NASA/NOAA feeds.
 The launcher serves only this folder at `http://127.0.0.1:8777/`.
 
+## Integrated exploration update (8 November 2026)
+
+The new `Downloads/UNITY/game` browser build is merged into this game. See
+[INTEGRATION.md](INTEGRATION.md) for features, retained fixes and validation.
+
 ## Play
 
 - WASD / arrows: walk. Shift: run. Space: jump. Click the game: mouse look.
 - Esc or C: release/capture the mouse. V: first/third person. E: interact.
+- B: plant a map flag. Hold F indoors or in the pressurised rover to eat.
 - G: surface operations map. P: power. L: logbook. M: sound.
 - Enter the green-marked airlock for the six linked crew modules. Power, storage,
   workshop, life support, shelter, observation and hazard stations are inside.

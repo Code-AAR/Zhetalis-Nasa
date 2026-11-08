@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission patch preview</title>
+<style>
+  :root { --muted: #9aa0aa; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0f14; color: #eef1f3; font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 18px 80px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; } h2 { font-size: 1.05rem; margin: 34px 0 6px; letter-spacing: .02em; }
+  p { color: var(--muted); margin: 4px 0 12px; max-width: 70ch; }
+  button, select { font: inherit; color: #eef1f3; background: #1b1e26; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+  button:hover { background: #242834; } button.primary { background: #eef1f3; color: #111; border-color: #eef1f3; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+  .tiers button { display: grid; text-align: left; gap: 2px; min-width: 150px; } .tiers small { color: var(--muted); font-size: .75rem; }
+  #patch-btn { position: fixed; top: 14px; right: 16px; z-index: 5; background: #1b1e26; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .cell { display: grid; justify-items: center; gap: 4px; padding: 12px 6px; text-align: center; border-radius: 12px; background: rgba(255,255,255,.04); cursor: pointer; }
+  .cell:hover { background: rgba(255,255,255,.09); } .cell b { font-size: .85rem; } .cell small { color: var(--muted); font-size: .72rem; }
+  .big { display: flex; flex-wrap: wrap; gap: 26px; align-items: center; justify-content: center; padding: 24px; border-radius: 14px; background: radial-gradient(circle at 50% 40%, #1c2030, #0d0f14); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .82rem; color: var(--muted); margin: 8px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  audio { width: 100%; max-width: 420px; }
+</style>
+</head>
+<body>
+<button id="patch-btn">Patches</button>
+<main>
+  <h1>Mission patch preview</h1>
+  <p>The new patch designs, the award animation and the sound. Nothing here touches the game: the game files use the same three modules (<code>patch-art.js</code>, <code>patch-fx.js</code>, <code>patches.js</code>).</p>
+
+  <h2>1. The award moment</h2>
+  <p>Three lengths, like Breath of the Wild's pickup fanfares: a short one for ordinary patches, a longer one for rarer ones and the longest for the big milestones. Turn your sound on. The patch flies to the Patches button, top right.</p>
+  <div class="row">
+    <label>Patch <select id="pick"></select></label>
+  </div>
+  <div class="row tiers">
+    <button data-tier="common"><b>Common</b><small>about 4 seconds</small></button>
+    <button data-tier="rare"><b>Rare</b><small>about 6 seconds, light rays</small></button>
+    <button data-tier="key"><b>Key</b><small>about 8 seconds, name spelled out</small></button>
+    <button data-tier="medal"><b>Final medal</b><small>for earning all 20</small></button>
+  </div>
+
+  <h2>2. The patches</h2>
+  <p>Five shapes for five kinds of patch, with a stitched border in a different thread colour for each. Tap one to hear its note (every patch has its own, so the whole set is a small instrument).</p>
+  <div class="legend" id="legend"></div>
+  <div class="grid" id="earned" style="margin-top:12px"></div>
+
+  <h2>3. Close up</h2>
+  <p>Past about 90 px a patch also shows its number at the top and its name stitched round the bottom, like a real crew patch.</p>
+  <div class="big" id="big"></div>
+
+  <h2>4. Not earned yet</h2>
+  <p>Unearned patches show as an empty slot in their own shape (like the holes in a Pokémon badge case), so you can see how many are left and what shape they are.</p>
+  <div class="grid" id="locked"></div>
+
+  <h2>5. Hear the three tiers</h2>
+  <p>Rendered straight from the same code, in case you want to listen without the animation.</p>
+  <div class="row" id="wavs"></div>
+</main>
+<script type="module">
+import { PATCHES, MEDAL, SHAPES, patchSVG, medalSVG } from './src/patch-art.js';
+import { showAward, playNote, renderAwardWav, patchRoot } from './src/patch-fx.js';
+const $ = s => document.querySelector(s);
+$('#pick').innerHTML = PATCHES.map((p, i) => `<option value="${p.id}">${String(i + 1).padStart(2, '0')} ${p.name} (${p.tier})</option>`).join('');
+$('#legend').innerHTML = Object.values(SHAPES).map(s => `<span><i style="width:12px;height:12px;border-radius:3px;background:${s.rim};display:inline-block"></i>${s.name}</span>`).join('');
+const cell = (p, i) => `<div class="cell" data-i="${i}">${patchSVG(p, false, 84)}<b>${p.name}</b><small>${SHAPES[p.shape].name} · ${p.tier}</small></div>`;
+$('#earned').innerHTML = PATCHES.map(cell).join('') + `<div class="cell" data-medal>${medalSVG(70)}<b>${MEDAL.name}</b><small>final medal</small></div>`;
+$('#earned').onclick = e => { const c = e.target.closest('.cell'); if (!c) return; if (c.dataset.i != null) { playNote(+c.dataset.i); $('#pick').value = PATCHES[+c.dataset.i].id; } };
+$('#big').innerHTML = ['steps', 'storm', 'gold', 'night', 'tier'].map(id => patchSVG(PATCHES.find(p => p.id === id), false, 190)).join('') + medalSVG(150);
+$('#locked').innerHTML = PATCHES.map(p => `<div class="cell">${patchSVG(p, true, 72)}<b style="opacity:.4;letter-spacing:.2em">???</b><small>${p.hint}</small></div>`).join('');
+document.querySelectorAll('.tiers button').forEach(b => b.onclick = () => {
+  const p = b.dataset.tier === 'medal' ? MEDAL : { ...PATCHES.find(x => x.id === $('#pick').value) };
+  if (b.dataset.tier !== 'medal') p.tier = b.dataset.tier;
+  showAward(p, { target: '#patch-btn' });
+});
+(async () => {
+  for (const t of ['common', 'rare', 'key']) {
+    const blob = await renderAwardWav(t, 1), url = URL.createObjectURL(blob);
+    $('#wavs').insertAdjacentHTML('beforeend', `<div style="min-width:280px"><div style="font-size:.85rem;margin-bottom:4px">${t}</div><audio controls src="${url}"></audio></div>`);
+  }
+})().catch(() => {});
+window.preview = { showAward, PATCHES, MEDAL };
+</script>
+</body>
+</html>

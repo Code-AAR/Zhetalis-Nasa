@@ -5,23 +5,30 @@ import { openPedia } from './pedia.js';
 import { loadSpaceWeather, sunToday, pickStormEvent, flareStrength, flareWords } from './spaceweather.js';
 import { World, GH } from './world.js';
 import { Launch } from './launch.js';
-import { CrewInterior as Interior } from './crew-interior.js?v=landing-water-12';
-import { installSettlement } from './settlement.js?v=cable-crossings-14';
-import { fieldMapHTML } from './fieldmap.js';
-import { Capsule } from './capsule.js?v=landing-water-12';
-import { Greenhouse } from './greenhouse.js?v=landing-water-12';
-import { showMissionPath } from './missionpath.js?v=landing-water-12';
-import { showArrival } from './arrival.js?v=five-minute-sol-28';
-import { loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
-import { $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
+import { CrewInterior as Interior } from './crew-interior.js';
+import { installSettlement } from './settlement.js';
+import { fieldMapHTML, mountFieldMap } from './fieldmap.js';
+import { MapState } from './mapstate.js';
+import { Minimap } from './minimap.js';
+import { Lookouts } from './lookouts.js';
+import { Mist } from './mist.js';
+import { Capsule } from './capsule.js';
+import { Greenhouse } from './greenhouse.js';
+import { showMissionPath } from './missionpath.js';
+import { showArrival } from './arrival.js';
+import { Survival } from './survival.js';
+import { playLanding, playStorm } from './cutscenes.js';
+import { resetGame, earn, openPatches, patchCount, PATCHES, setPatchContext, setSoundGate, setDuckHook } from './patches.js';
+import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
+import { noEmoji, $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
 import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
-import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug } from './sound.js';
-import { initTouch, isTouch } from './touch.js?v=landing-water-12';
+import { startSound, setSound, tickSound, footstep, toggleMute, isMuted, soundDebug, crunch, duck } from './sound.js';
+import { initTouch, isTouch } from './touch.js';
 import { earthGlobe, moonGlobe } from './globe.js';
 import { Colony, newColony, ORES, TOOLS, CROPS, SHOP, GREENHOUSE, BAG, JUG_L, priceWords } from './colony.js';
-import { initMissionMenu } from './menu.js?v=orbit-spin-6';
+import { initMissionMenu } from './menu.js';
 import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
@@ -35,10 +42,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
-const F = (await (await fetch('data/mars-facts.json?v=landing-water-12')).json()).facts;
+const F = (await (await fetch('data/mars-facts.json?v=integrated-survey-30')).json()).facts;
 await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
 for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
-onLog(n => { $('#log-btn').textContent = `📒 Logbook: ${n} (L)`; });
+onLog(n => { $('#log-btn').textContent = `Logbook ${n} (L)`; if (n >= 15) earn('scholar'); });
 
 // The mission logbook: every real fact you have met, as cards you can read again.
 function openLogbook() {
@@ -52,7 +59,7 @@ let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
 const state = { phase: 'title', difficulty: 'normal', speed: 1, site: 'plains', age: 'older' };
-$('#map-btn').onclick = () => modal({title:'Surface operations map',html:fieldMapHTML(world)+farmQuestHTML(colony?.s)});
+$('#map-btn').onclick = () => { modal({title:'Surface operations map',html:fieldMapHTML(world)+farmQuestHTML(colony?.s)}); mountFieldMap(world); };
 let colony, marsNow = null, monitorTipShown = false, toolbarKey = '', visorKey = '';
 let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
@@ -110,9 +117,13 @@ $('#howto').onclick = () => modal({ title: 'How to play', html: `
   <p>🫁 <b>Life support</b> - makes oxygen and powers the grow lights.<br>📡 <b>Talk to Earth</b> - sends your science home and brings supply pods.<br>🔬 <b>Science</b> - when Earth receives enough, its engineers radio you new <b>upgrade designs</b>.<br>🛡 <b>Shielding</b> - protects you from radiation, especially during solar storms.</p>
   <p>📍 <b>Where you land matters.</b> The ice plains are the easy start. The pole has lots of ice but weak sunlight and cold nights. Jezero Crater is best for science but has little ice. A lava tube blocks radiation but is hard to build in.</p>
   <p>🧊 Collect ice outside, then use the <b>water plant</b> inside: melt and filter the ice into clean water, and split water into oxygen. Pile <b>layers of Mars soil</b> on the outpost at the workbench - you decide how thick is thick enough.</p>
+  <p><b>Rations</b> (the packs at the bottom) go down as you walk, run and jump. Your helmet stays on outside, so you can only eat inside the outpost or the rover: ${keyWord('hold <b>F</b>', 'hold <b>Eat</b>')}. Greenhouse food keeps you going longer than freeze-dried packs. With three packs or fewer you can't run, and with none you slow down and breathe harder.</p>
+  <p>Outside, the <b>ring next to you</b> is your suit air. Running uses it faster. Head back in before it turns red.</p>
+  <p>Firsts earn <b>mission patches</b>. See them with the <b>Patches</b> button.</p>
   <p>Build the designs at the <b>workbench</b> using <b>parts</b> you salvage outside. There is never enough power for everything - that is the real puzzle astronauts and NASA mission planners solve!</p>` });
 $('#data-btn-title').onclick = $('#data-btn').onclick = showData;
-$('#path-btn').onclick = () => showMissionPath(F);
+$('#path-btn').onclick = () => showMissionPath(F).then(done => { if (done) earn('briefing'); });
+$('#patch-btn').onclick = () => openPatches();
 
 function showData() {
   const s = sunToday(weather);
@@ -135,11 +146,11 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Daytime solar disk: visible-light intensity from <a href="https://sdo.gsfc.nasa.gov/data/" target="_blank" rel="noopener">NASA/SDO and the HMI science team</a>. • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: shaped from NASA's 3D model of Spirit's landing site, Gusev Crater (shrunk - the real crater is about 160 km wide). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
-    <p class="source">• 1 sol is about 24 Earth hours 39 minutes (24.66 hours). In this game, a full day/night cycle takes ${TUNED.solSeconds / 60} minutes at normal speed. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it. • Landing sites: the real places are real, but how much sun, ice, radiation and science each one gives is game balance. • Mars-soil shielding: 18%, 28% and 33% for 1, 2 and 3 layers are game numbers that follow the real pattern (the first layer helps most). • The water plant's filter keeps 90% of dug-up ice as water (game); splitting 1 L of water into 0.89 kg of oxygen is real chemistry.</p>` });
+    <p class="source">• 1 sol is about 24 Earth hours 39 minutes (24.66 hours). In this game, a full day/night cycle takes ${TUNED.solSeconds / 60} minutes at normal speed. • Each solar panel makes ${TUNED.kWhPerPanel} kWh per clear sol. • Solar storms are made stronger than real ones so you can see shielding matter in one game. • Supply pods arrive in a few sols (real cargo takes about 7 months). • Upgrade design and parts numbers are made up. • Plants grow in a few sols (real lettuce takes about 4 weeks, potatoes 3 to 4 months). • Ore amounts, trade prices and the 2-sol storm warning are game values; real solar-storm particles take from hours to days to arrive. • Phobos is drawn about twice as big as it really looks, so you can spot it. • Landing sites: the real places are real, but how much sun, ice, radiation and science each one gives is game balance. • Mars-soil shielding: 18%, 28% and 33% for 1, 2 and 3 layers are game numbers that follow the real pattern (the first layer helps most). • The water plant's filter keeps 90% of dug-up ice as water (game); splitting 1 L of water into 0.89 kg of oxygen is real chemistry. Hunger drain and faster breathing while running are gameplay settings.</p>` });
 }
 
 // ---------------- save and resume ----------------
@@ -147,16 +158,17 @@ function showData() {
 // After a refresh, the title screen offers "Resume" to carry on from the same sol.
 const SAVE_KEY = 'zhetalis-unity-mars-save-v1';
 function saveGame() {
+  if (window.__resetting) return;
   if (state.phase !== 'mars' || !outpost || outpost.over || !world) return;
   const o = {};
   for (const [k, v] of Object.entries(outpost)) if (!['d', 'facts', 'today'].includes(k)) o[k] = v;
   const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
   const data = {
     v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
-    entry: world.activeEntrance?.index??0, solSeconds: TUNED.solSeconds, solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()],
+    entry: world.activeEntrance?.index??0, solSeconds: TUNED.solSeconds, solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()], body: body?.save(),
     world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
-    colony: colony?.s, surveys: [...(world.settlement?.surveys || [])],
+    colony: colony?.s, surveys: [...(world.settlement?.surveys || [])], lookouts: [...(world.lookouts?.got || [])], map: world.mapState?.save(),
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch { /* storage blocked: no saving */ }
 }
@@ -172,8 +184,9 @@ const saved = readSave();
 if (saved) {
   const b = $('#resume');
   b.textContent = `▶ Resume: sol ${saved.outpost.sol} of ${DIFFICULTY[saved.difficulty].sols} (${DIFFICULTY[saved.difficulty].label})`;
-  b.classList.remove('hidden');
+  b.classList.remove('hidden'); b.classList.add('primary');
   b.onclick = () => resume(saved);
+  $('#start').textContent = 'New game ↗'; $('#start').classList.remove('primary'); b.parentNode.insertBefore(b, $('#start'));
 }
 
 // Back to Mars straight away, with everything as it was.
@@ -186,10 +199,13 @@ async function resume(d) {
   buildWorld();
   await world.ready;
   world.settlement.surveys = new Set(d.surveys || []);
+  if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
+  world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap();
   world.activeEntrance=world.settlement.entrances[d.entry??0];
   Object.assign(outpost, { powerStep: 6, rations: 0 }, d.outpost); outpost.today = outpost.forecast();
   ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
   solClock = (solClock / (d.solSeconds || 37) % 1) * TUNED.solSeconds;
+  if (d.body) Object.assign(body, d.body);
   d.logbook.forEach(id => F[id] && logFact(F[id]));
   const w = d.world;
   world.pickups.slice().forEach(p => world.removePickup(p));
@@ -203,7 +219,7 @@ async function resume(d) {
   world.setLink(outpost.today.link); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
   world.setDust(!!outpost.dust);
   if (d.inside) (d.ship ? goInShip() : d.gh ? goInGreenhouse('hab') : goInside()); else inside = false;
-  loadEarthToday();
+  loadRoverPhotos(); loadEarthToday();
   setSound({ scene: 'mars' });
   await weatherReady;
   state.phase = 'mars';
@@ -212,7 +228,8 @@ async function resume(d) {
   toast(`👋 Welcome back, astronaut! Sol ${outpost.sol} - your mission carries on where you left it.`);
 }
 
-$('#start').onclick = () => {
+$('#reset-progress').onclick = () => modal({ title: 'Reset progress?', html: '<p>This deletes your saved mission and all your badges. It cannot be undone.</p>', choices: [{ label: 'Keep my progress', primary: true }, { label: 'Delete everything', onPick: resetGame }] });
+function startNew() {
   missionMenu.dispose();
   clearSave();                                                 // a new mission replaces the old save
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();   // phones: fill the screen like an app
@@ -226,7 +243,13 @@ $('#start').onclick = () => {
   Object.assign(skip.style, { position: 'fixed', right: '16px', bottom: '16px', zIndex: 5 });
   skip.onclick = () => (launch.done = true); document.body.appendChild(skip);
   buildWorld(); // start building Mars in the background during the countdown
-  loadMarsMap(); loadEarthToday();   // and start fetching the real NASA pictures
+  loadMarsMap(); loadRoverPhotos(); loadEarthToday();   // and start fetching the real NASA pictures
+}
+$('#start').onclick = () => {
+  const s = readSave();
+  if (!s) return startNew();
+  modal({ title: 'You have a saved game', html: `<p>Sol ${s.outpost.sol} of ${DIFFICULTY[s.difficulty].sols} (${DIFFICULTY[s.difficulty].label}). Starting a new game replaces it.</p>`,
+    choices: [{ label: `Continue my game (sol ${s.outpost.sol})`, primary: true, onPick: () => resume(s) }, { label: 'Start a new game', onPick: startNew }] });
 };
 
 function buildWorld() {
@@ -238,6 +261,8 @@ function buildWorld() {
   ghRoom.onStep = () => footstep(0, true);
   if (hasArt('mars-ground')) world.useGroundArt(artUrl('mars-ground'));
   world.onStep = run => footstep(run); interior.onStep = () => footstep(0, true);
+  world.onJump = () => { body?.jumped(); if (earn('hang')) toast('A jump on Mars keeps you in the air about 2.6 times longer than the same jump on Earth.', 6000); };
+  if (!body) body = new Survival();
   outpost = new Outpost(state.difficulty, F, state.site);
   world.setPanels(outpost.panels);
   world.setLink(outpost.today.link);
@@ -252,6 +277,26 @@ function buildWorld() {
       return list;
     };
     syncPowerHardware();
+    new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
+    // the crater map: charted ground, trail, flags, survey finds, Ingenuity scout flights, Gusev landmarks
+    const ms = new MapState(world, {
+      toast, modal,
+      onFind: f => { outpost.science += 3; toast(`Found: ${f.name}. +3 science`, 4000); },
+      onLandmark: (l, quiet) => { logFact({ id: l.id, ...l.fact }); if (!quiet) toast(`Landmark charted: ${l.name}. Added to your logbook.`, 4500); },
+    });
+    ms.weather = () => {
+      const h = outpost.hazards?.find(x => x.kind === 'dust' && x.seen);
+      return outpost.dust ? { dust: 'now' } : h ? { dust: 'coming', sols: Math.max(0, Math.ceil(h.at - outpost.sol)) } : {};
+    };
+    new Mist(world, {
+      onRegion: (i, sp) => {
+        outpost.science += 8; const first = earn('region');
+        modal({ title: `Region complete: ${sp.name}`, html: `<p>You scanned the tower and found both survey spots here. Nothing is left hidden in this region.</p><p class="pos">+8 science.${first ? ' You earned the <b>Region keeper</b> patch.' : ''}</p><p class="fact">Mapmakers call this a survey: walk the ground, mark what you see, and leave no gaps in the sheet.</p>`, pause: false });
+      },
+    });
+    new Minimap(world, $('#hud'), { onOpen: () => $('#map-btn').click() });
+    ms.sync(true);
+    return world.settlement;
   });
   loadMarsToday().then(t => (marsNow = t)).catch(() => {});   // real Curiosity weather for the visor and monitor
 }
@@ -261,7 +306,7 @@ async function arrive() {
   await world.ready;
   $('#countdown').classList.add('hidden'); $('#skip')?.remove();
   setSound({ scene: 'arrival' });
-  const selectedSite = await showArrival(F, outpost.delayMinutes());
+  const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>playLanding(world)});
   if (!selectedSite) { location.reload(); return; }
   state.site = selectedSite;
   outpost.site = selectedSite;
@@ -278,7 +323,7 @@ async function arrive() {
     <p>Collect the landed power kits and rations from the habitat locker. Follow the arrow to assemble and deploy your equipment.</p>
     <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}. Your lander supplies startup power.</p>
     <p>Landing scenario: <b>${outpost.s.name}</b>. ${outpost.s.why} All scenarios use the same Gusev-inspired training landscape.</p>
-    <p>Collect ice and process it at the water plant in the greenhouse service room.</p>`,
+    <p>Collect ice and process it at the water plant in the greenhouse service room.</p><p>Use the map to find survey towers. ${keyWord('Hold F','Hold Eat')} indoors or in the rover to eat; greenhouse meals keep you full longer.</p>`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
 
@@ -295,7 +340,7 @@ function goInShip() {
   inside = true; room = capsule; capsule.enter(); document.exitPointerLock?.();
   toast(`🚀 You climbed the ladder into your lander. 4 astronauts rode down to Mars in this cabin! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
 }
-// The greenhouse and habitat share a walkable pressure tunnel.
+// The base greenhouse (greenhouse.js): from the outpost through the tunnel ('hab'), or from outside through its airlock ('out')
 
 function farmQuestHTML(s) {
   if(!s)return '';
@@ -359,18 +404,37 @@ function stationAction(s) {
   }
   if (s.type === 'shelter') return modal({ pause: false, title: '🛏 Storm shelter', html: `<p>During a solar storm, the crew squeezes into this small room with the thickest walls. It blocks most of the radiation - but nobody can do science or go outside.</p><p>${outpost.storm ? (outpost.shelter ? `<b>Sheltering now:</b> ${outpost.shelter} sols left.` : '<b>A solar storm is happening!</b> Choosing "hide in the shelter" in the warning keeps you safe.') : 'No storm right now.'}</p>${factHTML(F.careerLimit)}` });
   if(s.type==='window'&&room===capsule)return toast('The windows show the live landscape outside your lander. Look around to see the camp and changing Martian sky.',5000);
-  if (s.type === 'window') {
-    modal({title:'NASA rover photographs',html:`<figure class="slide"><img id="deck-photo" style="width:100%;height:min(46vh,420px);object-fit:contain"><figcaption id="deck-caption" aria-live="polite"></figcaption></figure><div class="slide-nav"><button id="deck-prev">‹ Previous</button><button id="deck-next">Next ›</button></div>`});
-    function display(delta){
-      const photo=interior.showPhoto(interior.photoIndex+delta),img=$('#deck-photo');
-      img.alt=photo.title;img.src='assets/'+photo.slug+'.jpg';
-      $('#deck-caption').innerHTML=`${photo.title} · ${photo.credit} · <a href="https://science.nasa.gov/resource/${photo.slug}/" target="_blank" rel="noopener">NASA source</a>`;
-    }
-    $('#deck-prev').onclick=()=>display(-1);$('#deck-next').onclick=()=>display(1);display(0);return;
-  }
+  if (s.type === 'window') return openWindow();
   if (s.type === 'monitor') return openMonitor();
   if (s.type === 'locker') return openLocker();
   if (s.type === 'water') return openWaterPlant();
+}
+
+// The outpost window shows REAL photos from Mars: the newest colour pictures from NASA's Perseverance rover.
+async function openWindow() {
+  modal({ pause: false, title: '🪟 Mars today - real photos', html: '<p>Loading the newest photos from NASA\'s Perseverance rover…</p>' });
+  const { mode, photos } = await loadRoverPhotos();
+  if (!isModalOpen() || !$('#modal h3')?.textContent.includes('Mars today')) return;   // the player closed it while loading
+  if (!photos.length) return modal({ pause: false, title: '🪟 The view', html: `<p>Couldn't reach NASA's photo server right now.</p>${factHTML(F.air)}${factHTML(F.temperature)}` });
+  const tag = mode === 'live' ? '<span class="real-tag">LIVE</span>' : '<span class="real-tag archived">ARCHIVED</span>';
+  const today = await loadMarsToday(), w = today?.weather;
+  const weather = w ? `<div class="fact"><span class="real-tag">REAL</span><b>Mars weather report:</b> on ${dateWords(w.date)} (sol ${w.sol}), NASA's Curiosity rover in Gale Crater measured a high of <b>${w.high} °C</b> and a low of <b>${w.low} °C</b>. Air pressure: <b>${w.pressure} Pa</b> - less than 1% of Earth's. Sky: ${w.sky.toLowerCase()}, sunrise ${w.sunrise}, sunset ${w.sunset}.<div class="source">Source: <a href="${w.url}" target="_blank" rel="noopener">${w.source}</a></div></div>` : factHTML(F.temperature);
+  modal({ pause: false, title: '🪟 Mars today - real photos', html: `
+    <p>${tag}These are <b>real photos</b> that NASA's Perseverance rover took in Jezero Crater on Mars a few days ago. In our story it is 2126 - but this is what Mars looks like <b>right now</b>.</p>
+    <figure class="slide"><img id="ph-img" alt="Photo of Mars taken by NASA's Perseverance rover"><figcaption id="ph-cap"></figcaption></figure>
+    <div class="slide-nav"><button id="ph-prev">‹</button><button id="ph-play">⏸ Pause</button><button id="ph-next">›</button></div>
+    ${weather}${factHTML(F.perseverance)}`, choices: [{ label: 'Done', primary: true, onPick: () => clearInterval(timer) }] });
+  let i = 0, timer;
+  const show = () => {
+    const p = photos[i];
+    $('#ph-img').src = p.src;
+    $('#ph-cap').innerHTML = `Sol ${p.sol} of Perseverance's mission · ${dateWords(p.when + 'Z')} · ${p.camera} · <a href="${p.link}" target="_blank" rel="noopener">NASA/JPL-Caltech/ASU</a> (${i + 1}/${photos.length})`;
+  };
+  const step = d => { i = (i + d + photos.length) % photos.length; show(); };
+  const play = () => { clearInterval(timer); timer = setInterval(() => { if (!$('#ph-img')) return clearInterval(timer); step(1); }, 3500); };
+  $('#ph-prev').onclick = () => step(-1); $('#ph-next').onclick = () => step(1);
+  $('#ph-play').onclick = e => { if (timer) { clearInterval(timer); timer = null; e.target.textContent = '▶ Play'; } else { play(); e.target.textContent = '⏸ Pause'; } };
+  show(); play();
 }
 
 // ---------------- the power trade-off ----------------
@@ -468,10 +532,11 @@ function openWorkbench() {
   $('#modal .modal-box').querySelectorAll('[data-build]').forEach(b => b.onclick = () => {
     const key = b.dataset.build;
     if (outpost.buy(key)) {
+      earn('build');
       toast(`🔧 Built: ${UPGRADES[key].name}`);
       syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
       if (key === 'regolith') soilLayerReport();
-      else if (key === 'reactor') modal({ pause: false, title: '⚛ Reactor online!', html: factHTML(F.fission) });
+      else if (key === 'reactor') earn('reactor'), modal({ pause: false, title: '⚛ Reactor online!', html: factHTML(F.fission) });
       else openWorkbench();
     }
   });
@@ -627,7 +692,7 @@ function openLocker() {
   const box = $('#modal .modal-box'), again = () => { toolbarKey = ''; openLocker(); };
   box.querySelector('[data-kits]')?.addEventListener('click', () => { advancePower(0); again(); });
   box.querySelector('[data-prepare]')?.addEventListener('click', () => {
-    o.food += s.produce; s.produce = 0; farmProgress('prepared'); again();
+    o.food += s.produce; s.freshMeals = (s.freshMeals || 0) + s.produce; s.produce = 0; farmProgress('prepared'); again();
   });
   box.querySelector('[data-rations]').onclick = () => { o.food += o.rations; o.rations = 0; saveGame(); again(); };
   box.querySelectorAll('[data-take]').forEach(b => (b.onclick = () => { colony.take(b.dataset.take); again(); }));
@@ -706,17 +771,19 @@ function handle(ev) {
         ${real.real ? `<p class="fact"><span class="real-tag">REAL</span>This storm is based on a real <b>${real.cls}</b> flare seen by ${real.source}${when ? ' on ' + when : ''}.</p>` : ''}
         <p>${planned ? 'Sheltering already. Anything else?' : 'What do you do?'}</p>`,
         choices: planned ? [{ label: 'Stay in the shelter', primary: true }] : [
-          { label: '🏠 Hide in the storm shelter', cost: `Safest. But no science for ${outpost.storm.sols} sols, and you must be inside the outpost.`, onPick: () => { outpost.shelter = outpost.storm.sols; if (!inside) toast('Head back to the outpost - the shelter only works inside!', 4500); } },
+          { label: 'Hide in the storm shelter', cost: `Safest. But no science for ${outpost.storm.sols} sols, and you must be inside the outpost.`, onPick: () => { earn('shelter'); outpost.shelter = outpost.storm.sols; if (!inside) toast('Head back to the outpost - the shelter only works inside!', 4500); } },
           { label: '🛡 Put more power into shielding', cost: 'Takes power away from science and talking to Earth.', onPick: () => { outpost.setSplit({ ...outpost.split, shield: Math.max(outpost.split.shield, 0.45), science: outpost.split.science * 0.4, comms: outpost.split.comms * 0.8 }); toast('🛡 Shields up! Science and the radio get less power for now.'); } },
           { label: '⛏ Keep working and hope for the best', cost: 'You keep everything running - but your radiation badge will fill up much faster.' },
         ] });
       break;
     }
-    case 'storm-end': toast('☀️ The solar storm has passed.'); break;
+    case 'storm-end': toast('☀️ The solar storm has passed.'); earn('storm'); break;
     case 'hazard-detected':   // the monitor inside blinks; the first time, tell the player where to look
       if (!monitorTipShown) { monitorTipShown = true; toast('📟 New reading! The hazard monitor inside the base has spotted something. Go and check it.', 6000); }
       break;
+    case 'dust-cinematic': if(!inside)playStorm(world); break;
     case 'dust':
+      queue.push({type:'dust-cinematic'});
       world.setDust(true); say('dust');
       if (ev.seen === false) outpost.clean = Math.max(0.3, outpost.clean - 0.12);   // no warning: the panels were caught dirty and got caked
       outpost.today = outpost.forecast();
@@ -731,6 +798,7 @@ function handle(ev) {
       pending.push({ sol: outpost.sol + 3, type: 'pod' }); break;
     case 'supply-missed': toast('📡 Earth couldn\'t hear you - not enough power for the radio. No supply pod this time.', 5000); break;
     case 'tier-up': {
+      earn('tier');
       const t = TIERS[ev.tier], designs = Object.values(UPGRADES).filter(u => u.tier === ev.tier);
       say('design');
       modal({ title: `🏗 Your base is now a ${t.name}!`, html: `${eventArt('tier-up', 'The outpost growing bigger')}<p>Earth's engineers studied the science you sent and radioed you new designs:</p><p>${designs.map(u => `• <b>${u.name}</b> - ${u.desc}`).join('<br>')}</p><p>Build them at the <b>workbench</b> inside the outpost using parts.</p>` });
@@ -745,6 +813,9 @@ function handle(ev) {
 
 function collect(n) {
   if(n.type==='power-site') return advancePower(n.step);
+  if (n.type === 'lookout') return world.lookouts?.use(n.i);
+  if (n.type === 'find') return world.mapState?.collect(n.id);
+  if (n.type === 'scout') return world.mapState?.openScout();
   if(n.type.startsWith('survey-')) {
     const key=n.type.slice(7),mission=world.settlement;
     const titles={meteorite:'Meteorite field survey',relay:'Relay station inspection',ice:'Subsurface survey'};
@@ -759,31 +830,31 @@ function collect(n) {
   if (n.type === 'ore') { if(isTouch())mine(n.deposit); return; }
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
   if (n.type === 'sev') {
-    world.enterRover();
+    world.enterRover(); roverFrom = world.sev.pos.clone();
     if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Use')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it near the outpost to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
     else toast(`🚙 In the rover - battery ${Math.round(world.sev.battery * 100)}%. ${keyWord('E', 'Use')} to get out.`);
     return;
   }
   if (n.type === 'sev-exit') { world.exitRover(); toast('🧑‍🚀 Out through the suitport at the back of the rover.'); return; }
   if (n.type === 'panels') {
-    outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false;
+    outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false; earn('dust');
     modal({ title: '🧽 Solar panels cleaned!', html: `<p>Back to full power. Dust settles on them a little every sol - and a lot during dust storms - so check them often.</p>${factHTML(F.dustPanels)}` });
     return;
   }
   if (n.type === 'rover') {
-    world.rover.salvaged = true; outpost.parts += 8; say('rover');
+    world.rover.salvaged = true; outpost.parts += 8; say('rover'); earn('percy');
     world.rover.group.children[0].visible = false; // switch off its beacon
     modal({ title: '🤖 You found an old rover!', html: `${factHTML(F.perseverance)}${factHTML(F.moxie)}<p>You carefully salvage <b>8 spare parts</b> for your workbench.</p>` });
     return;
   }
   if (n.type === 'heli') {
-    world.heli.seen = true;
+    world.heli.seen = true; earn('heli');
     modal({ title: '🚁 Ingenuity - the first helicopter on another planet', html: `<p>This little helicopter weighs only 1.8 kg. It is made from NASA's own 3D model, at its real size.</p>${factHTML(F.ingenuity)}<p>The air on Mars is so thin that its blades had to spin thousands of times a minute - much faster than a helicopter's on Earth - just to lift off.</p>` });
     return;
   }
   const p = n.pickup; world.removePickup(p);
-  if (p.kind === 'ice') { const kg = Math.round(8 * outpost.s.ice); colony.s.ice = (colony.s.ice || 0) + kg; toast(`🧊 Ice! +${kg} kg of dirty ice for the water plant inside the outpost${outpost.s.ice > 1 ? ' (thick ice here!)' : outpost.s.ice < 1 ? ' (ice is thin here)' : ''}.`); }
-  if (p.kind === 'metal') { outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
+  if (p.kind === 'ice') { earn('ice'); const kg = Math.round(8 * outpost.s.ice); colony.s.ice = (colony.s.ice || 0) + kg; toast(`🧊 Ice! +${kg} kg of dirty ice for the water plant inside the outpost${outpost.s.ice > 1 ? ' (thick ice here!)' : outpost.s.ice < 1 ? ' (ice is thin here)' : ''}.`); }
+  if (p.kind === 'metal') { earn('scrap'); outpost.parts += 1; toast('🔩 Useful metal: +1 part'); }
   if (p.kind === 'pod' && p.cargo) { colony.receive(p.cargo, outpost); toast(`📦 Your order from Earth: ${cargoWords(p.cargo)}. Seeds go into the storage locker.`, 5000); }
   else if (p.kind === 'pod') { outpost.o2 += 15; outpost.food += 20; outpost.parts += 3; toast('📦 Supplies from Earth: +15 kg oxygen, +20 meals, +3 parts'); }
 }
@@ -792,6 +863,7 @@ function endMission() {
   clearSave();   // the mission is over, so there is nothing to resume
   document.exitPointerLock?.();
   const o = outpost.over;
+  if (o.win) earn('complete');
   say(o.win ? 'win' : 'lose');
   const why = {
     complete: `You kept your crew alive for all ${outpost.d.sols} sols. Mission complete! Your base reached the "${TIERS[outpost.tier].name}" tier.`,
@@ -811,6 +883,7 @@ function endMission() {
   const qs = pickQuestions(new Set(logbook.keys()));
   runQuiz($('#quiz'), qs, score => {
     const b = badgeFor(score, qs.length);
+    if (b.key === 'gold') earn('gold');
     $('#badge').innerHTML = `<div class="badge">${hasArt('badge-' + b.key) ? artHTML('badge-' + b.key, b.name + ' badge', 'badge-art') : `<b>${b.icon}</b>`}${score} of ${qs.length} right - you earned the <b>${b.name}</b> badge!</div>`;
     try { const best = +localStorage.getItem('ja-best') || 0; if (score > best) localStorage.setItem('ja-best', score); } catch { /* storage blocked */ }
   });
@@ -819,6 +892,7 @@ function endMission() {
 // ---------------- input ----------------
 // One place for the game's actions - the keyboard and the touch buttons both come here
 function pressKey(code) {
+  if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
   if (code === 'KeyE') {
     if (inside) { const s = room.nearest(); if (s) stationAction(s); }
@@ -826,6 +900,7 @@ function pressKey(code) {
   }
   if ((code === 'Digit1' || code === 'Digit2') && colony) { colony.select(+code.slice(5) - 1); toolbarKey = ''; }
   if (code === 'KeyG') $('#map-btn').click();
+  if (code === 'KeyB' && !inside && world?.mapState) { const f = world.mapState.addFlag(); if (f) toast(`${f.n} planted. Rename it on the map (G).`); }
   if (code === 'KeyP') openPower();
   if (code === 'KeyL') openLogbook();
   if (code === 'KeyM') muteButton();
@@ -894,7 +969,7 @@ pick.querySelectorAll('button').forEach(b => b.onclick = () => setScreenMode(b.d
 $('#screen-btn').onclick = () => { nextScreenMode(); toast(`📱 Screen: ${screenName(screenMode())}`); };
 onLayout((mode, used) => {
   pick.querySelectorAll('button').forEach(b => b.classList.toggle('selected', b.dataset.screen === mode));
-  $('#screen-btn').textContent = `📱 Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
+  $('#screen-btn').textContent = `Screen: ${screenName(mode)}${mode === 'auto' ? ` (${screenName(used)})` : ''}`;
 });
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
 
@@ -918,7 +993,7 @@ function phoneTips() {   // once per game: on a phone held upright, suggest turn
 }
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
-const soundLabel = () => { $('#sound-btn').textContent = `${isMuted() ? '🔇' : '🔊'} Sound${keyWord(' (M)', '')}`; };
+const soundLabel = () => { $('#sound-btn').textContent = `Sound ${isMuted() ? 'off' : 'on'}${keyWord(' (M)', '')}`; };
 function muteButton() { const m = toggleMute(); soundLabel(); toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
 $('#sound-btn').onclick = muteButton;
 soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: true });
@@ -959,7 +1034,7 @@ function drawHUD() {
   // Short numbers on the chips; the full sentence shows when you hover over one
   const o2Left = f.o2Net >= 0 ? null : Math.floor(o.o2 / -f.o2Net), foodLeft = f.foodNet >= 0 ? null : Math.floor(o.food / -f.foodNet);
   meter('#m-o2', o.o2 / 60, `${o.o2.toFixed(0)} kg${o2Left !== null && o2Left < 15 ? ` · ${o2Left} sols` : ''}`);
-  meter('#m-food', 1 - o.hungry / 3, `${o.food.toFixed(0)}${foodLeft !== null && foodLeft < 15 ? ` · ${foodLeft} sols` : ''}`);
+  meter('#m-food', o.food / 60, `${o.food.toFixed(0)}${foodLeft !== null && foodLeft < 15 ? ` · ${foodLeft} sols` : ''}`);
   meter('#m-power', f.total / (o.panels * TUNED.kWhPerPanel + o.reactors * TUNED.reactorKWh), `${f.total.toFixed(0)} kWh${o.dust ? ' · dust!' : ''}`);
   meter('#m-rad', o.dose / o.limit, `${o.dose.toFixed(1)} mSv`, true);
   $('#m-suit').classList.toggle('hidden', inside);
@@ -976,9 +1051,9 @@ function drawHUD() {
   const battery = o.reactors ? 1 : isDay ? Math.min(1, (ph - TUNED.dayStart) / 0.3) : Math.max(0, 1 - nightDone * f.heater / o.battery);
   $('#tod').textContent = `${isDay ? '☀️ Day' : '🌙 Night'} · ${String(hour).padStart(2, '0')}:00 Mars time · 🔋 ${Math.round(battery * 100)}% · 🏗 ${TIERS[o.tier].name} · ${o.s.icon} ${o.s.short}`;
   const quest=colony?.s.farmQuest;
-  $('#map-btn').textContent = quest?.rewarded?'Map · Explore':questBearing();
-  $('#credits').textContent = `🔩 ${o.parts} parts · 🔬 ${o.scienceSent} science sent${o.science >= 1 ? ` (+${Math.floor(o.science)} waiting)` : ''}`;
-  $('#link').textContent = f.link ? `📡 Earth link on · messages take ${o.delayMinutes().toFixed(1)} min` : (o.blackout ? '📵 Sun blocking the radio' : '📡 Earth link OFF (needs more power)');
+  $('#map-btn').textContent=quest?.rewarded?'Map · Harvest ✓':'Map · First harvest';
+  $('#credits').textContent = noEmoji(`🔩 ${o.parts} parts · 🔬 ${o.scienceSent} science sent${o.science >= 1 ? ` (+${Math.floor(o.science)} waiting)` : ''}`);
+  $('#link').textContent = noEmoji(f.link ? `📡 Earth link on · messages take ${o.delayMinutes().toFixed(1)} min` : (o.blackout ? '📵 Sun blocking the radio' : '📡 Earth link OFF (needs more power)'));
   const list = [];
   if (o.storm) list.push({ text: `☀️ Solar storm! ${o.shelter ? (inside ? 'Sheltering - stay inside' : 'Get back inside!') : 'Get inside or shield up!'}` });
   if (o.dust) list.push({ text: `🌪 Dust storm: ${o.dust} sols left` });
@@ -1000,15 +1075,14 @@ function drawHUD() {
   if (!isModalOpen()) {
     if (inside) {
       near = room.nearest();
-      hint = near?.type==='greenhouse' ? 'Walk through the lit pressure tube' : near ? `${useWord} to ${near.label}` : `Walk to a station · ${keyWord('click', 'drag')} to look around`;
+      hint = near ? `${useWord} to ${near.label}` : body.canEat && body.rations < 14 ? keyWord('Hold F to eat. Your helmet is off in here', 'Hold Eat to eat. Your helmet is off in here') : `Walk to a station · ${keyWord('click', 'drag')} to look around`;
     } else {
       near = world.nearest();
       const names = { 'survey-meteorite':'inspect the meteorite field', 'survey-relay':'check the relay station', 'survey-ice':'perform a subsurface survey', door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
-      names['power-site']=powerSteps[o.powerStep]; names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names.ghdoor = 'go into the greenhouse'; names['sev-exit'] = 'climb out';
-      if (near?.type === 'ore' && colony.tool!=='pickaxe') hint='Equip your pickaxe to mine';
-      else if (near?.type === 'ore') hint = `${keyWord("Aim and click","Aim and tap Use")} to mine ${ORES[near.deposit.ore].name.toLowerCase()}${colony.bagCount() >= BAG ? ' (bag full!)' : ''}`;
+      names['power-site']=powerSteps[o.powerStep]; names.lookout = 'scan the land from the lookout tower'; names.find = 'collect the survey find'; names.scout = 'send Ingenuity on a scout flight'; names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names.ghdoor = 'go into the greenhouse'; names['sev-exit'] = 'climb out';
+      if (near?.type === 'ore') hint = `${useWord} to mine ${ORES[near.deposit.ore].name.toLowerCase()}${colony.tool === 'pickaxe' ? '' : ' with your pickaxe'}${colony.bagCount() >= BAG ? ' (bag full!)' : ''}`;
       else if (near?.type === 'greenhouse') hint = `${useWord} to tend the greenhouse${near.house.gh.ready ? ' - ready to harvest!' : ''}`;
-      else if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out`;
+      else if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out${body.canEat && body.rations < 14 ? keyWord(' · hold F to eat', ' · hold Eat to eat') : ''}`;
       else if (!near && colony.tool === 'builder') hint = `🛠 ${useWord} to build a greenhouse in front of you`;
       else hint = near ? `${useWord} to ${names[near.type]}` : (tutorialStep === 0 ? keyWord('Walk to the outpost door (green light) · click the game to look around · V for first person', 'Walk to the outpost door (green light) · left thumb moves, right thumb looks') : '');
     }
@@ -1019,16 +1093,27 @@ function drawHUD() {
     else if(!quest?.rewarded)hint=questBearing();
   }
   const hintEl = $('#hint');                       // a hint that is no longer needed fades away slowly
+  hint = noEmoji(hint);
   if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
   else hintEl.classList.add('gone');
   drawMouseNote();
-  touch.sync({ active: !isModalOpen() && !o.over && !$('#hud').classList.contains('menu-open'), canUse: !!near || (!inside && colony.tool === 'builder'), inside });
+  touch.sync({ active: !isModalOpen() && !o.over && !$('#hud').classList.contains('menu-open'), canUse: !!near || (!inside && colony.tool === 'builder'), inside, canEat: !!body.canEat });
+  // rations row and the suit-air ring next to your astronaut
+  let sx = null, sy = null;
+  if (!inside && !world.driving) {
+    if (world.firstPerson) { sx = innerWidth / 2 + 90; sy = innerHeight / 2; }
+    else { const v = world.player.position.clone().add(new THREE.Vector3(0, 1.3, 0)).project(world.camera); sx = (v.x + 1) / 2 * innerWidth + 70; sy = (1 - v.y) / 2 * innerHeight; }
+  }
+  body.draw({ show: !isModalOpen() && !o.over && !world.cinematic && !$('#hud').classList.contains('menu-open'), suit, outside: !inside && !world.driving, sx, sy, t: clock.elapsedTime });
 }
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
-let sunsetShown = false, hudElapsed = 0;
+if (location.hash === '#debug') window.game = { get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
+setPatchContext(() => ({ sol: outpost?.sol }));
+setSoundGate(() => !isMuted());
+setDuckHook(on => duck(on));
 
 // Launch captions: when the words change, the old ones fade out slowly while the new ones fade in,
 // so there is time to finish reading. The countdown number and the height gauge update in place.
@@ -1079,7 +1164,7 @@ renderer.setAnimationLoop(() => {
     return;
   }
   if (state.phase === 'mars' && world) {
-    const paused = isPaused();
+    const paused = isPaused() || !!world.cinematic;
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
     if (inside) room.update(dt, world.keys, !isModalOpen());
     if (inside && room===interior && interior.pos.z < -4.65){
@@ -1105,7 +1190,8 @@ renderer.setAnimationLoop(() => {
         if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection * 0.6;
       } else if (!inside) {
         // Outside, the suit uses air (faster in the freezing night) and the outpost's shielding isn't protecting you.
-        suit -= step / outpost.suitSeconds() * (world.night ? TUNED.coldSuit : 1);
+        const runningNow = (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun && world.move.lengthSq() > 4;
+        suit -= step / outpost.suitSeconds() * (world.night ? TUNED.coldSuit : 1) * (runningNow ? 1.5 : 1) * (body.starving ? 1.5 : 1);   // breathing harder (game balance)
         const f = outpost.today, perSol = step / TUNED.solSeconds;
         outpost.dose += F.surfaceDose.value * f.protection * perSol;   // the part the shield would have blocked
         if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection;
@@ -1114,6 +1200,21 @@ renderer.setAnimationLoop(() => {
           modal({ title: '🆘 Out of suit air!', html: '<p>Your crewmates came out and carried you back inside just in time. Refilling your suit in a hurry used <b>5 kg of the outpost\'s oxygen</b>. Keep an eye on your suit meter!</p>', onClose: goInside });
         }
       } else suit = Math.min(1, suit + step * 0.25);
+      // your own hunger (survival.js)
+      const moving = !inside && !world.driving && world.move.lengthSq() > 0.5;
+      const ev = body.update(step, { inside, driving: world.driving, moving, running: moving && (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun, eatHeld: !!world.keys.KeyF, foodStock: outpost.food, fresh: (colony.s.freshMeals || 0) >= .5 });
+      world.noRun = !body.canRun; world.speedMul = body.starving ? 0.7 : 1;
+      if (body.eatT > 0 && Math.floor(clock.elapsedTime * 5) !== lastCrunch) { lastCrunch = Math.floor(clock.elapsedTime * 5); crunch(); }
+      if (ev === 'ate' || ev === 'ate-fresh') {
+        outpost.food = Math.max(0, outpost.food - 0.5);
+        if (ev === 'ate-fresh') { colony.s.freshMeals = Math.max(0, (colony.s.freshMeals || 0) - .5); earn('fresh'); toast('Fresh from the greenhouse. That keeps you going longer than the freeze-dried packs.', 4500); }
+        else toast('Freeze-dried ration. Better than nothing.', 3000);
+      }
+      if (ev === 'starving') toast(keyWord('You are out of rations, so you are slower and breathing harder. Eat inside the outpost or the rover (hold F).', 'You are out of rations, so you are slower and breathing harder. Eat inside the outpost or the rover.'), 6000);
+      if (!inside && !world.driving && Math.hypot(world.player.position.x - 28, world.player.position.z + 35) > 25) earn('steps');
+      if (world.driving && roverFrom && world.sev.pos.distanceTo(roverFrom) > 200) earn('driver');
+      if (wasNight && !world.night) earn('night');   // the Sun is up again
+      wasNight = world.night;
       if (solClock >= TUNED.solSeconds) {
         solClock -= TUNED.solSeconds;
         queue.push(...outpost.tick());
@@ -1133,16 +1234,17 @@ renderer.setAnimationLoop(() => {
         if (outpost.over) { queue.length = 0; endMission(); }
       }
     }
-    if (!isModalOpen() && queue.length && !outpost.over) handle(queue.shift());   // wait until no pop-up is open, so events never replace one
+    if (!isModalOpen() && !world.cinematic && queue.length && !outpost.over) handle(queue.shift());   // wait until no pop-up is open, so events never replace one
     world.setTime(solClock / TUNED.solSeconds);
     if (!sunsetShown && !inside && solClock / TUNED.solSeconds > 0.72 && solClock / TUNED.solSeconds < 0.78) {
-      sunsetShown = true; toast('🌅 Look at the sunset - on Mars sunsets are BLUE! Fine dust lets blue light through. (NASA Curiosity photographed one in 2015.)', 7000);
+      sunsetShown = true; earn('sunset'); toast('🌅 Look at the sunset - on Mars sunsets are BLUE! Fine dust lets blue light through. (NASA Curiosity photographed one in 2015.)', 7000);
     }
     interior.setStorm(!!outpost.storm, clock.elapsedTime);
     interior.setMonitor(outpost.hazards.some(h => !h.seen), clock.elapsedTime);
     colony.update(clock.elapsedTime, world.night);
     hudElapsed+=dt;
     if(hudElapsed>=.1){drawHUD();hudElapsed=0;}
+    world.minimap?.draw(!inside && !isModalOpen() && !$('#hud').classList.contains('menu-open'), dt);
     world.settlement?.updateGreenhouse(colony.s.base, outpost.today.total*outpost.split.life>=1);
     if(inside&&(room===ghRoom||room===capsule))renderInteriorView(renderer,world,room,room===ghRoom?'greenhouse':'capsule',dt);
     else if (inside) {

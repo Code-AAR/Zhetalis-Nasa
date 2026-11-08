@@ -16,31 +16,73 @@
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="menu.css?v=landing-water-12">
-  <link rel="stylesheet" href="loading-screen.css">
-  <link rel="stylesheet" href="phone.css">
-  <link rel="stylesheet" href="briefing.css?v=landing-water-12">
-  <link rel="stylesheet" href="mobile.css?v=slow-dots-27">
+  <link rel="stylesheet" href="style.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="menu.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="loading-screen.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="phone.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="briefing.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="mobile.css?v=integrated-survey-30">
   <script type="importmap">
-    { "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "./src/ui.js": "./src/ui.js?v=compact-messages-16",
-        "./src/world.js": "./src/world.js?v=rover-slopes-29",
-        "./src/rock-contact.js": "./src/rock-contact.js?v=rover-slopes-29",
-        "./src/arrival.js?v=landing-water-12": "./src/arrival.js?v=smooth-globe-glass-26",
-        "./src/arrival-globe.js": "./src/arrival-globe.js?v=smooth-globe-glass-26",
-        "./src/starship-landing.js": "./src/starship-landing.js?v=smooth-globe-glass-26",
-        "./src/greenhouse.js?v=landing-water-12": "./src/greenhouse.js?v=smooth-globe-glass-26",
-        "./src/settlement.js?v=cable-crossings-14": "./src/settlement.js?v=five-minute-sol-28",
-        "./src/globe.js": "./src/globe.js?v=smooth-globe-glass-26",
-        "./src/briefing.js": "./src/briefing.js?v=compact-messages-16",
-        "./src/rover.js": "./src/rover.js?v=rover-slopes-29",
-        "./src/sim.js": "./src/sim.js?v=five-minute-sol-28",
-        "./src/colony.js": "./src/colony.js?v=landing-water-12",
-        "./src/interior.js": "./src/interior.js?v=landing-water-12",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    } }
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "./src/access.js": "./src/access.js?v=integrated-survey-30",
+    "./src/arrival-globe.js": "./src/arrival-globe.js?v=integrated-survey-30",
+    "./src/arrival.js": "./src/arrival.js?v=integrated-survey-30",
+    "./src/art.js": "./src/art.js?v=integrated-survey-30",
+    "./src/briefing.js": "./src/briefing.js?v=integrated-survey-30",
+    "./src/cable-crossings.js": "./src/cable-crossings.js?v=integrated-survey-30",
+    "./src/capsule.js": "./src/capsule.js?v=integrated-survey-30",
+    "./src/chart.js": "./src/chart.js?v=integrated-survey-30",
+    "./src/colony.js": "./src/colony.js?v=integrated-survey-30",
+    "./src/crew-interior.js": "./src/crew-interior.js?v=integrated-survey-30",
+    "./src/cutscenes.js": "./src/cutscenes.js?v=integrated-survey-30",
+    "./src/exploration-layout.js": "./src/exploration-layout.js?v=integrated-survey-30",
+    "./src/exterior-view.js": "./src/exterior-view.js?v=integrated-survey-30",
+    "./src/fieldmap.js": "./src/fieldmap.js?v=integrated-survey-30",
+    "./src/globe.js": "./src/globe.js?v=integrated-survey-30",
+    "./src/greenhouse.js": "./src/greenhouse.js?v=integrated-survey-30",
+    "./src/interior.js": "./src/interior.js?v=integrated-survey-30",
+    "./src/journey-visual.js": "./src/journey-visual.js?v=integrated-survey-30",
+    "./src/launch.js": "./src/launch.js?v=integrated-survey-30",
+    "./src/layout.js": "./src/layout.js?v=integrated-survey-30",
+    "./src/loading-screen.js": "./src/loading-screen.js?v=integrated-survey-30",
+    "./src/lookouts.js": "./src/lookouts.js?v=integrated-survey-30",
+    "./src/main.js": "./src/main.js?v=integrated-survey-30",
+    "./src/mapstate.js": "./src/mapstate.js?v=integrated-survey-30",
+    "./src/menu.js": "./src/menu.js?v=integrated-survey-30",
+    "./src/minimap.js": "./src/minimap.js?v=integrated-survey-30",
+    "./src/missionpath.js": "./src/missionpath.js?v=integrated-survey-30",
+    "./src/mist.js": "./src/mist.js?v=integrated-survey-30",
+    "./src/models.js": "./src/models.js?v=integrated-survey-30",
+    "./src/nasaimages.js": "./src/nasaimages.js?v=integrated-survey-30",
+    "./src/nasamodels.js": "./src/nasamodels.js?v=integrated-survey-30",
+    "./src/panel-contact.js": "./src/panel-contact.js?v=integrated-survey-30",
+    "./src/patch-art.js": "./src/patch-art.js?v=integrated-survey-30",
+    "./src/patch-fx.js": "./src/patch-fx.js?v=integrated-survey-30",
+    "./src/patches.js": "./src/patches.js?v=integrated-survey-30",
+    "./src/pedia.js": "./src/pedia.js?v=integrated-survey-30",
+    "./src/phone-layout.js": "./src/phone-layout.js?v=integrated-survey-30",
+    "./src/quiz.js": "./src/quiz.js?v=integrated-survey-30",
+    "./src/reveal.js": "./src/reveal.js?v=integrated-survey-30",
+    "./src/rock-contact.js": "./src/rock-contact.js?v=integrated-survey-30",
+    "./src/rover-terrain.js": "./src/rover-terrain.js?v=integrated-survey-30",
+    "./src/rover.js": "./src/rover.js?v=integrated-survey-30",
+    "./src/scancine.js": "./src/scancine.js?v=integrated-survey-30",
+    "./src/settlement.js": "./src/settlement.js?v=integrated-survey-30",
+    "./src/sim.js": "./src/sim.js?v=integrated-survey-30",
+    "./src/sky.js": "./src/sky.js?v=integrated-survey-30",
+    "./src/sound.js": "./src/sound.js?v=integrated-survey-30",
+    "./src/spaceweather.js": "./src/spaceweather.js?v=integrated-survey-30",
+    "./src/starship-landing.js": "./src/starship-landing.js?v=integrated-survey-30",
+    "./src/suit.js": "./src/suit.js?v=integrated-survey-30",
+    "./src/survival.js": "./src/survival.js?v=integrated-survey-30",
+    "./src/touch.js": "./src/touch.js?v=integrated-survey-30",
+    "./src/ui.js": "./src/ui.js?v=integrated-survey-30",
+    "./src/world.js": "./src/world.js?v=integrated-survey-30"
+  }
+}
   </script>
 </head>
 <body>
@@ -51,7 +93,7 @@
     <div class="mission-shell">
       <header class="mission-header">
         <a class="mission-brand" href="./" aria-label="Zhetalis home"><img src="assets/zhetalis-badge.png" alt="Zhetalis" width="64" height="64"><span>Zhetalis<small>Space exploration, in your hands.</small></span></a>
-        <nav aria-label="Game information"><button id="howto">How to play</button><button id="age-btn" aria-label="Player age: changes how much text the game shows"></button><button id="data-btn-title">NASA data &amp; credits <span aria-hidden="true">↗</span></button></nav>
+        <nav aria-label="Game information"><button id="howto">How to play</button><button id="age-btn" aria-label="Player age: changes how much text the game shows"></button><button id="reset-progress" title="Clears your saved game and all badges">Reset progress</button><button id="data-btn-title">NASA data &amp; credits <span aria-hidden="true">↗</span></button></nav>
       </header>
       <main class="mission-main">
         <div class="mission-copy">
@@ -103,24 +145,25 @@
   <section id="hud" class="hidden">
     <div class="meters">
       <div class="meter" id="m-o2"><span class="icon">O₂</span><div><label>Oxygen</label><div class="bar"><i></i></div><small></small></div></div>
-      <div class="meter" id="m-food"><span class="icon">🥕</span><div><label>Food</label><div class="bar"><i></i></div><small></small></div></div>
-      <div class="meter" id="m-power"><span class="icon">⚡</span><div><label>Power today</label><div class="bar"><i></i></div><small></small></div></div>
-      <div class="meter danger" id="m-rad"><span class="icon">☢</span><div><label>Radiation badge</label><div class="bar"><i></i></div><small></small></div></div>
-      <div class="meter" id="m-suit"><span class="icon">🧑‍🚀</span><div><label>Suit oxygen</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-food"><span class="icon"><svg viewBox="0 0 20 20"><path d="M5 3v6a2 2 0 0 0 2 2v6M7 3v5M9 3v6a2 2 0 0 1-2 2M14 3c-1.6 1-2 3-2 5s1 2.6 2 2.6V17"/></svg></span><div><label>Food</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-power"><span class="icon"><svg viewBox="0 0 20 20"><path d="M11 2 4 11h5l-1 7 7-9h-5Z"/></svg></span><div><label>Power today</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter danger" id="m-rad"><span class="icon"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="1.6"/><path d="M10 3a7 7 0 0 1 6 3.5l-4.3 2.4A2 2 0 0 0 10 8ZM16.1 13.5A7 7 0 0 1 10 17v-5a2 2 0 0 0 1.7-1ZM3.9 13.5 8.2 11A2 2 0 0 0 10 12v5a7 7 0 0 1-6.1-3.5Z" transform="rotate(30 10 10)"/></svg></span><div><label>Radiation badge</label><div class="bar"><i></i></div><small></small></div></div>
+      <div class="meter" id="m-suit"><span class="icon"><svg viewBox="0 0 20 20"><circle cx="10" cy="8" r="5"/><path d="M4 18c0-3 2.7-4.5 6-4.5s6 1.5 6 4.5"/></svg></span><div><label>Suit oxygen</label><div class="bar"><i></i></div><small></small></div></div>
     </div>
     <div class="status">
       <div id="sol"></div>
       <div id="tod"></div>
       <div id="credits"></div>
       <div id="link"></div>
-      <button id="menu-btn" aria-label="Menu">☰ Menu</button>
+      <button id="menu-btn" aria-label="Menu">Menu (Esc)</button>
       <div class="status-buttons">
-        <button id="power-btn">⚡ Power (P)</button>
-        <button id="view-btn">👁 View (V)</button>
+        <button id="power-btn">Power (P)</button>
+        <button id="view-btn">View (V)</button>
         <button id="speed-btn">Speed ×1</button>
         <button id="map-btn">Surface map (G)</button>
-        <button id="log-btn">📒 Logbook (L)</button>
-        <button id="sound-btn">🔊 Sound (M)</button>
+        <button id="log-btn">Logbook (L)</button>
+        <button id="patch-btn">Patches</button>
+        <button id="sound-btn">Sound (M)</button>
         <button id="data-btn">NASA data</button>
         <button id="pedia-btn">📖 Mars-pedia</button>
         <button id="screen-btn">📱 Screen</button>
@@ -141,8 +184,8 @@
   <div id="toast"></div>
   <div id="loading">Loading Mars…</div>
 
-  <script type="module" src="src/loading-screen.js"></script>
-  <script type="module" src="src/main.js?v=rover-slopes-29"></script>
-  <script type="module" src="src/phone-layout.js?v=landing-water-12"></script>
+  <script type="module" src="src/loading-screen.js?v=integrated-survey-30"></script>
+  <script type="module" src="src/main.js?v=integrated-survey-30"></script>
+  <script type="module" src="src/phone-layout.js?v=integrated-survey-30"></script>
 </body>
 </html>

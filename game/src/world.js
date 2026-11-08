@@ -6,6 +6,8 @@ import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
 import { Rover } from './rover.js';
 import { createRockContact } from './rock-contact.js';
+import { solarPanel, makeCellMat } from './models.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeStars, makePlanets } from './sky.js';
 
 // ---------- terrain shape (deterministic, so every player gets the same map) ----------
@@ -20,17 +22,18 @@ function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i 
 
 export const WORLD_SIZE = 640;
 // The land around the outpost is shaped like the real Gusev Crater, where NASA's Spirit rover landed:
-// heights come from NASA's 3D model of the Spirit landing site (assets/gusev-height.bin, 256x256, made by
-// sampling NASA's 3D-print file). The real crater is about 160 km wide - here it is shrunk so its rim is
+// heights come from NASA's 3D model of the Spirit landing site (assets/gusev-height.bin, 512x512, sampled from the cleaned and
+// resubdivided copy of NASA's 3D-print file). The real crater is about 160 km wide - here it is shrunk so its rim is
 // the hills you see around you, and heights are stretched so they are easy to see.
 const GUSEV = await fetch('assets/gusev-height.bin').then(r => (r.ok ? r.arrayBuffer() : null)).then(b => b && new Uint16Array(b)).catch(() => null);
-const GN = 256, G_CX = 0.52, G_CY = 0.4, G_SPAN = 980;   // crater centre in the map, and metres the map covers
+const GN = GUSEV ? Math.round(Math.sqrt(GUSEV.length)) : 256, G_CX = 0.52, G_CY = 0.4, G_SPAN = 980;   // grid size comes from the file, so a finer map just works   // crater centre in the map, and metres the map covers
 function gusev(x, z) {
   const u = (G_CX + x / G_SPAN) * (GN - 1), v = (G_CY + z / G_SPAN) * (GN - 1);
   const x0 = Math.max(0, Math.min(GN - 2, Math.floor(u))), y0 = Math.max(0, Math.min(GN - 2, Math.floor(v)));
   const fx = Math.min(1, Math.max(0, u - x0)), fy = Math.min(1, Math.max(0, v - y0)), at = (i, j) => GUSEV[(y0 + j) * GN + x0 + i] / 65535;
   return (at(0, 0) * (1 - fx) + at(1, 0) * fx) * (1 - fy) + (at(0, 1) * (1 - fx) + at(1, 1) * fx) * fy;
 }
+export const gusevGrid = () => (GUSEV ? { data: GUSEV, n: GN, cx: G_CX, cy: G_CY, span: G_SPAN } : null);
 const FLOOR = GUSEV ? gusev(0, 0) : 0;
 export function heightAt(x, z) {
   const r = Math.hypot(x, z);
@@ -156,7 +159,7 @@ function gravelTexture() {
 }
 
 function makeTerrain() {
-  const seg = 256;
+  const seg = 384;
   const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, colors = [];
@@ -177,7 +180,28 @@ function makeTerrain() {
   return mesh;
 }
 
-// Flat slabs and boulders like the Perseverance photo of Jezero Crater.
+// Boulders, flat slabs and loose pebbles like the Perseverance photo of Jezero Crater. The stones are lumpy
+// (noise pushes every point in or out), smooth-shaded, flat on the bottom, darker in the hollows and lighter on top.
+const hash3 = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };
+function noise3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), fx = x - ix, fy = y - iy, fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), t = fz * fz * (3 - 2 * fz), L = (a, b, k) => a + (b - a) * k;
+  return L(L(L(hash3(ix, iy, iz), hash3(ix + 1, iy, iz), u), L(hash3(ix, iy + 1, iz), hash3(ix + 1, iy + 1, iz), u), v),
+           L(L(hash3(ix, iy, iz + 1), hash3(ix + 1, iy, iz + 1), u), L(hash3(ix, iy + 1, iz + 1), hash3(ix + 1, iy + 1, iz + 1), u), v), t);
+}
+export function rockGeometry(seed, { detail = 3, squash = 1, rough = .3 } = {}) {
+  let g = new THREE.IcosahedronGeometry(1, detail); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4);
+  const p = g.attributes.position, col = new Float32Array(p.count * 3), v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).normalize();
+    const n = noise3(v.x * 1.6 + seed, v.y * 1.6 + seed * .7, v.z * 1.6 - seed) - .5, m = noise3(v.x * 5 + seed, v.y * 5, v.z * 5 - seed) - .5;
+    const r = 1 + n * rough * 1.6 + m * rough * .35 + (v.y > 0 ? -.05 : 0);
+    v.multiplyScalar(r); v.y = Math.max(v.y * squash, -.32 * squash);                    // flat underside, so it sits in the ground
+    p.setXYZ(i, v.x, v.y, v.z);
+    const shade = .5 + .4 * THREE.MathUtils.clamp(v.y * .5 + .55, 0, 1) + n * .5 + m * .45; col[i * 3] = shade; col[i * 3 + 1] = shade * .97; col[i * 3 + 2] = shade * .95;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+}
 function makeRocks(rng) {
   const count = 520;
   const geo = new THREE.DodecahedronGeometry(1, 0);
@@ -291,20 +315,7 @@ function makeSkyLights(scene) {
   const tex = new THREE.CanvasTexture(c);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: '#fff1dc', transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
   glow.scale.setScalar(260); scene.add(glow);
-  // HMI is a full-disk observation. Map it onto a camera-facing disk.
-  const texture = new THREE.TextureLoader().load('assets/sdo-sun.jpg');
-  texture.colorSpace=THREE.SRGBColorSpace;
-  const material=new THREE.ShaderMaterial({
-    uniforms:{solarMap:{value:texture}},
-    vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader:`uniform sampler2D solarMap; varying vec2 vUv;
-      void main(){float intensity=texture2D(solarMap, .5+(vUv-.5)*.92).r;
-        gl_FragColor=vec4(vec3(1.,.965,.89)*sqrt(intensity)*2.5,1.);
-        #include <colorspace_fragment>
-      }`
-  });
-  const disc=new THREE.Mesh(new THREE.CircleGeometry(2.5,64),material);
-  disc.name='SDO solar disk';
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 20), new THREE.MeshBasicMaterial({ color: '#fffaf0', fog: false }));
   scene.add(disc);
   // thousands of stars and the Milky Way; the thin, dry air of Mars makes the night sky very clear
   const stars = makeStars(850, 3500, true); scene.add(stars);
@@ -317,30 +328,11 @@ function makeSkyLights(scene) {
 
 function makeSolarField() {
   const g = new THREE.Group(); g.position.set(16, 0, -8);
-  const panelMat = new THREE.MeshLambertMaterial({ color: '#1d3a6e', flatShading: true });
-  g.userData.panelMat = panelMat;
-  const frame = mat('#bfbab2');
+  const cellMat = makeCellMat(); g.userData.panelMat = cellMat;
   const panels = [];
   for (let i = 0; i < 12; i++) {
-    const p = new THREE.Group();
-    const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 2), panelMat); board.rotation.x = -0.45; board.position.y = 1.3; p.add(board);
-    for(const side of [-1,1]){
-      const rail=new THREE.Mesh(new THREE.BoxGeometry(.08,.1,2.08),frame);rail.position.set(side*1.64,.02,0);board.add(rail);
-      const rim=new THREE.Mesh(new THREE.BoxGeometry(3.36,.1,.08),frame);rim.position.set(0,.02,side*1.04);board.add(rim);
-      for(const front of [-1,1]){
-        const z=front*.8, top=1.3+Math.sin(.45)*z;
-        const leg=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,top,8),frame);leg.position.set(side*1.3,top/2,z);p.add(leg);
-        const foot=new THREE.Mesh(new THREE.BoxGeometry(.3,.09,.3),frame);foot.position.set(side*1.3,.025,z);p.add(foot);
-      }
-    }
-    const grid=[];
-    for(let col=0;col<=8;col++){const x=-1.55+col*3.1/8;grid.push(new THREE.Vector3(x,-.95,0),new THREE.Vector3(x,.95,0));}
-    for(let row=0;row<=4;row++){const y=-.95+row*1.9/4;grid.push(new THREE.Vector3(-1.55,y,0),new THREE.Vector3(1.55,y,0));}
-    const cells=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(grid),new THREE.LineBasicMaterial({color:'#7186a4'}));
-    cells.rotation.x=-Math.PI/2;cells.position.y=.065;board.add(cells);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.3, 12), frame); post.position.y = 0.65; p.add(post);
-    p.position.set((i % 4) * 4.6, 0, Math.floor(i / 4) * 3.4);
-    p.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    const px = (i % 4) * 4.6, pz = Math.floor(i / 4) * 3.4, p = solarPanel(cellMat, { w: 3.2, d: 2, tilt: .5, low: .6 });
+    p.position.set(px, heightAt(g.position.x + px, g.position.z + pz), pz);
     p.visible = false; g.add(p); panels.push(p);
   }
   return { group: g, panels };
@@ -569,7 +561,7 @@ export class World {
   }
 
   setPanels(n) { this.solar.panels.forEach((p, i) => (p.visible = i < n)); }
-  setPanelDust(clean) { this.solar.group.userData.panelMat.color.set('#1d3a6e').lerp(new THREE.Color('#b06a43'), (1 - clean) * 1.2); }
+  setPanelDust(clean) { this.solar.group.userData.panelMat.color.set('#ffffff').lerp(new THREE.Color('#a8744f'), Math.min(1, (1 - clean) * 1.2)); }
   setWall(level) { if(this.settlement)return this.settlement.setWall(level);this.outpost.wall.visible = level > 0; }
   setRegolith(on) {
     if(this.settlement)return this.settlement.setRegolith(on);
@@ -591,7 +583,7 @@ export class World {
     this.sun.color.set('#fff1dc').lerp(new THREE.Color('#ffc08a'), dusk);
     this.hemi.intensity = 0.22 + 0.93 * day * (this.dustOn ? 0.7 : 1);
     const u = this.sky.material.uniforms, C = c => new THREE.Color(c);
-    u.zenith.value.copy(C(this.dustOn ? '#8a5232' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#020308'), 1 - day);
+    u.zenith.value.copy(C(this.dustOn ? '#8a5232' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#3d2c38'), THREE.MathUtils.clamp((1 - day) * 1.2, 0, 1) * 0.8).lerp(C('#020308'), THREE.MathUtils.clamp((1 - day - 0.55) / 0.45, 0, 1));
     u.horizon.value.copy(C(this.dustOn ? '#b5744c' : '#dcb08a')).lerp(C('#b07a5a'), dusk * 0.5).lerp(C('#0d0b12'), 1 - day);
     u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
@@ -726,15 +718,15 @@ export class World {
     this.sevCollider.x = this.sev.pos.x; this.sevCollider.z = this.sev.pos.z;
     if (this.driving) return this.updateDriving(dt);
     const p = this.player.position, g = this.facts.gravity.value;
-    const k = this.keys, running = k.ShiftLeft || k.ShiftRight;
+    const k = this.keys, running = (k.ShiftLeft || k.ShiftRight) && !this.noRun;   // no running on an empty stomach (main.js sets noRun)
     const want = this.wantMove??=new THREE.Vector3();want.set(0,0,0);
     if (controlsActive) {
       const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
       want.set(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
-      if (want.lengthSq() > 0) want.normalize().multiplyScalar(running ? RUN : WALK);
+      if (want.lengthSq() > 0) want.normalize().multiplyScalar((running ? RUN : WALK) * (this.speedMul ?? 1));
       if (this.toolSwing >= 0) want.multiplyScalar(0.15);                          // you plant your feet to swing
-      if (k.Space && this.onGround && this.toolSwing < 0) { this.vel.y = 4.2; this.onGround = false; }   // same push as on Earth...
+      if (k.Space && this.onGround && this.toolSwing < 0) { this.vel.y = 4.2; this.onGround = false; this.onJump?.(); }   // same push as on Earth...
     }
     this.updateSwing(dt);
     // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
@@ -823,7 +815,6 @@ export class World {
     this.sky.position.copy(cam);
     this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
-    this.skyLights.disc.lookAt(cam);
     this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
     this.skyLights.moons.userData.place(this.phase, cam, (this.nightness ?? 0) * (this.dustOn ? 0.2 : 1));
     this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);

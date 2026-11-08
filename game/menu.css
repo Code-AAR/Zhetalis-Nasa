@@ -97,3 +97,10 @@
   #title .screen-pick button, #title #fs-btn-title { min-height: 44px; } #title .screen-pick { gap: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { #title * { scroll-behavior: auto; } }
+
+/* With a saved game, Continue is the main button and New game is the quiet one. */
+#title #resume.primary { background: #ff7a2f; color: #1a0f0b; font-size: 14px; font-weight: 700; }
+#title #start:not(.primary) { background: #252b2d; color: #f3ece4; }
+
+#reset-progress { opacity: .65; font-size: 12px; }
+#reset-progress:hover { opacity: 1; }

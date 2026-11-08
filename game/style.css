@@ -155,7 +155,7 @@ h2 { font-size: 1rem; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 /* first-person crosshair */
 #crosshair { position: fixed; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; pointer-events: none; z-index: 2; }
 
-#toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(12px); opacity: 0; background: #2c1a12; border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; transition: opacity 1.4s ease, transform 1.4s ease; pointer-events: none; max-width: 90vw; text-align: center; z-index: 20; }
+#toast { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%) translateY(12px); opacity: 0; background: #2c1a12; border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; transition: opacity 1.4s ease, transform 1.4s ease; pointer-events: none; max-width: 90vw; text-align: center; z-index: 20; }
 #toast.show { opacity: 1; transform: translateX(-50%); transition: opacity .45s ease, transform .45s ease; }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #1a0f0b; font-size: 1.3rem; z-index: 50; }
 
@@ -474,3 +474,84 @@ body.young .modal-box p { font-size: 1.05rem; }
 .water-steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
 .water-steps button { text-align: left; }
 .water-steps button small { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }
+
+/* ---- game HUD pieces (survival.js, patches.js) ---- */
+#m-suit { display: none !important; }                       /* the suit-air ring next to the astronaut replaces it */
+.meter .icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#m-rad .icon svg, #m-power .icon svg { fill: currentColor; stroke: none; }
+
+/* Rations: ten foil packs above the hint, Minecraft-hunger style */
+#rations { position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; pointer-events: none; }
+.rt-packs { display: flex; gap: 2px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+.pk svg { width: 20px; height: 20px; display: block; }
+.pk .pk-bg { fill: rgba(20,14,12,.75); stroke: rgba(255,255,255,.35); stroke-width: .9; }
+.pk .pk-fill, .pk .pk-half { fill: #d7dde4; }
+.pk .pk-half { display: none; }
+.pk .pk-seal { stroke: #8a95a3; stroke-width: 1; }
+.pk.half .pk-fill { display: none; } .pk.half .pk-half { display: block; }
+.pk.empty .pk-fill, .pk.empty .pk-seal { display: none; }
+#rations.low .pk .pk-fill, #rations.low .pk .pk-half { fill: #ffb25a; }
+#rations.shake .rt-packs { transform: translateY(-1px); }
+.rt-label { font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,247,238,.7); }
+.rt-eat { width: 120px; height: 4px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; opacity: 0; transition: opacity .2s; }
+.rt-eat b { display: block; height: 100%; width: 0; background: #7dffb2; }
+#rations.eating .rt-eat { opacity: 1; }
+body.touch #rations { bottom: calc(150px + env(safe-area-inset-bottom)); }
+
+/* Suit air: a ring beside your astronaut, like a stamina wheel */
+#air-wheel { position: absolute; width: 52px; height: 52px; margin: -26px 0 0 -26px; opacity: 0; transform: scale(.7); transition: opacity .35s, transform .35s; pointer-events: none; }
+#air-wheel.on { opacity: 1; transform: none; }
+#air-wheel svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+#air-wheel .aw-track { fill: rgba(10,10,14,.45); stroke: rgba(255,255,255,.18); stroke-width: 5; }
+#air-wheel .aw-fill { fill: none; stroke: #7dffb2; stroke-width: 5; stroke-linecap: round; transition: stroke .3s; }
+#air-wheel[data-level=yellow] .aw-fill { stroke: #ffd27a; }
+#air-wheel[data-level=red] .aw-fill { stroke: #ff5a4a; }
+#air-wheel[data-level=red].on { animation: airflash .6s steps(2) infinite; }
+@keyframes airflash { 50% { opacity: .35; } }
+#air-wheel span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .62rem; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; }
+
+/* Mission patch book. The award animation has its own styles, injected by patch-fx.js */
+.patch-medal { display: flex; align-items: center; gap: 12px; margin: 10px 0 4px; padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.04); }
+.patch-medal b { display: block; font-size: .9rem; } .patch-medal small { font-size: .74rem; color: var(--muted); }
+.patch-medal:not(.got) b { color: rgba(255,255,255,.4); letter-spacing: .2em; }
+.patch-medal.got { background: rgba(201,162,39,.14); box-shadow: inset 0 0 0 1px rgba(201,162,39,.4); }
+.patch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+.patch-cell { height: 164px; perspective: 700px; border-radius: 12px; background: rgba(255,255,255,.04); }
+.patch-cell.got { cursor: pointer; } .patch-cell.got:hover { background: rgba(255,255,255,.08); }
+.pc-in { position: relative; width: 100%; height: 100%; transition: transform .5s cubic-bezier(.3,.8,.3,1); transform-style: preserve-3d; }
+.patch-cell.flipped .pc-in { transform: rotateY(180deg); }
+.pc-face { position: absolute; inset: 0; display: grid; justify-items: center; align-content: center; text-align: center; gap: 4px; padding: 8px 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.pc-back { transform: rotateY(180deg); gap: 6px; border-radius: 12px; background: repeating-linear-gradient(45deg, #1d2027 0 3px, #20242c 3px 6px); }
+.pc-back small { letter-spacing: .12em; text-transform: uppercase; color: #ffd27a; } .pc-back b { font-size: 1.5rem; } .pc-back span { font-size: .8rem; color: var(--muted); }
+.patch-cell b { font-size: .85rem; } .patch-cell small { font-size: .72rem; color: var(--muted); line-height: 1.3; }
+.patch-cell.got .patch { filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.patch-cell.locked b { color: rgba(255,255,255,.4); letter-spacing: .2em; }
+
+/* pause menu and briefing: the same quiet look as the new title menu */
+.modal-box:has(.pm) .choices button.primary, .modal-box:has(.pm-patches) .choices button.primary, #briefing .primary { background: #eef1f3; border-color: #eef1f3; color: #111; }
+.modal-box:has(.pm) .choices button { background: rgba(255,255,255,.04); }
+.bf-chip { border-color: rgba(255,255,255,.18); color: #d9dde2; }
+.bf-panel { background: rgba(12,13,17,.86); border-color: rgba(255,255,255,.12); }
+.bf-dot.on { background: #eef1f3; }
+
+/* ---- survey map: layer tabs, flags, landmarks, minimap ---- */
+.fm-tabs { display: flex; gap: 6px; margin: 10px 0 8px; }
+.fm-tabs button { flex: 1; padding: 6px 10px; font-size: .85rem; }
+.fm-tabs button[aria-pressed="true"] { background: #e9dcc1; color: #3b2417; border-color: #e9dcc1; font-weight: 600; }
+#fm-wrap canvas { border-radius: 6px; box-shadow: 0 6px 22px rgba(0,0,0,.45); }
+.fm-actions { display: flex; align-items: center; gap: 12px; margin: 10px 0 4px; flex-wrap: wrap; }
+.fm-actions span { color: var(--muted); font-size: .8rem; }
+.fm-flag { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 8px; align-items: center; margin: 6px 0; }
+.fm-flag i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,.7); }
+.fm-flag input { background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 8px; color: inherit; padding: 5px 9px; font: inherit; min-width: 0; }
+.fm-flag small { color: var(--muted); }
+#fm-lm h4 { margin: 14px 0 6px; font-size: .95rem; }
+.fm-lm { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; margin: 5px 0; font-size: .9rem; }
+.fm-lm summary { cursor: pointer; font-weight: 600; }
+.fm-lm p { margin: 6px 0 2px; font-size: .85rem; color: var(--muted); }
+.fm-lm.off { color: var(--muted); font-style: italic; opacity: .7; }
+#minimap { position: absolute; right: 14px; bottom: 78px; width: 132px; height: 132px; border-radius: 50%; box-shadow: 0 4px 16px rgba(0,0,0,.55); cursor: pointer; pointer-events: auto; z-index: 3; }
+#minimap.hidden { display: none; }
+body.layout-phone #minimap, body.touch #minimap { display: none; }
+
+#modal.cine-hide { opacity: 0; pointer-events: none; }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeSpin, latLonDir } from './globe.js?v=slow-dots-27';
+import { makeSpin, latLonDir } from './globe.js';
 import { loadMarsMap } from './nasaimages.js';
 import { loadModel } from './nasamodels.js';
 

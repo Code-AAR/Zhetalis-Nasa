@@ -1,6 +1,10 @@
 // Small DOM helpers for the HUD, pop-ups and panels.
 import { artHTML } from './art.js';
 export const $ = s => document.querySelector(s);
+// Pop-up titles and toasts are written with an emoji in front. The HUD draws its own icons, so the emoji is
+// dropped here to keep the screen looking like a game rather than a chat.
+export const plain = t => String(t).replace(/^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D]|\s)+/u, '');
+export const noEmoji = t => String(t).replace(/(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D])+\s?/gu, '').trim();   // for HUD lines
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function factHTML(f, log = true, open = false) {
@@ -32,7 +36,7 @@ export const isPaused = () => modalOpen && modalPauses;   // the outpost panel l
 export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause = true }) {
   modalPauses = pause;
   const box = $('#modal .modal-box');
-  box.innerHTML = `<header class="message-header"><h3>${title}</h3><button type="button" class="modal-dismiss" aria-label="Close message">×</button></header>${html || ''}<div class="choices"></div>`;
+  box.innerHTML = `<header class="message-header"><h3>${plain(title)}</h3><button type="button" class="modal-dismiss" aria-label="Close message">×</button></header>${html || ''}<div class="choices"></div>`;
   box.scrollTop = 0;   // every new pop-up starts at its title
   const list = box.querySelector('.choices');
   choices.forEach(c => {
@@ -62,7 +66,7 @@ let toastTimer;
 // Short messages: they fade in, stay long enough to read (longer messages stay longer), then fade out slowly.
 export function toast(text, ms = 3200) {
   ms = Math.min(6000, Math.max(ms, 2000 + text.length * 20));
-  const t = $('#toast'); t.innerHTML = '<span></span><button type="button" aria-label="Dismiss notification">×</button>'; t.querySelector('span').textContent = text; t.classList.add('show');
+  const t = $('#toast'); t.innerHTML = '<span></span><button type="button" aria-label="Dismiss notification">×</button>'; t.querySelector('span').textContent = plain(text); t.classList.add('show');
   t.querySelector('button').onclick = () => { clearTimeout(toastTimer); t.classList.remove('show'); };
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
@@ -77,7 +81,7 @@ export function meter(id, frac, text, invert = false) {
 }
 
 export function alerts(list) {
-  $('#alerts').innerHTML = list.map(a => `<div class="alert ${a.info ? 'info' : ''}">${esc(a.text)}</div>`).join('');
+  $('#alerts').innerHTML = list.map(a => `<div class="alert ${a.info ? 'info' : ''}">${esc(noEmoji(a.text))}</div>`).join('');
 }
 
 export function sourcesHTML(sources) {

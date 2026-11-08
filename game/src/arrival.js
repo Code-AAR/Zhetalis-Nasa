@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ArrivalGlobe } from './arrival-globe.js?v=slow-dots-27';
+import { ArrivalGlobe } from './arrival-globe.js';
 import { StarshipLandingVisual } from './starship-landing.js';
 import { SITES } from './sim.js';
 
@@ -12,7 +12,7 @@ export const LANDING_REGIONS=[
 ];
 // Set scanVideo to the supplied animation's local asset URL when it is ready.
 // A failed video leaves the built-in illustrative scan available.
-export function showArrival(F,delayMinutes=10,{scanVideo=null}={}){
+export function showArrival(F,delayMinutes=10,{scanVideo=null,onDescent=null}={}){
  return new Promise(resolve=>{
   let selected=null,phase='select',visual,frame,closed=false,elapsed=0,last=performance.now(),video;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -27,7 +27,10 @@ export function showArrival(F,delayMinutes=10,{scanVideo=null}={}){
   function beginScan(){if(!selected)return;phase='scan';elapsed=0;confirm.hidden=true;skip.hidden=false;root.querySelectorAll('[data-region]').forEach(b=>b.disabled=true);get('#landing-title').textContent='Orbital survey · '+SITES[selected].name;get('[data-stage]').textContent='The orbiter checks the chosen region before the lander begins its descent.';status.textContent='Illustrative scan · placeholder for your animation';visual?.scan?.();
    if(scanVideo){video=document.createElement('video');video.src=scanVideo;video.muted=true;video.playsInline=true;video.className='scan-video';video.onerror=()=>video.remove();get('.landing-art').appendChild(video);video.play().catch(()=>video.remove());}
   }
-  function beginDescent(){phase='descent';elapsed=0;video?.pause();video?.remove();visual?.dispose();const canvas=get('canvas');canvas.replaceWith(document.createElement('canvas'));try{visual=new StarshipLandingVisual(get('canvas'));visual.setMode('entry');}catch{visual=null;}get('#landing-title').textContent='Starship approach · '+SITES[selected].name;get('[data-stage]').textContent='Atmospheric entry → engine braking → slow touchdown';get('.landing-regions').hidden=true;}
+  function beginDescent(){
+   if(onDescent){phase='cinematic';video?.pause();video?.remove();visual?.dispose();visual=null;root.hidden=true;
+    Promise.resolve().then(onDescent).then(()=>finish(selected)).catch(()=>{root.hidden=false;status.textContent='Landing complete. Continue to your outpost.';touchdown();});return;}
+   phase='descent';elapsed=0;video?.pause();video?.remove();visual?.dispose();const canvas=get('canvas');canvas.replaceWith(document.createElement('canvas'));try{visual=new StarshipLandingVisual(get('canvas'));visual.setMode('entry');}catch{visual=null;}get('#landing-title').textContent='Starship approach · '+SITES[selected].name;get('[data-stage]').textContent='Atmospheric entry → engine braking → slow touchdown';get('.landing-regions').hidden=true;}
   function touchdown(){phase='landed';status.textContent='Touchdown confirmed. Engines off.';confirm.hidden=false;confirm.disabled=false;confirm.textContent='Step outside ›';skip.hidden=true;}
   confirm.onclick=()=>phase==='select'?beginScan():phase==='landed'?finish(selected):null;
   skip.onclick=()=>phase==='scan'?beginDescent():finish(selected);

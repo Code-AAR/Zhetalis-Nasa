@@ -19,6 +19,7 @@ export function initTouch({ keys, look, press }) {
       <button id="t-view">👁<span>View</span></button>
       <button id="t-power">⚡<span>Power</span></button>
       <button id="t-log">📒<span>Log</span></button>
+      <button id="t-eat" class="hidden">🍽<span>Eat</span></button>
     </div>`;
   document.querySelector('#hud').appendChild(root);
   const stick = root.querySelector('#t-stick'), knob = stick.querySelector('i');
@@ -87,11 +88,12 @@ export function initTouch({ keys, look, press }) {
   btn('#t-view', () => press('KeyV'));
   btn('#t-power', () => press('KeyP'));
   btn('#t-log', () => press('KeyL'));
+  btn('#t-eat', () => { const k = keys(); if (k) k.KeyF = true; }, () => { const k = keys(); if (k) k.KeyF = false; });   // hold to eat, like holding F
 
   let shown = false;
   return {
     // main.js calls this every frame: hide the controls while a pop-up is open, light up Use when something is near
-    sync({ active, canUse, inside }) {
+    sync({ active, canUse, inside, canEat }) {
       const show = on && active;
       if (show !== shown) {
         shown = show; root.classList.toggle('hidden', !show);
@@ -99,6 +101,7 @@ export function initTouch({ keys, look, press }) {
       }
       root.querySelector('#t-use').classList.toggle('ready', !!canUse);
       root.querySelector('#t-view').classList.toggle('hidden', !!inside);
+      root.querySelector('#t-eat').classList.toggle('hidden', !canEat);
     },
   };
 }

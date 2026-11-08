@@ -126,4 +126,26 @@ export function toggleMute() {
   return muted;
 }
 export const isMuted = () => muted;
+// Dip everything (wind, hum, steps) for a moment so an award can be heard, like the pause before a Zelda fanfare.
+export function duck(on) { if (master && !muted) ramp(master.gain, on ? 0.2 : 0.9, on ? 0.25 : 1.2); }
 export const soundDebug = () => ({ context: ctx?.state ?? 'not started', windRecording: !!wind && wind.buffer?.duration > 30, windSeconds: wind?.buffer?.duration, muted });
+
+// Eating: a few quick, crunchy bites (made from the same noise as the footsteps).
+export function crunch() {
+  if (!ctx || muted) return;
+  const t = ctx.currentTime, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  src.buffer = noise.brown; f.type = 'bandpass'; f.frequency.value = 900 + Math.random() * 500; f.Q.value = 1.2;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  src.connect(f).connect(g).connect(master); src.start(t, Math.random() * 3, 0.12);
+}
+
+// A mission patch: two soft rising notes.
+export function chime() {
+  if (!ctx || muted) return;
+  [[660, 0], [990, 0.12]].forEach(([hz, d]) => {
+    const t = ctx.currentTime + d, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = hz;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    o.connect(g).connect(master); o.start(t); o.stop(t + 0.55);
+  });
+}
