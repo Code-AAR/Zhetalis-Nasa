@@ -36,6 +36,9 @@ export function installHabitatAccess(world, model, layout) {
     hatch.position.set(c.x,height,doorZ+.12);
     hatch.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
     group.add(hatch);entrance.handle=hatch.userData.handle;
+    // The ramp bypasses the habitat cylinder, but must never bypass its hatch.
+    layout.colliders.push({x:c.x,z:doorZ+.26,r:1.65,halfX:1.575,halfZ:.28,
+      minY:height-.1,maxY:height+2.94,airlock:true,object:hatch});
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#26353a';ctx.fillRect(0,0,512,96);ctx.fillStyle='#c9f5db';ctx.font='30px system-ui';ctx.textAlign='center';ctx.fillText(`AIRLOCK ${String(index+1).padStart(2,'0')} · E`,256,61);
     const sign=new THREE.Mesh(new THREE.PlaneGeometry(2,.375),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));

@@ -700,7 +700,7 @@ export class World {
     for (const c of this.colliders) {
       if (c.rock) continue;
       if(c.object && !c.object.visible)continue;
-      if(c.halfX !== undefined){blockPanel(pos,c,0.45);continue;}
+      if(c.halfX !== undefined){if(c.minY===undefined||(pos.y<c.maxY&&pos.y+1.85>c.minY))blockPanel(pos,c,0.45);continue;}
       if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
