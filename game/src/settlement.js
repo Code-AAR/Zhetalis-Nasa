@@ -135,6 +135,8 @@ export async function installSettlement(world){
   model.traverse(o=>{if(!o.isMesh||!/^Object_(17|18|19|20|21|22|23|24|25|26|27|28)$/.test(o.name))return;
     const tint=m=>{const copy=m.clone();finishes.push(regolithFinish(copy));return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);
   });
+  const hatchMaterials=new Set();access.group.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material))if(o.userData.regolithFinish||m.userData.regolithFinish)hatchMaterials.add(m);});
+  for(const m of hatchMaterials)finishes.push(regolithFinish(m));
   const domeMaterials=new Set();greenhouse.traverse(o=>{if(o.isMesh&&o.material?.color)domeMaterials.add(o.material);});
   for(const material of domeMaterials)finishes.push(regolithFinish(material));
   const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=false;finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};

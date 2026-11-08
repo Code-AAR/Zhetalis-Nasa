@@ -4,7 +4,8 @@ import * as THREE from 'three';
 // airlock before the existing scene transition; it is not an open door to vacuum.
 export function pressureHatch({ entry = false } = {}) {
   const g = new THREE.Group(); g.name = 'Pressure airlock hatch';
-  const shell = new THREE.MeshStandardMaterial({color:'#c9cec9',roughness:.65,metalness:.2});
+  const shell = new THREE.MeshStandardMaterial({color:entry?'#b9824f':'#c9cec9',roughness:.65,metalness:.2});
+  shell.userData.regolithFinish=entry;
   const door = new THREE.MeshStandardMaterial({color:'#82969b',roughness:.5,metalness:.45});
   const steel = new THREE.MeshStandardMaterial({color:'#bac7c9',roughness:.3,metalness:.7});
   const seal = new THREE.MeshStandardMaterial({color:'#26353a',roughness:.9});

@@ -104,3 +104,6 @@ Validation: Mars full power/charger/soil workflow and save/resume; culture water
 
 ### Revision 57 — regolith finish without corridor obstruction
 Removed the soil-bag sphere rows that crossed the greenhouse connection. Numeric shielding levels now reach the appearance code (previously reduced to a boolean), including on save restore. Habitat shell and dome materials gain progressively warmer soil tint, roughness and procedural fine dust at levels 1–3; glass stays transparent and interior/exterior finishes match. The finish is a visual cue for the existing shielding upgrade, not a claim that a thin dust film blocks radiation. Browser checked levels 0–3 and the clear corridor view; no shader errors after validation.
+
+### Revision 58 — charger feedback and matching airlocks
+Expanded docking detection to the painted bay rectangle with a parking tolerance. Connection is acknowledged even with an empty reserve; charging still requires stored energy, and never invents power at night. Persistent nearby status shows rover percentage, charger state and reserve while on foot or driving. Indoor greenhouse/locker goals no longer mark exterior stairs. Grow beds now have an indoor marker. Airlock collars and outer hatch surrounds share warm ochre tones and the soil-layer finish, while operational door hardware stays distinct.

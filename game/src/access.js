@@ -6,7 +6,7 @@ export function installHabitatAccess(world, model, layout) {
   model.getObjectByName('Object_15')?.removeFromParent(); // replace decorative stairs
   const group = new THREE.Group(); group.name = 'habitat-access'; world.scene.add(group);
   const metal = new THREE.MeshStandardMaterial({color:'#6b7375',roughness:.7,metalness:.55});
-  const shell = new THREE.MeshStandardMaterial({color:'#d8cfb7',roughness:.8});
+  const shell = new THREE.MeshStandardMaterial({color:'#b9824f',roughness:.8});
   const entrances = layout.moduleColliders.map((c,index) => {
     c.habitatIndex=index;
     const doorZ=c.z+c.r+.15, landingEnd=doorZ+2, bottom=landingEnd+4.8, height=2.4;
@@ -67,7 +67,7 @@ export function installHabitatAccess(world, model, layout) {
     collarGeo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
     collarGeo.computeVertexNormals();
     const collar=new THREE.Mesh(collarGeo,shell.clone());collar.material.side=THREE.DoubleSide;
-    collar.name='Fitted airlock collar';collar.castShadow=true;collar.receiveShadow=true;group.add(collar);
+    collar.name='Fitted airlock collar';collar.userData.regolithFinish=true;collar.castShadow=true;collar.receiveShadow=true;group.add(collar);
     // Continuous rubber gasket at the wall junction hides the construction seam.
     const gasketPath=new THREE.CatmullRomCurve3(rear.map(p=>p.clone().add(new THREE.Vector3(0,0,.13))),true,'centripetal');
     const gasket=new THREE.Mesh(new THREE.TubeGeometry(gasketPath,104,.045,8,true),metal);

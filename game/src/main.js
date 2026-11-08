@@ -1,3 +1,4 @@
+import {chargeRover} from './rover-charging.js';
 import { heightAt } from './world.js';
 import { marsObjective, missionLog } from './mars-objectives.js';
 import { openResearch, tickResearch } from './surface-research.js';
@@ -1070,7 +1071,7 @@ function questBearing(){
   const task=marsObjective(outpost,colony.s),step=outpost.powerStep,exterior=['power','base','charger','shelter','soil'].includes(task.target);
   let target,label;
   const galley=step===6 && colony.s.produce>0;
-  if(!inside&&task.target==='workbench')return 'Workbench · inside the base';
+  if(!inside&&['workbench','greenhouse','locker'].includes(task.target))return ({workbench:'Workbench',greenhouse:'Grow beds',locker:'Storage locker'})[task.target]+' · inside the base';
   if(!inside){
     target=exterior?missionTarget(task.target):missionTarget(task.target)||world.settlement.entrances[1];
     label=exterior?task.title:'Airlock';
@@ -1159,8 +1160,7 @@ function drawHUD() {
   }
   const hintEl = $('#hint');                       // a hint that is no longer needed fades away slowly
   if(world.driving&&outpost.chargerStep>=3&&world.settlement){
-    const bay=world.settlement.chargingBay;
-    if(Math.hypot(world.sev.pos.x-bay.x,world.sev.pos.z-bay.z)<2.5&&Math.abs(world.sev.speed)<.15)hint=`Charging bay · ${Math.round(world.sev.battery*100)}% · ${outpost.chargeReserve>.001?'charging from reserve':'waiting for solar power'} · E / Use to exit`;
+    if(world.chargingStatus?.inBay)hint=`Charging bay · ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus.status} · E / Use to exit`;
   }
   hint = noEmoji(hint);
   if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
@@ -1376,7 +1376,7 @@ function setupMissionHud(){
 }
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
-  if(kind==='workbench')return null; // The objective is the indoor station, never the stairs.
+  if(['workbench','greenhouse','locker'].includes(kind))return null; // The objective is the indoor station, never the stairs.
   if(kind==='power')return m.powerSite;
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
@@ -1395,6 +1395,10 @@ function performMissionWork(task){
   outpost.today=outpost.forecast();syncPowerHardware();saveGame();toast('Done · '+task.title);
 }
 function drawMissionHud(){
+  let charge=document.getElementById('rover-charge-status');if(!charge){charge=document.createElement('div');charge.id='rover-charge-status';document.getElementById('hud').append(charge);}
+  const nearby=world.settlement&&Math.hypot(world.player.position.x-world.settlement.chargingBay.x,world.player.position.z-world.settlement.chargingBay.z)<12;
+  charge.hidden=!nearby||inside||isModalOpen()||outpost.chargerStep<2;charge.textContent=`Rover ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus?.status||'Approach charging bay'} · Stored charge ${(outpost.chargeReserve||0).toFixed(2)} kWh`;
+
   let delivery=document.getElementById('delivery-status');
   if(!delivery){delivery=document.createElement('button');delivery.id='delivery-status';document.getElementById('hud').append(delivery);delivery.onclick=()=>modal({title:'Cargo deliveries',html:`<p>Orange squares on the minimap mark unopened pods. Go to a pod and press E / Use. Seeds enter your locker only after collection.</p><ul>${world.pickups.filter(p=>p.kind==='pod').map(p=>`<li>${p.cargo?cargoWords(p.cargo):'Base supplies'} · ${Math.round(Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z))} m away · map (${Math.round(p.x)}, ${Math.round(p.z)})</li>`).join('')}${pending.filter(p=>p.cargo).map(p=>`<li>${cargoWords(p.cargo)} · lands in ${Math.max(0,p.sol-outpost.sol)} sols</li>`).join('')}</ul>`});}
   const pods=world.pickups.filter(p=>p.kind==='pod'),orders=pending.filter(p=>p.cargo),nearest=pods.reduce((n,p)=>Math.min(n,Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z)),Infinity);
@@ -1409,8 +1413,11 @@ function drawMissionHud(){
     const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.16),new THREE.MeshBasicMaterial({color:'#c995ff',depthTest:false,depthWrite:false}));
     marker.name='workbench-objective';marker.renderOrder=100;interior.scene.add(marker);interior.workbenchMarker=marker;
   }
-  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type==='workbench');
-  marker.visible=inside&&room===interior&&task.target==='workbench'&&!isModalOpen();
+  const isGrow=task.target==='greenhouse';
+  if(isGrow&&!ghRoom.objectiveMarker){ghRoom.objectiveMarker=interior.workbenchMarker.clone();ghRoom.scene.add(ghRoom.objectiveMarker);}
+  const grow=ghRoom.objectiveMarker;if(grow){grow.visible=inside&&room===ghRoom&&isGrow&&!isModalOpen();const bed=ghRoom.stations.find(s=>s.type==='gh-bed');if(bed)grow.position.set(bed.x,2,bed.z);}
+  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type===(task.target==='locker'?'locker':'workbench'));
+  marker.visible=inside&&room===interior&&['workbench','locker'].includes(task.target)&&!isModalOpen();
   if(marker.visible&&bench){marker.position.set(bench.x,2.1+.08*Math.sin(performance.now()/300),bench.z);marker.rotation.y=performance.now()/1000;}
   world.objectiveTarget=missionTarget(task.target);
   const beacon=world.settlement.objectiveBeacon;
@@ -1430,8 +1437,7 @@ function updateMissionPower(dt){
   // A separate 2 kWh charging allocation. Values/rates are training-game rules.
   const surplus=o.baseConnected&&!world.night?o.chargerAllocation():0;
   o.chargeReserve=Math.min(2,(o.chargeReserve||0)+surplus*dt/TUNED.solSeconds);
-  const parked=o.chargerStep>=3&&Math.hypot(world.sev.pos.x-m.chargingBay.x,world.sev.pos.z-m.chargingBay.z)<2.5&&Math.abs(world.sev.speed)<.15;
-  if(parked){const amount=Math.min(1-world.sev.battery,dt/25,o.chargeReserve);world.sev.battery+=amount;o.chargeReserve-=amount;
-    if((amount>0||world.sev.battery>=.999)&&!o.roverCharged){o.roverCharged=true;saveGame();toast('Rover docked · charging station checked.');}
-  }
+  const wasDocked=o.roverCharged;
+  world.chargingStatus=chargeRover(o,world.sev,m.chargingBay,dt);
+  if(!wasDocked&&o.roverCharged){saveGame();toast('Rover connected · '+world.chargingStatus.status);}
 }

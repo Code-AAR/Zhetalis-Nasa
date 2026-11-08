@@ -567,3 +567,5 @@ body.layout-phone #minimap, body.touch #minimap { display: none; }
 
 /* Keep the cargo button above the minimap at every UI scale. */
 #delivery-status{bottom:calc(18px + 190px);z-index:12}
+
+#rover-charge-status{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);max-width:85vw;padding:8px 12px;border:1px solid #63c7c2;border-radius:12px;background:#142626ed;color:#e4ffff;font-size:13px;pointer-events:none}#rover-charge-status[hidden]{display:none}
