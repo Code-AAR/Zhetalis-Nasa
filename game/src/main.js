@@ -1070,6 +1070,7 @@ function questBearing(){
   const task=marsObjective(outpost,colony.s),step=outpost.powerStep,exterior=['power','base','charger','shelter','soil'].includes(task.target);
   let target,label;
   const galley=step===6 && colony.s.produce>0;
+  if(!inside&&task.target==='workbench')return 'Workbench · inside the base';
   if(!inside){
     target=exterior?missionTarget(task.target):missionTarget(task.target)||world.settlement.entrances[1];
     label=exterior?task.title:'Airlock';
@@ -1375,6 +1376,7 @@ function setupMissionHud(){
 }
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
+  if(kind==='workbench')return null; // The objective is the indoor station, never the stairs.
   if(kind==='power')return m.powerSite;
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
@@ -1401,8 +1403,15 @@ function drawMissionHud(){
   if(!missionCard||!world.settlement)return;
   const task=marsObjective(outpost,colony.s);
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');
-  if(task.id!==missionKey){missionKey=task.id;missionCard.querySelector('summary').textContent=task.title;missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
+  if(task.id!==missionKey){missionKey=task.id;missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
   if(missionCollapseAt&&performance.now()>missionCollapseAt){missionCard.open=false;missionCollapseAt=0;}
+  if(!interior.workbenchMarker){
+    const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.16),new THREE.MeshBasicMaterial({color:'#c995ff',depthTest:false,depthWrite:false}));
+    marker.name='workbench-objective';marker.renderOrder=100;interior.scene.add(marker);interior.workbenchMarker=marker;
+  }
+  const marker=interior.workbenchMarker,bench=interior.stations.find(s=>s.type==='workbench');
+  marker.visible=inside&&room===interior&&task.target==='workbench'&&!isModalOpen();
+  if(marker.visible&&bench){marker.position.set(bench.x,2.1+.08*Math.sin(performance.now()/300),bench.z);marker.rotation.y=performance.now()/1000;}
   world.objectiveTarget=missionTarget(task.target);
   const beacon=world.settlement.objectiveBeacon;
   if(beacon){beacon.visible=!!world.objectiveTarget&&!inside;if(beacon.visible){beacon.position.set(world.objectiveTarget.x,heightAt(world.objectiveTarget.x,world.objectiveTarget.z)+.08,world.objectiveTarget.z);beacon.scale.setScalar(1+.12*Math.sin(performance.now()/250));}}
