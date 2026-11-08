@@ -1232,7 +1232,7 @@ renderer.setAnimationLoop(() => {
       // your own hunger (survival.js)
       const moving = !inside && !world.driving && world.move.lengthSq() > 0.5;
       const ev = body.update(step, { inside, driving: world.driving, moving, running: moving && (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun, eatHeld: !!world.keys.KeyF, foodStock: outpost.food, fresh: (colony.s.freshMeals || 0) >= .5 });
-      world.noRun = !body.canRun; world.speedMul = body.starving ? 0.7 : 1;
+      world.noRun = !body.canRun; world.speedMul = body.starving ? 0.7 : body.rations<=6 ? .85 : 1;
       if (body.eatT > 0 && Math.floor(clock.elapsedTime * 5) !== lastCrunch) { lastCrunch = Math.floor(clock.elapsedTime * 5); crunch(); }
       if (ev === 'ate' || ev === 'ate-fresh') {
         outpost.food = Math.max(0, outpost.food - 0.5);

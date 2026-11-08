@@ -122,7 +122,7 @@ export async function installSettlement(world){
   world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});
   for(const panel of world.solar.panels){
     const position=panel.getWorldPosition(new THREE.Vector3());
-    world.colliders.push({x:position.x,z:position.z,r:1.9,halfX:1.7,halfZ:1.05,object:panel});
+    world.colliders.push({x:position.x,z:position.z,r:1.9,solar:true,halfX:1.7,halfZ:1.05,object:panel});
   }
   const endpoint=layout.moduleColliders[0];
   const cablePoints=[new THREE.Vector3(53.4,.6,-20),new THREE.Vector3(53.4,.1,-18.8),pack.position.clone(),new THREE.Vector3(51,.1,-17), new THREE.Vector3(endpoint.x,.1,endpoint.z-5),new THREE.Vector3(endpoint.x,.8,endpoint.z-4)];
@@ -132,7 +132,14 @@ export async function installSettlement(world){
   const crossings=cableCrossings([serviceCables,cable],heightAt);
   const previousSurface=world.sev.surfaceAt;
   world.sev.surfaceAt=(x,z)=>crossings.height(x,z,previousSurface(x,z));
-  const mission={crossings,serviceCables,glassTunnel,blockEquipment:equipmentContact(model),pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;},updateGreenhouse:(beds,powered=true)=>{
+  const panelRay=new THREE.Raycaster(),panelOrigin=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0);
+  world.panelHeight=(x,z,ceiling=1000)=>{
+    panelOrigin.set(x,ceiling,z);panelRay.set(panelOrigin,down);panelRay.far=Infinity;
+    const surfaces=[model.getObjectByName('Object_14'),...world.solar.panels.filter(p=>p.visible).map(p=>p.children[0])].filter(Boolean);
+    return panelRay.intersectObjects(surfaces,true)[0]?.point.y??-Infinity;
+  };
+  const equipmentBlock=equipmentContact(model);
+  const mission={crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;},updateGreenhouse:(beds,powered=true)=>{
     const room=mission.greenhouseRoom;if(!room)return;
     room.draw(beds,GREENHOUSE.tank,powered);
     const key=room.beds.map(b=>b.key).join(';');if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;

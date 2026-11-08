@@ -36,6 +36,14 @@ export function installHabitatAccess(world, model, layout) {
     hatch.position.set(c.x,height,doorZ+.12);
     hatch.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
     group.add(hatch);entrance.handle=hatch.userData.handle;
+    // A sealed collar bridges the hatch to the curved habitat shell.
+    const ray=new THREE.Raycaster(new THREE.Vector3(c.x,height+1.5,doorZ+1),new THREE.Vector3(0,0,-1));
+    const hit=ray.intersectObject(model,true)[0];
+    const depth=Math.max(.5,Math.min(4,doorZ-(hit?.point.z??doorZ-1)+.25));
+    const collarZ=doorZ+.05-depth/2;
+    for(const side of [-1,1])addBox(.2,2.94,depth,c.x+side*1.475,height+1.47,collarZ,shell);
+    addBox(3.15,.18,depth,c.x,height+2.85,collarZ,shell);
+    addBox(3.15,.18,depth,c.x,height-.02,collarZ,shell);
     // The ramp bypasses the habitat cylinder, but must never bypass its hatch.
     layout.colliders.push({x:c.x,z:doorZ+.26,r:1.65,halfX:1.575,halfZ:.28,
       minY:height-.1,maxY:height+2.94,airlock:true,object:hatch});

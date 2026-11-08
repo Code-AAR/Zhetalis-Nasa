@@ -5,7 +5,7 @@
 // in the pressurised rover. Hold F (or Eat) for 1.6 seconds to eat one meal from the outpost's food store.
 // Food grown in the greenhouse also fills "fibre", a hidden buffer that is used up before the packs
 // (Minecraft calls it saturation). Freeze-dried food from supply pods doesn't give any.
-// Low on rations: no running. Out of rations: you're slower and your suit uses air faster.
+// Low rations reduce movement speed, but Shift remains available. Empty rations use air faster.
 //
 // Suit air: a ring next to your astronaut (like the stamina wheel in Zelda: Breath of the Wild). It only
 // shows up outside when the tank isn't full, turns yellow, then red and flashes when you're nearly out.
@@ -33,7 +33,7 @@ export class Survival {
   }
 
   save() { return { rations: +this.rations.toFixed(2), fibre: +this.fibre.toFixed(2) }; }
-  get canRun() { return this.rations > NO_RUN; }
+  get canRun() { return true; }
   get starving() { return this.rations <= 0; }
 
   // Use some up. `what` is one of the RATE keys.
@@ -66,6 +66,7 @@ export class Survival {
   draw({ show, suit, outside, sx, sy, t }) {
     this.row.classList.toggle('hidden', !show);
     const r = this.rations;
+    this.row.querySelector('.rt-label').textContent=r<=NO_RUN?'Low rations · slower movement · eat inside':'Rations';
     this.packs.forEach((p, i) => { p.className = 'pk ' + (r >= i * 2 + 2 ? 'full' : r >= i * 2 + 1 ? 'half' : 'empty'); });
     this.row.classList.toggle('low', r <= NO_RUN);
     this.row.classList.toggle('shake', r <= NO_RUN && Math.sin(t * 9) > 0.6);

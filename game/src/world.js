@@ -700,6 +700,7 @@ export class World {
     for (const c of this.colliders) {
       if (c.rock) continue;
       if(c.object && !c.object.visible)continue;
+      if(c.solar){const top=this.panelHeight?.(pos.x,pos.z)??Infinity;if(pos.y>=top-.18)continue;}
       if(c.halfX !== undefined){if(c.minY===undefined||(pos.y<c.maxY&&pos.y+1.85>c.minY))blockPanel(pos,c,0.45);continue;}
       if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
@@ -750,7 +751,7 @@ export class World {
     this.collide(p);
     this.settlement?.blockEquipment(p);
     const ceiling = Math.max(previous.y, p.y) + (this.onGround ? 0.45 : 0.02);
-    const ground = Math.max(this.groundHeightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling));
+    const ground = Math.max(this.groundHeightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling),this.panelHeight?.(p.x,p.z,ceiling)??-Infinity);
     if ((this.onGround && Math.abs(p.y - ground) <= 0.45) || (this.vel.y <= 0 && p.y <= ground)) {
       if (!this.onGround && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);
       p.y = ground; this.vel.y = 0; this.onGround = true;
