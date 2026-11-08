@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {regolithFinish} from './regolith-finish.js';
 import { layServiceCables, cableCrossings } from './cable-crossings.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createOpenLayout } from './exploration-layout.js';
@@ -126,14 +127,17 @@ export async function installSettlement(world){
   const waterMat=new THREE.MeshStandardMaterial({color:'#c5c8bb',roughness:.85}),soilMat=new THREE.MeshStandardMaterial({color:'#80614c',roughness:1});
   for(const c of layout.moduleColliders){
     const wall=new THREE.Mesh(new THREE.BoxGeometry(4.9,3.8,.5),waterMat);wall.position.set(c.x,1.9,c.z-3.2);shielding.add(wall);
-    // Filled regolith bags in supported courses at the shelter wall.
-    for(let row=0;row<5;row++)for(let i=0;i<6;i++){
-      const bag=new THREE.Mesh(new THREE.SphereGeometry(1,20,12),soilMat);
-      bag.scale.set(.46,.24,.5);bag.position.set(c.x-2.4+i*.91+(row%2)*.15,.24+row*.44,c.z-3.5);
-      bag.castShadow=bag.receiveShadow=true;berms.add(bag);
-    }
+
   }
   shielding.visible=false;berms.visible=false;
+  // No oversized soil spheres along the greenhouse corridor.
+  const finishes=[];let soilLevel=0;
+  model.traverse(o=>{if(!o.isMesh||!/^Object_(17|18|19|20|21|22|23|24|25|26|27|28)$/.test(o.name))return;
+    const tint=m=>{const copy=m.clone();finishes.push(regolithFinish(copy));return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);
+  });
+  const domeMaterials=new Set();greenhouse.traverse(o=>{if(o.isMesh&&o.material?.color)domeMaterials.add(o.material);});
+  for(const material of domeMaterials)finishes.push(regolithFinish(material));
+  const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=false;finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};
   const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
   pack.position.set(53.4,heightAt(53.4,-17)+.45,-17);world.scene.add(pack);
   world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});
@@ -171,14 +175,14 @@ export async function installSettlement(world){
   const equipmentBlock=equipmentContact(model);
   const objectiveBeacon=new THREE.Mesh(new THREE.RingGeometry(.8,1,64),new THREE.MeshBasicMaterial({color:'#c78aff',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));objectiveBeacon.rotation.x=-Math.PI/2;world.scene.add(objectiveBeacon);
   const inlet=new THREE.Mesh(new THREE.BoxGeometry(.42,.7,.22),cyan);inlet.position.set(access.entrances[0].x+2.7,.65,access.entrances[0].doorZ+1);world.scene.add(inlet);
-  const mission={objectiveBeacon,charging,chargerCable,chargerSite:{x:-30.8,z:26},chargingBay:{x:-34,z:26},shelterSite,soilSite,crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;},updateGreenhouse:(beds,powered=true)=>{
+  const mission={objectiveBeacon,charging,chargerCable,chargerSite:{x:-30.8,z:26},chargingBay:{x:-34,z:26},shelterSite,soilSite,crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;room.setRegolith(soilLevel);},updateGreenhouse:(beds,powered=true)=>{
     const room=mission.greenhouseRoom;if(!room)return;
     room.draw(beds,GREENHOUSE.tank,powered);
     const key=room.beds.map(b=>b.key).join(';');if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;
     if(mission.visibleFurnishings)greenhouse.remove(mission.visibleFurnishings);
     // Share the actual interior geometry and materials; draw() owns their lifecycle.
     mission.visibleFurnishings=room.furnishings.clone(true);greenhouse.add(mission.visibleFurnishings);
-  },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:on=>berms.visible=on};
+  },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:applySoil};
   world.settlement=mission;return mission;
 }
 

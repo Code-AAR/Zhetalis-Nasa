@@ -218,7 +218,7 @@ async function resume(d) {
   world.heli.seen = w.heli; world.sevShown = w.sevShown;
   world.player.position.set(w.player[0], 0, w.player[1]); world.yaw = w.yaw;
   world.sev.pos.set(w.sev[0], 0, w.sev[1]); world.sev.yaw = w.sev[2]; world.sev.battery = w.sev[3];
-  syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
+  syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith);
   world.setLink(outpost.today.link); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
   world.setDust(!!outpost.dust);
   if (d.inside) (d.ship ? goInShip() : d.gh ? goInGreenhouse('hab') : goInside()); else inside = false;
@@ -573,7 +573,7 @@ function openWorkbench() {
     if (outpost.buy(key)) {
       earn('build');
       toast(`🔧 Built: ${UPGRADES[key].name}`);
-      syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith > 0);
+      syncPowerHardware(); world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith);
       if (key === 'regolith') soilLayerReport();
       else if (key === 'reactor') earn('reactor'), modal({ pause: false, title: '⚛ Reactor online!', html: factHTML(F.fission) });
       else openWorkbench();
@@ -1391,7 +1391,7 @@ function performMissionWork(task){
   else if(task.id.startsWith('charger-'))outpost.chargerStep++;
   else if(task.id==='soil-0')outpost.soilStep=1;
   else if(task.id==='soil-1')outpost.soilStep=2;
-  else if(task.id==='soil-3'){outpost.upgrades.regolith=Math.max(1,outpost.upgrades.regolith);outpost.soilStep=4;world.setRegolith(true);outpost.today=outpost.forecast();}
+  else if(task.id==='soil-3'){outpost.upgrades.regolith=Math.max(1,outpost.upgrades.regolith);outpost.soilStep=4;world.setRegolith(outpost.upgrades.regolith);outpost.today=outpost.forecast();}
   outpost.today=outpost.forecast();syncPowerHardware();saveGame();toast('Done · '+task.title);
 }
 function drawMissionHud(){

@@ -101,3 +101,6 @@ Validation: Mars full power/charger/soil workflow and save/resume; culture water
 - Indoor-work objective rings point to the stair foot, rather than beneath the elevated landing. Airlock interaction works from its landing without precisely targeting the small handle; height checks prevent entering from underneath.
 - Workshop/locker interaction range accommodates their cabinet collision bounds. Browser check walked from outside up Airlock 02, entered with E, approached the workbench and assembled the charger.
 - Baseline Mars suit oxygen lasts 120 real seconds, including sprinting and night. Suit upgrades add capacity. Cargo button raised above the minimap.
+
+### Revision 57 — regolith finish without corridor obstruction
+Removed the soil-bag sphere rows that crossed the greenhouse connection. Numeric shielding levels now reach the appearance code (previously reduced to a boolean), including on save restore. Habitat shell and dome materials gain progressively warmer soil tint, roughness and procedural fine dust at levels 1–3; glass stays transparent and interior/exterior finishes match. The finish is a visual cue for the existing shielding upgrade, not a claim that a thin dust film blocks radiation. Browser checked levels 0–3 and the clear corridor view; no shader errors after validation.

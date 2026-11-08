@@ -3,6 +3,7 @@
 // under pink-purple LED bars, like NASA's Veggie garden on the ISS. Each bed is a farm plot from colony.js:
 // plant seeds, water it from the pipe, harvest food for the crew. Same shape of class as interior.js.
 import * as THREE from 'three';
+import {regolithFinish} from './regolith-finish.js';
 import { loadModel } from './nasamodels.js';
 import { CROPS } from './colony.js';
 
@@ -34,6 +35,7 @@ export class Greenhouse {
     const glass = new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.13, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false });
     this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(R, SEG, 24, 0, Math.PI * 2, 0, Math.PI / 2), glass));
     const frame = std('#eceae4', { metalness: 0.3, roughness: 0.4 });
+    const finishes=[regolithFinish(glass),regolithFinish(frame)];this.setRegolith=n=>finishes.forEach(f=>f(n));this.regolithMaterials=[glass,frame];
     for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; this.scene.add(rib); }
     for (const a of [0.35, 0.7, 1.05]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(R * Math.cos(a), 0.05, 8, SEG), frame); ring.rotation.x = Math.PI / 2; ring.position.y = R * Math.sin(a); this.scene.add(ring); }
     // Cut the dome skin and its ribs where they meet the passage.
