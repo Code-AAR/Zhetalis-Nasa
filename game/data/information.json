@@ -134,5 +134,27 @@
     "body": "The minimap spans 240 game metres. Map-sized detail loads the tiles touching a 120 m radius around you. Tiles use a small boundary margin so their edges do not expose gaps. A coarse horizon remains beyond it. Your mission state and buildings are not deleted when terrain unloads.",
     "source": "Game design; not a NASA measurement",
     "url": ""
+  },
+  {
+    "id": "moon-jumping",
+    "title": "Jumping and sprinting on the Moon",
+    "category": "Equations",
+    "destination": "Moon",
+    "short": "Less gravity means a longer, higher jump.",
+    "body": "The game keeps lunar gravity at 1.62 m/s². Walking is 2 m/s; hold Shift to sprint at 4 m/s. The tuned jump launch speed is 2.9 m/s, giving about 2.6 m of rise and 3.6 seconds in the air on level ground. These speeds are game choices, not astronaut performance measurements. A bulky pressurized suit, equipment and technique affect real jumps. With the same launch speed, a lunar jump is about six times higher than on Earth.",
+    "equation": "h = v₀² / (2g); t = 2v₀ / g",
+    "symbols": "h: rise above takeoff (m); v₀: upward launch speed (m/s); g: gravity (m/s²); t: time back to the same height (s). Ignores air resistance; assumes level landing.",
+    "url": "https://ntrs.nasa.gov/citations/19660019916",
+    "source": "NASA reduced-gravity locomotion research; game movement settings"
+  },
+  {
+    "id": "moon-models",
+    "title": "NASA Moon and spacecraft models",
+    "category": "Spacecraft",
+    "destination": "Moon",
+    "short": "Our flyby Moon uses NASA LRO imagery and topography.",
+    "body": "On computers and tablets the flyby loads NASA’s original topographic GLB and 8192 × 4096 texture unchanged. Phones automatically load a separate Lite derivative; choose Full quality in Settings to load the original on a phone too. The Orion crew capsule uses NASA’s detailed STL; its service module and arrays are illustrative game geometry. The surface lander is an HLS-inspired training design. NASA’s astronaut and Space Exploration Vehicle models are also used. The walkable terrain is procedural with a NASA LOLA-derived distant horizon; it is not an exact survey of a landing site. Assets load once and are reused; nearby terrain uses bounded chunks.",
+    "url": "https://svs.gsfc.nasa.gov/14959/",
+    "source": "NASA Goddard Space Flight Center / LRO; NASA 3D Resources"
   }
 ]

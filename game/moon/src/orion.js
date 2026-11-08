@@ -2,6 +2,18 @@
 // Service Module (a cylinder) and its four X-shaped solar array wings. Artemis I flew it uncrewed with
 // cameras on the array wings; Artemis II carried four astronauts (lit windows, crew in the seats).
 import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+// NASA's printable crew-module mesh. Only the capsule is NASA geometry;
+// service module, arrays and materials below remain illustrative game geometry.
+const capsuleGeometry = new STLLoader().loadAsync('moon/assets/nasa/orion-capsule.stl').then(geo => {
+  geo.computeBoundingBox();
+  const box = geo.boundingBox, scale = 5 / (box.max.x - box.min.x);
+  geo.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+  geo.scale(scale, scale, scale);
+  geo.computeBoundingSphere();
+  return geo;
+}).catch(() => null);
+
 
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.2, ...o });
 const cells = (() => {
@@ -44,6 +56,11 @@ export function buildOrion(mission = 'artemis2') {
   // the whole stack flies heat-shield-forward-ish; rotate so +z is "forward"
   g.rotation.x = Math.PI / 2;
   const root = new THREE.Group(); root.add(g); root.userData.body = g;
+  capsuleGeometry.then(geo => {
+    if (!geo || root.userData.disposed) return;
+    cm.geometry.dispose(); cm.geometry = geo.clone(); cm.position.y = 0;
+    cm.name = 'NASA Orion capsule'; root.userData.nasaCapsule = true;
+  });
   return root;
 }
 

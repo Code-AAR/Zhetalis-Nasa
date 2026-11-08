@@ -8,7 +8,10 @@ import { MOON } from './config.js';
 import { heightAt, normalAt, clampToWorld } from './terrain.js';
 import { MAX_PRINTS } from './save.js';
 
-const WALK = 1.5, LOPE = 3.1, ACCEL = 2.6, JUMP = 2.3;   // m/s; jump 2.3 m/s -> ~1.6 m high, ~2.8 s in the air
+export const MOVEMENT = Object.freeze({ walk: 2.0, sprint: 4.0, acceleration: 3.2, jump: 2.9 });
+const { walk: WALK, sprint: LOPE, acceleration: ACCEL, jump: JUMP } = MOVEMENT;
+// Tuned launch speed, real gravity: h=v²/(2g)=2.60 m, flight≈3.58 s on level ground.
+// Not a prediction of a particular astronaut: suit stiffness, loads and technique matter.
 
 function printTexture(kind) {
   const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d');

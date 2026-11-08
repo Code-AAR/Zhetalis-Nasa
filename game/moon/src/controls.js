@@ -83,12 +83,12 @@ function initTouch(canvas) {
 
 export const CONTROLS_HTML = `<h4>Moon controls</h4><dl class="controls-list">
 <dt>Move / look</dt><dd>WASD or arrows / drag the mouse (click to lock the mouse)</dd>
-<dt>Lope (run)</dt><dd>Shift - a bouncy run, like Apollo astronauts in low gravity</dd>
+<dt>Sprint</dt><dd>Hold Shift - 4 m/s (walking: 2 m/s); tuned game speeds</dd>
 <dt>Jump</dt><dd>Space - you fall at 1.62 m/s², so jumps float</dd>
 <dt>Use / hold to work</dt><dd>E (hold for drilling, masts, samples)</dd>
 <dt>Rover in / out</dt><dd>R near the back of the rover</dd>
-<dt>Lamp / camera / map / tasks</dt><dd>L / V / M / T</dd>
+<dt>Lamp / camera / map / quest log</dt><dd>L / V / M / T</dd>
 <dt>Flyby</dt><dd>Drag or arrows to aim, Space or P for a photo, F for time warp</dd>
 <dt>Pause menu</dt><dd>Esc (saves your mission)</dd>
-<dt>Phone</dt><dd>Left thumb joystick moves (push to the edge to lope), right thumb drags to look. Round buttons: Jump, Use (hold), Rover, Lamp.</dd>
+<dt>Phone</dt><dd>Left thumb joystick moves (push to the edge to sprint), right thumb drags to look. Round buttons: Jump, Use (hold), Rover, Lamp.</dd>
 </dl><p>All cinematics can be skipped. Your mission saves itself every few seconds.</p>`;

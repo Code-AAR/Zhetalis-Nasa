@@ -165,3 +165,112 @@ body.layout-phone .flyby-hud { width: calc(100vw - 190px); min-width: 180px; pad
 body.layout-phone .flyby-hud .row button { min-height: 44px; padding: 6px 10px; font-size: .74rem; }
 body.layout-phone .flyby-hud h3 small { display: block; font-size: .7rem; color: var(--muted); }
 body.flyby .fact-pop { top: auto; bottom: calc(190px + var(--safe-b)); }
+
+/* ---------- quests: compact objective, quest log, map target ---------- */
+.objective { padding: 0; overflow: hidden; width: 264px; }
+.objective .obj-head { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; padding: 10px 12px; cursor: pointer; min-height: 44px; }
+.objective .obj-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
+.objective .obj-head small { grid-column: 1 / -1; }
+.objective .obj-head b { font-size: .95rem; line-height: 1.3; }
+.objective .obj-dist { align-self: center; font-size: .78rem; color: #ff8ae6; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.objective .obj-head::after { content: '▾'; grid-column: 2; grid-row: 1; justify-self: end; color: var(--muted); font-size: .8rem; transition: transform .2s; }
+.objective.collapsed .obj-head::after { transform: rotate(-90deg); }
+.objective .obj-body { padding: 0 12px 12px; display: grid; gap: 8px; animation: rise .3s ease-out; }
+.objective.collapsed .obj-body { display: none; }
+.objective .obj-step { color: var(--text); font-weight: 600; }
+.objective .obj-detail { font-size: .8rem; }
+.objective .obj-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.objective .obj-actions button { min-height: 36px; padding: 6px 10px; font-size: .74rem; }
+.objective.fresh { animation: objective-glow 1.6s ease-out 2; }
+@keyframes objective-glow { 0% { box-shadow: 0 0 0 0 rgba(255,79,216,.55); } 100% { box-shadow: 0 0 0 14px rgba(255,79,216,0); } }
+.map-legend { margin: 0; display: flex; align-items: center; gap: 6px; max-width: 200px; font-size: .72rem; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; }
+.map-legend span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-target { width: 9px; height: 9px; background: #ff4fd8; transform: rotate(45deg); box-shadow: 0 0 0 2px #4ff0ff; flex: none; }
+.quest-log { position: absolute; right: calc(12px + var(--safe-r)); top: calc(268px + var(--safe-t)); bottom: calc(24px + var(--safe-b)); width: min(340px, calc(100vw - 24px)); display: flex; flex-direction: column; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px; pointer-events: auto; animation: rise .25s ease-out; }
+.quest-log header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 6px; }
+.quest-log h3 { margin: 0; font-size: 1.05rem; }
+.quest-log header button { width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; border-radius: 50%; }
+.ql-body { overflow: auto; padding: 0 14px 14px; font-size: .84rem; }
+.ql-body h4 { margin: 14px 0 6px; font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.ql-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ql-body li { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid transparent; line-height: 1.4; }
+.ql-body li small { display: block; color: var(--muted); font-size: .74rem; }
+.ql-body li.active { border-color: #ff4fd8; background: rgba(255,79,216,.08); }
+.ql-body li.done { color: var(--good); }
+.ql-body li.done::before { content: '✓ '; }
+.ql-body li.failed { opacity: .6; }
+.ql-body li .prog { float: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ql-body li.warn-critical { border-color: var(--bad); background: rgba(255,122,107,.12); }
+.ql-body li.warn-warn { border-color: var(--warn); }
+.ql-body li.warn-info { color: var(--muted); }
+.ql-legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; font-size: .76rem; color: var(--muted); }
+.ql-legend i { width: 10px; height: 10px; border-radius: 50%; justify-self: center; }
+.alert-banner.critical { background: rgba(120, 20, 10, .9); }
+.alert-banner.warn { background: rgba(90, 64, 0, .9); border-color: var(--warn); }
+body.quest-open .fact-pop { display: none; }
+body:not(.surface) .quest-log, body:not(.surface) .map-legend, body.cinematic .quest-log, body.cinematic .map-legend { display: none !important; }
+body.layout-phone .objective { width: min(250px, 62vw); }
+body.layout-phone .objective .obj-head { padding: 8px 10px; }
+body.layout-phone .objective .obj-head b { font-size: .82rem; }
+body.layout-phone .map-legend { max-width: 140px; font-size: .66rem; }
+body.layout-phone .quest-log { top: calc(128px + var(--safe-t)); bottom: calc(186px + var(--safe-b)); left: calc(12px + var(--safe-l)); width: auto; }
+body.layout-phone.quest-open .objective { display: none; }
+@media (max-width: 760px) {
+  .objective { width: min(250px, 62vw); }
+  .quest-log { top: calc(128px + var(--safe-t)); bottom: calc(186px + var(--safe-b)); left: calc(12px + var(--safe-l)); width: auto; }
+  body.quest-open .objective { display: none; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .objective { display: block; top: auto; bottom: 52px; transform: none; width: 230px; }
+  .quest-log { top: 12px; bottom: 12px; }
+}
+/* phone: the critical banner stays left of the minimap; the quest log starts under the map/legend/buttons column */
+body.layout-phone .alert-banner { left: calc(12px + var(--safe-l)); right: calc(122px + var(--safe-r)); transform: none; max-width: none; font-size: .8rem; }
+body.layout-phone .quest-log { top: calc(202px + var(--safe-t)); }
+@media (max-width: 760px) {
+  .alert-banner { left: calc(12px + var(--safe-l)); right: calc(122px + var(--safe-r)); transform: none; max-width: none; font-size: .8rem; }
+  .quest-log { top: calc(202px + var(--safe-t)); }
+}
+/* phone, final: banner sits in the free band under both top columns; the log moves down only while it shows */
+body.layout-phone .alert-banner { top: calc(200px + var(--safe-t)); left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); }
+body.layout-phone.alert-on .quest-log { top: calc(270px + var(--safe-t)); }
+@media (max-width: 760px) {
+  .alert-banner { top: calc(200px + var(--safe-t)); right: calc(12px + var(--safe-r)); }
+  body.alert-on .quest-log { top: calc(270px + var(--safe-t)); }
+}
+/* touch targets: at least 44 px */
+.quest-log header button { width: 44px; height: 44px; min-height: 44px; }
+.objective .obj-actions button { min-height: 44px; padding: 8px 12px; }
+/* phone: the clock row wraps inside the screen and sits above the thumb controls; the log ends above it */
+body.layout-phone .hud-top-center { left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); transform: none; bottom: calc(186px + var(--safe-b)); white-space: normal; flex-wrap: wrap; justify-content: center; row-gap: 2px; border-radius: 12px; text-align: center; }
+body.layout-phone .quest-log { bottom: calc(240px + var(--safe-b)); }
+@media (max-width: 760px) {
+  .hud-top-center { left: calc(12px + var(--safe-l)); right: calc(12px + var(--safe-r)); transform: none; bottom: calc(186px + var(--safe-b)); white-space: normal; flex-wrap: wrap; justify-content: center; row-gap: 2px; border-radius: 12px; text-align: center; }
+  .quest-log { bottom: calc(240px + var(--safe-b)); }
+}
+/* phone: objective card sits above the clock row and scrolls if its explanation is long */
+body.layout-phone .objective { bottom: calc(232px + var(--safe-b)); max-height: calc(100dvh - 500px - var(--safe-b) - var(--safe-t)); overflow: auto; }
+@media (max-width: 760px) { .objective { bottom: calc(232px + var(--safe-b)); max-height: calc(100dvh - 500px - var(--safe-b) - var(--safe-t)); overflow: auto; } }
+/* short landscape phones (e.g. 844x390): last, so it beats the portrait phone rules above.
+   Middle column between the left bars and the right map/buttons column holds banner, log and clock;
+   the objective sits under the bars, above the joystick. */
+@media (max-height: 500px) and (orientation: landscape) {
+  body .quest-log, body.layout-phone .quest-log { top: calc(12px + var(--safe-t)); bottom: calc(46px + var(--safe-b)); left: calc(196px + var(--safe-l)); right: calc(216px + var(--safe-r)); width: auto; }
+  body.alert-on .quest-log, body.layout-phone.alert-on .quest-log { top: calc(74px + var(--safe-t)); }
+  body .alert-banner, body.layout-phone .alert-banner { top: calc(12px + var(--safe-t)); bottom: auto; left: calc(196px + var(--safe-l)); right: calc(216px + var(--safe-r)); transform: none; max-width: none; font-size: .76rem; padding: 6px 12px; }
+  body .hud-top-center, body.layout-phone .hud-top-center { top: auto; bottom: calc(8px + var(--safe-b)); left: calc(196px + var(--safe-l)); right: calc(216px + var(--safe-r)); transform: none; white-space: normal; flex-wrap: wrap; justify-content: center; border-radius: 12px; font-size: .68rem; }
+  body .objective, body.layout-phone .objective { display: block; top: calc(130px + var(--safe-t)); bottom: auto; transform: none; width: 176px; max-height: calc(100dvh - 300px - var(--safe-t) - var(--safe-b)); min-height: 0; overflow: auto; }
+  body:not(.touch) .objective { max-height: calc(100dvh - 142px - var(--safe-t) - var(--safe-b)); }
+  body.layout-phone .objective .obj-head b { font-size: .78rem; }
+  body .hud-top-left, body.layout-phone .hud-top-left { width: 172px; }
+  body.quest-open .objective { display: none; }
+}
+
+/* Reading the log takes precedence over cabin controls, which otherwise cover its Close button. */
+body.quest-open .cabin { visibility: hidden; pointer-events: none; }
+@media (max-width: 650px) and (max-height: 650px) {
+  body.quest-open .hud-top-left, body.quest-open .hud-top-right, body.quest-open .hud-top-center { visibility: hidden; }
+  body .quest-log, body.layout-phone .quest-log { left: 12px; right: 12px; top: 12px; bottom: 12px; width: auto; }
+  body.alert-on .quest-log, body.layout-phone.alert-on .quest-log { top: 88px; }
+  body.quest-open .alert-banner { left: 12px; right: 12px; top: 12px; bottom: auto; transform: none; }
+}

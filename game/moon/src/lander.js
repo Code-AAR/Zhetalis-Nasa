@@ -77,7 +77,7 @@ export class BallisticDust {
     this.max = max; this.n = 0;
     this.pos = new Float32Array(max * 3); this.vel = new Float32Array(max * 3);
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3)); geo.setDrawRange(0, 0);
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#b9b7b0', size: 0.22, transparent: true, opacity: 0.85, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#b9b7b0', size: 0.025, transparent: true, opacity: 0.65, depthWrite: false }));
     this.points.frustumCulled = false; scene.add(this.points);
   }
   // Emit grains around (x,z) where the plume hits. strength 0..1.

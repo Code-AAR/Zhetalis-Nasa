@@ -1,6 +1,7 @@
 // The lunar surface scene: streamed crater terrain (bounded), a distant horizon shaped by NASA LOLA data,
 // boulders, a black sky with stars, the Sun and Earth. No fog, no haze: the Moon has no air.
 import * as THREE from 'three';
+import { effectiveQuality } from '../../src/device-profile.js';
 import { WORLD, CHUNKS_PER_SIDE } from './config.js';
 import { heightAt, permanentShadow, chunkPlan, chunkOrigin, CRATERS, MAP_CHUNK_CAP } from './terrain.js';
 import { horizonAt, skyVector } from './sun.js';
@@ -11,15 +12,15 @@ export const QUALITY = (() => {
   let q, lim; const params = new URLSearchParams(location.search);
   try { q = params.get('graphics') || localStorage.getItem('mars-graphics'); lim = params.get('chunks') || localStorage.getItem('mission-world-limit'); } catch { q = params.get('graphics'); lim = params.get('chunks'); }
   const radius = ['1', '2', '3'].includes(String(lim)) ? Number(lim) : 'map';
-  const coarse = matchMedia('(pointer: coarse)').matches, weak = coarse || (navigator.deviceMemory && navigator.deviceMemory <= 4);
-  if (q === 'low' || (!q || q === 'auto') && weak) return { name: 'low', seg: 40, radius, shadow: 1024, rocks: 900, pixel: 1, aa: false, range: lim || 'map' };
-  if (q === 'high') return { name: 'high', seg: 96, radius, shadow: 4096, rocks: 2600, pixel: 1.75, aa: true, range: lim || 'map' };
+  q = effectiveQuality(q);
+  if (q === 'low') return { name: 'low', seg: 40, radius, shadow: 1024, rocks: 900, pixel: 1, aa: false, range: lim || 'map' };
+  if (q === 'high') return { name: 'high', seg: 96, radius, shadow: 4096, rocks: 2600, pixel: devicePixelRatio, aa: true, range: lim || 'map' };
   return { name: 'balanced', seg: 64, radius, shadow: 2048, rocks: 1800, pixel: 1.5, aa: true, range: lim || 'map' };
 })();
 
 // Regolith texture: fine grey grain with tiny craterlets and pebbles (procedural).
 function regolithTextures() {
-  const n = QUALITY.name === 'low' ? 256 : 512, c = document.createElement('canvas'), b = document.createElement('canvas');
+  const n = QUALITY.name === 'low' ? 256 : QUALITY.name === 'high' ? 2048 : 512, c = document.createElement('canvas'), b = document.createElement('canvas');
   c.width = c.height = b.width = b.height = n;
   const g = c.getContext('2d'), h = b.getContext('2d'), ci = g.createImageData(n, n), hi = h.createImageData(n, n);
   let seed = 9; const r = () => (seed = seed * 16807 % 2147483647) / 2147483647;
@@ -93,8 +94,12 @@ export class MoonWorld {
   // Streams detailed chunks around the focus point; at most one new chunk per frame (no hitches) and never
   // more than (2r+1)^2 detailed chunks alive. Game state never lives in chunks.
   update(focus) {
-    const plan = chunkPlan(focus.x, focus.z, QUALITY.radius), sig = plan.map(c => c.key).join(';');
-    if (sig !== this.sig) {
+    // Avoid rebuilding the same residency plan while standing still; queued chunks still stream.
+    const moved = focus.x !== this.lastFocusX || focus.z !== this.lastFocusZ;
+    const plan = moved ? chunkPlan(focus.x, focus.z, QUALITY.radius) : null;
+    this.lastFocusX = focus.x; this.lastFocusZ = focus.z;
+    const sig = plan ? plan.map(c => c.key).join(';') : this.sig;
+    if (plan && sig !== this.sig) {
       this.sig = sig; const want = new Set(plan.map(c => c.key));
       for (const [k, m] of this.detailed) if (!want.has(k)) { this.group.remove(m); m.geometry.dispose(); this.detailed.delete(k); this.coarse.get(k).visible = true; }
       this.queue = plan.filter(c => !this.detailed.has(c.key));

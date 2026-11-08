@@ -4,6 +4,8 @@
 // law sets the speed) but it is simplified: not NASA's actual trajectory.
 import * as THREE from 'three';
 import { buildOrion, MISSIONS } from './orion.js';
+import { effectiveQuality } from '../../src/device-profile.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const MOON_R = 173.74, EARTH_R = 637.1, EARTH_D = 38440, MU = 4902.8;   // units of 10 km; MU in km^3/s^2
 const SUN = new THREE.Vector3(0.2, 0.12, -0.97).normalize();   // approach sees a lit Moon; the far side is half-lit at closest approach
@@ -11,6 +13,7 @@ const SUN = new THREE.Vector3(0.2, 0.12, -0.97).normalize();   // approach sees 
 // Free a removed object's own geometries and materials. Textures shared between builds (Orion's solar-cell
 // canvas) are left alone: material.dispose() does not free textures.
 function disposeTree(root) {
+  root.userData.disposed = true;
   root.traverse(o => { o.geometry?.dispose(); for (const m of [].concat(o.material || [])) m.dispose(); });
 }
 
@@ -26,6 +29,20 @@ export class Flyby {
     const moonTex = tl.load('assets/moon-map.jpg'); moonTex.colorSpace = THREE.SRGBColorSpace; moonTex.anisotropy = 8;
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_R, 128, 96), new THREE.MeshStandardMaterial({ map: moonTex, roughness: 1, metalness: 0, bumpMap: moonTex, bumpScale: 0.6 }));
     this.scene.add(this.moon);
+    // Full original NASA LRO topographic mesh + texture. Load once and retain across missions.
+    // The lightweight sphere is only a loading placeholder, not a quality downgrade.
+    let choice; try { choice = new URLSearchParams(location.search).get('graphics') || localStorage.getItem('mars-graphics'); } catch {}
+    const lite = effectiveQuality(choice) === 'low';
+    this.moonModelReady = new GLTFLoader().loadAsync(`moon/assets/nasa/moon-lro${lite ? '-lite' : ''}.glb`).then(gltf => {
+      const model = gltf.scene, box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+      model.position.sub(centre); const wrapper = new THREE.Group(); wrapper.add(model);
+      wrapper.scale.setScalar(MOON_R * 2 / Math.max(size.x, size.y, size.z));
+      wrapper.rotation.copy(this.moon.rotation); wrapper.name = lite ? 'NASA LRO Moon — phone Lite' : 'NASA LRO full-resolution Moon';
+      model.traverse(o => { if(o.isMesh) { o.material.side = THREE.FrontSide; o.material.map && (o.material.map.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy())); } });
+      this.scene.remove(this.moon); this.moon.geometry.dispose(); this.moon.material.dispose(); moonTex.dispose();
+      this.moon = wrapper; this.scene.add(wrapper); return true;
+    }).catch(error => { console.warn('NASA Moon model unavailable; showing loading fallback', error); return false; });
     const earthTex = tl.load('assets/earth-map.jpg'); earthTex.colorSpace = THREE.SRGBColorSpace;
     this.earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R, 96, 64), new THREE.MeshStandardMaterial({ map: earthTex, roughness: 0.7, metalness: 0 }));
     this.earth.position.set(EARTH_D, 0, 0); this.scene.add(this.earth);

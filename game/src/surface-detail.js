@@ -1,15 +1,16 @@
 // Procedural material detail, inspired by rover views; not measured topography.
 import * as THREE from 'three';
+import { effectiveQuality } from './device-profile.js';
 let saved; try { saved = localStorage.getItem('mars-graphics'); } catch {}
 const requested = new URLSearchParams(location.search).get('graphics') || saved;
 export const GRAPHICS_MODE = ['high','balanced','low'].includes(requested) ? requested : 'auto';
-const choice = GRAPHICS_MODE;
+const choice = effectiveQuality(GRAPHICS_MODE);
 let range;try{range=localStorage.getItem('mission-world-limit');}catch{}
 const requestedRange=new URLSearchParams(location.search).get('chunks')||range||'map';
 export const WORLD_LIMIT=['1','2','3'].includes(requestedRange)?Number(requestedRange):'map';
 export const WORLD_RADIUS=typeof WORLD_LIMIT==='number'?WORLD_LIMIT:2;
 const constrained = matchMedia('(pointer: coarse)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 4);
-export const SURFACE_DETAIL = choice === 'low' ? { segments: 256, texture: 256, dust: 180 } : choice === 'high' ? { segments: 640, texture: 1024, dust: 1000 } : choice === 'balanced' || constrained ? { segments: 384, texture: 512, dust: 420 } : { segments: 512, texture: 1024, dust: 720 };
+export const SURFACE_DETAIL = choice === 'low' ? { segments: 256, texture: 256, dust: 180 } : choice === 'high' ? { segments: 640, texture: 2048, dust: 1000 } : choice === 'balanced' || constrained ? { segments: 384, texture: 512, dust: 420 } : { segments: 512, texture: 1024, dust: 720 };
 let maps;
 export function regolithMaps() {
   if (maps) return maps;
@@ -46,10 +47,10 @@ export function makeGroundDust(heightAt) {
   const c=document.createElement('canvas');c.width=c.height=128;
   const g=c.getContext('2d');g.translate(64,64);g.scale(1,.24);
   const a=g.createRadialGradient(0,0,0,0,0,64);a.addColorStop(0,'rgba(255,255,255,.45)');a.addColorStop(.45,'rgba(255,255,255,.18)');a.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=a;g.fillRect(-64,-64,128,128);
-  const material=new THREE.PointsMaterial({map:new THREE.CanvasTexture(c),color:'#b49a7a',size:8,opacity:.12,transparent:true,depthWrite:false,fog:true});
+  const material=new THREE.PointsMaterial({map:new THREE.CanvasTexture(c),color:'#b49a7a',size:1.6,opacity:.12,transparent:true,depthWrite:false,fog:true});
   const points=new THREE.Points(geometry,material);points.name='Ground dust';points.frustumCulled=false;
   points.userData.update=(cam,t,storm,night)=>{
-    material.opacity=(storm?.26:.07)*(1-night*.85);material.size=storm?12:7;
+    material.opacity=(storm?.26:.07)*(1-night*.85);material.size=storm?2.4:1.4;
     for(let i=0;i<n;i++) {
       const x=cam.x+((i*39.713+t*(storm?4:1.1)-cam.x)%100+100)%100-50;
       const z=cam.z+((i*23.371+t*.21-cam.z)%100+100)%100-50;

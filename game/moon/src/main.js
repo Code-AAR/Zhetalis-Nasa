@@ -10,6 +10,7 @@ import { MOON, GAME_DAY_SECONDS, SITES, WORLD } from './config.js';
 import { heightAt, permanentShadow } from './terrain.js';
 import { sunAt, earthAt, skyVector } from './sun.js';
 import * as sim from './sim.js';
+import { currentObjective, questLog, warnings, mapMarker } from './quests.js';
 import { packSave, writeSave, readSave, clearSave } from './save.js';
 import { MoonWorld, QUALITY } from './world.js';
 import { buildLander, BallisticDust, descentHeight, DESCENT_T, LANDER } from './lander.js';
@@ -41,7 +42,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: QUALITY.aa, logari
 renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY.pixel));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.3;   // training-sim exposure: readable for kids
-renderer.shadowMap.enabled = QUALITY.name !== 'low';   // low-memory mode: no shadow maps renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = QUALITY.name !== 'low';   // phone Lite: no shadow maps
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 
 // ---------- surface scene ----------
@@ -113,6 +115,7 @@ function setMode(m) {
   $('#flyby-hud').hidden = m !== 'flyby'; $('#window-frame').hidden = !(m === 'flyby' && flyby.m?.view === 'window');
   $('#skip').hidden = m !== 'descent'; if (m !== 'descent') caption('');
   $('#cabin').hidden = true; $('#alert').hidden = true; $('#prompt').hidden = true;
+  if (m !== 'surface') { closeQuestLog(); document.body.classList.remove('alert-on'); }
   if (m === 'menu') { refreshMenu(); document.exitPointerLock?.(); }
 }
 
@@ -136,7 +139,7 @@ $('#settings-btn').onclick = () => openSettings({ tab: 'audio' });
 $('#sources-btn').onclick = () => showSources();
 $('#gear-btn').onclick = () => openSettings({ tab: 'audio' });
 $('#pause-btn').onclick = () => pause();
-$('#info-btn').onclick = () => info(mode === 'flyby' ? flyby.m.fact : (sim.nextTask(state)?.fact || 'moon-gravity'));
+$('#info-btn').onclick = () => info(mode === 'flyby' ? flyby.m.fact : (objective?.fact || 'moon-gravity'));
 $('#skip').onclick = () => { if (mode === 'descent') descentT = DESCENT_T + 3; };
 
 function showSources() {
@@ -320,10 +323,10 @@ on('rover', () => {
 });
 on('lamp', () => { lamp = lamp === 'auto' ? 'on' : lamp === 'on' ? 'off' : 'auto'; toast('Lamps: ' + lamp); });
 on('view', toggleView);
-on('menu', () => pause());
+on('menu', () => { if (questOpen) closeQuestLog(); else pause(); });
 on('settings', () => openSettings({ tab: 'audio' }));
 on('info', () => $('#info-btn').click());
-on('tasks', () => $('#task').classList.toggle('collapsed'));
+on('tasks', () => { if (mode === 'surface') toggleQuestLog(); });
 on('photo', () => takePhoto()); on('photoKey', () => { if (mode === 'flyby') takePhoto(); });
 on('warp', () => { if (mode === 'flyby') toggleWarp(); });
 on('map', () => $('#minimap').classList.toggle('big'));
@@ -362,7 +365,8 @@ function step(dt) {
   rover.setLights(place === 'rover' && (lamp === 'on' || (lamp === 'auto' && dark)));
   outpost.update(dt, state, sun.az, sun.lit, earth.az, earth.el);
   renderer.render(scene, camera);
-  hudT += dt; if (hudT > 0.2 && mode === 'surface') { hudT = 0; drawHud(sun, earth); drawMap(); }
+  hudT += dt; if (hudT > 0.2 && mode === 'surface') { hudT = 0; drawHud(sun, earth); }
+  if (mode === 'surface' && state) drawMap();
   lastSun = sun; consume();
 }
 
@@ -463,14 +467,70 @@ function drawHud(sun, earth) {
   $('#bars').innerHTML = meter('Power', s.battery, 25) + meter('Oxygen', s.oxygen, 30) + meter('Water', s.water, 20) + `<div class="science"><span>Science</span><b>${Math.round(s.science)}</b></div>`;
   $('#suit').innerHTML = meter('Suit O₂', s.suitO2, 30) + meter('Suit pwr', s.suitPower, 25) + (place === 'rover' || s.roverIce ? meter('Rover', s.roverBattery, 20) : '') + (s.dose > 0 ? `<div class="science"><span>Radiation dose</span><b>${Math.round(s.dose)}</b></div>` : '') +
     (s.carried.length || s.handIce || s.roverIce ? `<div class="science"><span>Carrying</span><b>${[s.carried.length ? s.carried.length + ' samples' : '', s.handIce ? '1 ice' : '', s.roverIce ? s.roverIce + ' ice in rover' : ''].filter(Boolean).join(', ')}</b></div>` : '');
-  $('#clock').innerHTML = `<span><span class="sun-dot ${sun.lit < 0.5 ? 'off' : ''}"></span>${sun.lit < 0.5 ? 'Sun hidden by far ridges' : 'Sun up'}</span><span>Lunar day: Earth day ${sun.earthDays.toFixed(1)} of ${MOON.synodicDays}</span><span>${earth.visible ? 'Earth in view · radio OK' : 'Earth below horizon'}</span>`;
-  const next = sim.nextTask(s);
-  $('#task').innerHTML = `<small>Task ${sim.tasksDone(s) + (next ? 1 : 0)} of ${sim.TASKS.length}</small><h3>${esc(next?.title || 'All tasks done!')}</h3><p>${esc(next?.hint || 'Keep exploring, or head back to the menu.')}</p><ol>${sim.TASKS.map(t => `<li class="${s.tasks[t.id] ? 'done' : ''}">${esc(t.title)}</li>`).join('')}</ol>`;
-  const al = $('#alert');
+  const short = document.body.classList.contains('layout-phone') || innerWidth < 520;   // phones: shorter words so the row fits
+  $('#clock').innerHTML = `<span><span class="sun-dot ${sun.lit < 0.5 ? 'off' : ''}"></span>${sun.lit < 0.5 ? (short ? 'Sun hidden' : 'Sun hidden by far ridges') : 'Sun up'}</span><span>${short ? 'Day' : 'Lunar day: Earth day'} ${sun.earthDays.toFixed(1)} of ${MOON.synodicDays}</span><span>${earth.visible ? (short ? 'Radio OK' : 'Earth in view · radio OK') : (short ? 'No Earth link' : 'Earth below horizon')}</span>`;
+  updateObjective();
+  // The most urgent warning stays on screen at the top, even with the quest log open.
+  const al = $('#alert'), warn = currentWarnings.find(w => w.level === 'critical');
   if (s.alert) {
     const left = Math.ceil(s.alert.start + sim.RATES.sepWarning - s.t), storm = left <= 0;
-    al.hidden = false; al.innerHTML = `${storm ? `Solar particle storm! ${place === 'hab' ? 'You are sheltered.' : place === 'rover' ? 'The rover blocks some of it - the cabin is safer.' : 'Get inside!'}` : `Solar particle alert: shelter in ${left} s`}<br><small>${esc(s.alert.source || '')}</small>`;
-  } else al.hidden = true;
+    al.hidden = false; al.className = 'alert-banner critical'; al.innerHTML = `${storm ? `Solar particle storm! ${place === 'hab' ? 'You are sheltered.' : place === 'rover' ? 'The rover blocks some of it - the cabin is safer.' : 'Get inside!'}` : `Solar particle alert: shelter in ${left} s`}<br><small>${esc(s.alert.source || '')}</small>`;
+  } else if (warn) { al.hidden = false; al.className = 'alert-banner critical'; al.textContent = warn.text; }
+  else al.hidden = true;
+  document.body.classList.toggle('alert-on', !al.hidden);
+  if (questOpen) drawQuestLog();
+}
+
+// ---------- quests: compact objective card, quest log, minimap target ----------
+let objective = null, objKey = '', objPinned = false, objUntil = 0, questOpen = false, currentWarnings = [];
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const questCtx = () => ({ place, player: { x: astro.pos.x, z: astro.pos.z }, rover: { x: rover.pos.x, z: rover.pos.z }, sunLit: lastSun?.lit });
+const focusPos = () => (place === 'rover' ? rover.pos : place === 'outside' ? astro.pos : { x: 0, z: 0 });
+function setObjectiveOpen(open) {
+  $('#task').classList.toggle('collapsed', !open);
+  $('#obj-toggle').setAttribute('aria-expanded', String(open));
+}
+function updateObjective() {
+  if (!state) return;
+  const ctx = questCtx(), o = currentObjective(state, ctx), f = focusPos();
+  objective = o; currentWarnings = warnings(state, ctx);
+  if (o.key !== objKey) {
+    const first = !objKey, newTask = objKey.split(':')[0] !== o.id; objKey = o.key;
+    $('#obj-count').textContent = o.id === 'free' ? 'All objectives done' : `Objective ${o.index + 1} of ${o.total}`;
+    $('#obj-title').textContent = o.title;
+    $('#obj-detail').textContent = o.detail;
+    // A new objective shows its full explanation for a few seconds, then folds down to its title.
+    if (newTask || first) {
+      setObjectiveOpen(true); objUntil = state.t + 9;   // game seconds: pausing or Settings does not eat the reading time
+      const card = $('#task'); card.classList.remove('fresh'); void card.offsetWidth; if (!reducedMotion.matches) card.classList.add('fresh');
+    }
+  }
+  if (objUntil && state.t > objUntil) { objUntil = 0; if (!objPinned) setObjectiveOpen(false); }
+  $('#obj-step').textContent = o.step;
+  $('#obj-dist').textContent = o.target ? `${Math.round(Math.hypot(o.target.x - f.x, o.target.z - f.z))} m` : '';
+  const lg = $('#map-legend');
+  lg.hidden = !o.target; if (o.target) lg.querySelector('span').textContent = `${o.target.label} · ${Math.round(Math.hypot(o.target.x - f.x, o.target.z - f.z))} m`;
+}
+$('#obj-toggle').onclick = () => { const open = $('#task').classList.contains('collapsed'); objPinned = open; objUntil = 0; setObjectiveOpen(open); };
+$('#obj-info').onclick = () => info(objective?.fact || 'moon-gravity');
+$('#obj-log').onclick = () => openQuestLog();
+$('#quest-btn').onclick = () => toggleQuestLog();
+$('#ql-close').onclick = () => closeQuestLog();
+function openQuestLog() { if (mode !== 'surface') return; questOpen = true; $('#quest-log').hidden = false; document.body.classList.add('quest-open'); $('#quest-btn').setAttribute('aria-expanded', 'true'); drawQuestLog(); document.exitPointerLock?.(); }
+function closeQuestLog() { questOpen = false; $('#quest-log').hidden = true; document.body.classList.remove('quest-open'); $('#quest-btn').setAttribute('aria-expanded', 'false'); }
+function toggleQuestLog() { questOpen ? closeQuestLog() : openQuestLog(); }
+function drawQuestLog() {
+  if (!state) return;
+  const ctx = questCtx(), q = questLog(state, ctx), w = warnings(state, ctx), f = focusPos(), a = q.active;
+  const dist = a.target ? ` · ${Math.round(Math.hypot(a.target.x - f.x, a.target.z - f.z))} m away` : '';
+  const legend = [['#ff4fd8', 'Objective (pulsing diamond; arrow at the edge when off the map)'], ['#7dffb2', 'You'], ['#ffffff', 'Lander'], ['#6fd3ff', 'Rover'], ['#ffd34d', 'Solar mast site'], ['#ffb347', 'Rock sample'], ['#5ab8ff', 'Ice drill'], ['#7dffb2', 'Processor / instruments']];
+  $('#ql-body').innerHTML = `
+    ${w.length ? `<h4>Warnings</h4><ul>${w.map(x => `<li class="warn-${x.level}">${esc(x.text)}</li>`).join('')}</ul>` : ''}
+    <h4>Active</h4><ul><li class="active"><b>${esc(a.title)}</b><small>${esc(a.step)}${a.target ? ` · ${esc(a.target.label)}${dist}` : ''}</small></li></ul>
+    ${q.upcoming.length ? `<h4>Up next</h4><ul>${q.upcoming.map(t => `<li>${esc(t.title)}</li>`).join('')}</ul>` : ''}
+    <h4>Optional</h4><ul>${q.optional.map(o => `<li class="${o.done ? 'done' : o.failed ? 'failed' : ''}"><span class="prog">${esc(o.progress)}</span>${esc(o.title)}<small>${esc(o.why)}</small></li>`).join('')}</ul>
+    <h4>Completed (${q.completed.length}/${sim.TASKS.length})</h4>${q.completed.length ? `<ul>${q.completed.map(t => `<li class="done">${esc(t.title)}</li>`).join('')}</ul>` : '<p>None yet.</p>'}
+    <h4>Map key</h4><div class="ql-legend">${legend.map(([c, t]) => `<i style="background:${c}"></i><span>${esc(t)}</span>`).join('')}</div>`;
 }
 
 const mapCtx = $('#minimap').getContext('2d'); let mapBg = null, mapKey = '';
@@ -491,9 +551,34 @@ function drawMap() {
   const dot = (x, z, col, r = 3) => { const px = W / 2 + (x - f.x) * k, pz = W / 2 + (z - f.z) * k; c.fillStyle = col; c.beginPath(); c.arc(Math.max(4, Math.min(W - 4, px)), Math.max(4, Math.min(W - 4, pz)), r, 0, 7); c.fill(); };
   dot(0, 0, '#ffffff', 5); dot(rover.pos.x, rover.pos.z, '#6fd3ff', 4);
   for (const [id, b] of outpost.beacons) if (b.visible && id !== 'elevator') dot(b.position.x, b.position.z, id.startsWith('sample') ? '#ffb347' : id === 'drill' ? '#5ab8ff' : id.startsWith('mast') ? '#ffd34d' : '#7dffb2', 3);
+  drawTarget(c, f, W, span);
   c.save(); c.translate(W / 2, W / 2); c.rotate(-(place === 'rover' ? rover.yaw : astro.yaw) + Math.PI);
   c.fillStyle = '#7dffb2'; c.beginPath(); c.moveTo(0, -7); c.lineTo(5, 5); c.lineTo(-5, 5); c.fill(); c.restore();
   c.fillStyle = '#9aa6b4'; c.font = '10px Poppins, sans-serif'; c.fillText('N', W / 2 - 3, 12);
+}
+
+// Objective marker: magenta diamond with a pulsing cyan ring at the real target; if the target is beyond the
+// 120 m map radius it becomes an arrow on the rim pointing the way, with the distance.
+function drawTarget(c, f, W, span) {
+  const t = objective?.target; if (!t) return;
+  const mk = mapMarker(t, f, { size: W, span }); if (!mk) return;
+  const pulse = reducedMotion.matches ? 0.5 : (performance.now() / 1100) % 1;
+  c.save(); c.translate(mk.x, mk.y);
+  c.strokeStyle = '#4ff0ff'; c.lineWidth = 2;
+  if (!mk.clamped) {
+    c.globalAlpha = reducedMotion.matches ? 0.9 : 1 - pulse; c.beginPath(); c.arc(0, 0, 6 + pulse * 9, 0, 7); c.stroke(); c.globalAlpha = 1;
+    c.rotate(Math.PI / 4); c.fillStyle = '#ff4fd8'; c.fillRect(-4.5, -4.5, 9, 9); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.strokeRect(-4.5, -4.5, 9, 9);
+  } else {
+    c.rotate(mk.angle); const grow = reducedMotion.matches ? 0 : Math.sin(pulse * Math.PI * 2) * 1.5;
+    c.fillStyle = '#ff4fd8'; c.strokeStyle = '#4ff0ff'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(8 + grow, 0); c.lineTo(-5, -6 - grow * 0.5); c.lineTo(-2, 0); c.lineTo(-5, 6 + grow * 0.5); c.closePath(); c.fill(); c.stroke();
+    c.rotate(-mk.angle);
+    const label = mk.metres >= 1000 ? (mk.metres / 1000).toFixed(1) + ' km' : Math.round(mk.metres) + ' m';
+    const lx = -Math.cos(mk.angle) * 20, ly = -Math.sin(mk.angle) * 14;
+    c.font = '600 10px Poppins, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.85)'; c.strokeText(label, lx, ly); c.fillStyle = '#ffffff'; c.fillText(label, lx, ly);
+  }
+  c.restore();
 }
 
 // ---------- integration API (for the shared menu / tests) ----------
@@ -502,6 +587,8 @@ window.MoonMission = {
   start: m => (m === 'surface' ? startSurface(!!readSave()?.state) : m === 'artemis1' || m === 'artemis2' ? startFlyby(m) : setMode('menu')),
   save: saveNow,
   state: () => state && JSON.parse(JSON.stringify(state)),
+  // Test hook: patch mission numbers (e.g. { nextAlert: 0 } or { suitO2: 8 }) to check warnings and alerts.
+  debugSet: patch => { if (!state) return false; for (const [k, v] of Object.entries(patch || {})) if (k in state && typeof v !== 'object') state[k] = v; return true; },
   // Test hook: move the astronaut (outside only).
   teleport: (x, z) => { if (place !== 'outside') return false; astro.pos.set(x, heightAt(x, z), z); astro.vel.set(0, 0, 0); astro.grounded = true; return true; },
   press: code => { window.dispatchEvent(new KeyboardEvent('keydown', { code })); window.dispatchEvent(new KeyboardEvent('keyup', { code })); },
@@ -509,6 +596,7 @@ window.MoonMission = {
   simulate: (seconds = 1, codes = [], fps = 30) => { holdKeys(codes); for (let i = 0; i < seconds * fps; i++) step(1 / fps); holdKeys([]); return window.MoonMission.debug(); },
   debug: () => ({ mode, place, quality: QUALITY, chunks: { ...world.stats }, dust: dust.n, prints: prints.list.length, player: { x: +astro.pos.x.toFixed(2), y: +astro.pos.y.toFixed(2), z: +astro.pos.z.toFixed(2), grounded: astro.grounded, vy: +astro.vy.toFixed(2) }, rover: { x: +rover.pos.x.toFixed(2), z: +rover.pos.z.toFixed(2), speed: +rover.speed.toFixed(2) }, gravity: MOON.gravity, sun: lastSun, renderer: renderer.info.render, memory: renderer.info.memory }),
   info,
+  quests: () => ({ objective, warnings: currentWarnings, log: state ? questLog(state, questCtx()) : null, open: questOpen, expanded: !$('#task').classList.contains('collapsed'), marker: objective?.target ? mapMarker(objective.target, focusPos()) : null }),
   three: () => ({ THREE, scene, camera, renderer, sunLight, fill, world, flyby }),
 };
 

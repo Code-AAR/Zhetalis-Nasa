@@ -41,7 +41,7 @@ function createStorm(world) {
   }
   // wind-blown grit around the camera
   const N = 2200, pp = new Float32Array(N * 3), seed = new Float32Array(N * 3); for (let i = 0; i < N * 3; i++) seed[i] = r();
-  const grit = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pp, 3)), new THREE.PointsMaterial({ map: glowTexture(), color: '#e0a070', size: .55, alphaTest: .02, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: true, fog: false }));
+  const grit = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pp, 3)), new THREE.PointsMaterial({ map: glowTexture(), color: '#e0a070', size: .09, alphaTest: .02, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: true, fog: false }));
   grit.frustumCulled = false; scene.add(grit);
   let tint = 0;
   const frame = t => {

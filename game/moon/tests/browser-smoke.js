@@ -22,7 +22,7 @@
   const before = M.debug().player; M.simulate(8, ['KeyW', 'ShiftLeft']); const after = M.debug().player;
   ok(Math.hypot(after.x - before.x, after.z - before.z) > 15, 'walking moves the astronaut');
   M.simulate(0.05, ['Space']); M.simulate(0.5, []); const air = M.debug().player;
-  ok(!air.grounded && Math.abs(air.vy - (2.3 - 1.62 * 0.55)) < 0.15, 'jump follows 1.62 m/s2: vy ' + air.vy);
+  ok(!air.grounded && Math.abs(air.vy - (2.9 - 1.62 * 0.55)) < 0.15, 'jump follows 1.62 m/s2: vy ' + air.vy);
   const d = M.debug();
   ok(d.chunks.detailed <= d.chunks.limit && d.chunks.limit <= 16, 'chunks bounded ' + JSON.stringify(d.chunks));
   ok(M.state().tasks.stepDown, 'first task completes');

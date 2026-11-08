@@ -89,7 +89,7 @@ function makeMotes() {
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
   const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16); grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-  const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#bca18a', size: 0.035, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.NormalBlending, fog: true });
+  const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#bca18a', size: 0.009, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.NormalBlending, fog: true });
   const points = new THREE.Points(geo, mat); points.frustumCulled = false;
   points.userData.update = (dt, cam, t, wind) => {
     // specks stay put in the world (so they slide past as you walk); any that fall too far behind you
@@ -579,7 +579,7 @@ export class World {
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
     u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
     this.skyLights.motes.material.opacity = (0.06 + 0.12 * day) * (this.dustOn ? 2 : 1);
-    this.skyLights.motes.material.size = this.dustOn ? 0.055 : 0.025;
+    this.skyLights.motes.material.size = this.dustOn ? 0.014 : 0.006;
     this.nightness = 1 - day;
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);

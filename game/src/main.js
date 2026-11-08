@@ -1,3 +1,4 @@
+import { effectiveQuality } from './device-profile.js';
 import {initSettings,openSettings} from './settings.js';
 import { GRAPHICS_MODE, WORLD_RADIUS, WORLD_LIMIT } from './surface-detail.js';
 import * as THREE from 'three';
@@ -36,10 +37,10 @@ loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models st
 
 // Phones and tablets: draw fewer pixels, and skip shadows on small screens, so the game stays smooth
 const coarse = matchMedia('(pointer: coarse)').matches, smallScreen = Math.min(screen.width, screen.height) < 600;
-const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: GRAPHICS_MODE !== 'low' && !(coarse && smallScreen) });
-renderer.setPixelRatio(Math.min(devicePixelRatio, GRAPHICS_MODE === 'low' ? 1 : coarse ? 1.25 : 1.75));
+const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: effectiveQuality(GRAPHICS_MODE) !== 'low' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE) === 'low' ? 1 : effectiveQuality(GRAPHICS_MODE) === 'high' ? devicePixelRatio : 1.5));
 renderer.setSize(innerWidth, innerHeight, false);
-renderer.shadowMap.enabled = GRAPHICS_MODE !== 'low' && !(coarse && smallScreen);
+renderer.shadowMap.enabled = effectiveQuality(GRAPHICS_MODE) !== 'low';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
@@ -998,7 +999,7 @@ soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: 
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 let viewportFrame;
-function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,GRAPHICS_MODE==='low'?1:isTouch()?1.25:1.75));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=GRAPHICS_MODE!=='low'&&!(isTouch()&&Math.min(innerWidth,innerHeight)<600);world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
+function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,effectiveQuality(GRAPHICS_MODE)==='low'?1:effectiveQuality(GRAPHICS_MODE)==='high'?devicePixelRatio:1.5));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=effectiveQuality(GRAPHICS_MODE)!=='low';world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
 addEventListener('resize',resizeGame);window.visualViewport?.addEventListener('resize',resizeGame);
 
 // ---------------- HUD ----------------

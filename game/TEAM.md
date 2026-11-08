@@ -164,3 +164,7 @@ node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when D
 - `audio-preferences.js` owns master/music/ambience/effects/voice and mute. `ambient-music.js` starts on a gesture and advances via `tickMusic`. Music is an original score, not a scientific recording.
 - Default Mars detailed terrain covers the minimap's 240 m span. `test-chunk-plan.mjs` checks circle coverage and bounded residency. `test-audio-preferences.mjs` checks mute and unavailable storage.
 - Never expose `.env` through a static site. NASA image library requests need no API key; keyed feeds must be fetched by local/server scripts and published as dated snapshots.
+
+
+### Full quality, phone Lite and lunar quests (8 Nov)
+Auto graphics selects full quality on computers/tablets and Lite on phones; this is independent of the screen-layout preview. A phone can choose Full quality. See src/device-profile.js and scripts/test-device-profile.mjs. Full NASA Moon geometry/texture is unchanged; phone Lite is a separate asset, never an automatic desktop downgrade. Moon quest logic is in moon/src/quests.js, with grouped log, active map target and auto-collapsing objective. Movement is walk2/sprint4 m/s, jump2.9 m/s launch with lunar gravity. Treat these speeds as game tuning.
