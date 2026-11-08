@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {fitPart,assemblyDone,buildState,circuitFor,circuitReady,firstMissionReport,ASSEMBLIES} from '../game/src/construction-state.js';
+import {fitPart,assemblyDone,buildState,circuitFor,circuitReady,circuitConnected,firstMissionReport,ASSEMBLIES} from '../game/src/construction-state.js';
 const o={powerStep:1,baseConnected:false,chargerStep:0};
 assert.equal(fitPart(o,'array','Solar module','Support frame'),false);
 for(const p of ASSEMBLIES.array)assert.equal(fitPart(o,'array',p,p),true);
@@ -13,3 +13,5 @@ buildState(o).removed.push(5);buildState(o).cleared.push(1);
 const restored=JSON.parse(JSON.stringify(o));assert.ok(assemblyDone(restored,'array'));assert.deepEqual(buildState(restored).removed,[5]);
 assert.equal(firstMissionReport(o,{farmQuest:{waterMade:true,rewarded:true}}).filter(x=>x.done).length,4);
 console.log('Wrong parts/cables rejected, assembly and circuit gates, repeat placement, save persistence and first-base debrief passed.');
+
+assert.equal(circuitConnected(o,2),false);o.chargerStep=3;assert.equal(circuitConnected(o,2),true);assert.equal(circuitReady(o,2),false);assert.equal(circuitConnected(o,1),true);assert.equal(circuitConnected(o,0),true);assert.equal(circuitConnected(o,-1),false);

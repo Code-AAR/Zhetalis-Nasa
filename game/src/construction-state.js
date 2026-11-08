@@ -11,3 +11,5 @@ export function firstMissionReport(o,c){return [
  {title:'Water prepared',done:!!c?.farmQuest?.waterMade,lesson:'Collected ice needs processing before it can supply a grow bed.'},
  {title:'First meal prepared',done:!!c?.farmQuest?.rewarded,lesson:'Plants need water, light and time. Harvesting and preparing food completes the supply chain.'}
 ];}
+
+export function circuitConnected(o,index){return index===0?o.powerStep>=6:index===1?!!o.baseConnected:index===2?o.chargerStep>=3:false;}

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {heightAt} from './world.js';
-import {ASSEMBLIES,buildState,fitPart,assemblyDone,circuitFor,circuitReady} from './construction-state.js';
+import {ASSEMBLIES,buildState,fitPart,assemblyDone,circuitFor,circuitReady,circuitConnected,CIRCUITS} from './construction-state.js';
 
 // In-world interactions: E / touch Use and clicks share the same ray and reach limit.
 export class Construction {
@@ -69,7 +69,7 @@ export class Construction {
   this.bench.visible=!!this.kind&&inside&&room===this.interior;
   if(this.kind){const placed=s.placed[this.kind]||[];for(const mesh of this.slots){const done=placed.includes(mesh.userData.name);mesh.visible=mesh.userData.kind==='slot'||(!done&&this.held!==mesh.userData.name);if(mesh.userData.kind==='slot'){mesh.material.opacity=done?1:.35;mesh.material.color.set(done?'#bfc4b5':this.held===mesh.userData.name?'#ffd577':'#6cddbf');}}}
   const partner=this.wire?{'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[this.wire]:null;
-  this.sockets.forEach(mesh=>{const id=mesh.userData.id;mesh.visible=id==='solar-out'?o.powerStep>=5:id.startsWith('battery')?o.powerStep>=5:id==='charger-in'?o.chargerStep>=2:o.powerStep>=6;mesh.material.color.set(this.wire===id?'#ffd577':partner===id?'#b78cff':'#8be5d1');});
+  this.sockets.forEach(mesh=>{const id=mesh.userData.id;mesh.visible=id==='solar-out'?o.powerStep>=5:id.startsWith('battery')?o.powerStep>=5:id==='charger-in'?o.chargerStep>=2:o.powerStep>=6;mesh.material.color.set(circuitConnected(o,CIRCUITS.findIndex(pair=>pair.includes(id)))?'#69d897':this.wire===id?'#ffd577':partner===id?'#b78cff':'#8be5d1');});
   for(let i=0;i<3;i++){const connected=i===0?o.powerStep>=6:i===1?o.baseConnected:o.chargerStep>=3;if(connected&&!this.cables.has(i)){const ids=[['solar-out','battery-in'],['battery-out','base-in'],['base-out','charger-in']][i];const a=this.sockets.find(p=>p.userData.id===ids[0]).position,b=this.sockets.find(p=>p.userData.id===ids[1]).position;const pts=[a.clone()];for(let j=0;j<=24;j++){const t=j/24,x=THREE.MathUtils.lerp(a.x,b.x,t),z=THREE.MathUtils.lerp(a.z,b.z,t)+Math.sin(t*Math.PI)*.6;pts.push(new THREE.Vector3(x,heightAt(x,z)+.07,z));}pts.push(b.clone());const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),100,.04,8,false),new THREE.MeshStandardMaterial({color:'#252e30',roughness:.8}));this.world.scene.add(cable);this.cables.set(i,cable);}}
   // Legacy cables ended at the wrong model faces; visible leads now terminate at sockets.
   this.world.settlement.cable.visible=false;this.world.settlement.chargerCable.visible=false;
@@ -84,6 +84,7 @@ export class Construction {
   if(hit&&hit.object!==this.world.rocks){while(!hit.object.userData.kind&&hit.object.parent)hit.object=hit.object.parent;}
   const player=inside?room.pos.clone().add(room.scene.position):this.world.player.position;
   if(hit&&hit.point.distanceTo(player.clone().add(new THREE.Vector3(0,1,0)))<3.3){this.hit=hit;this.hint=hit.object===this.world.rocks?'E / Use · break surface rock with pickaxe':`E / Use · ${hit.object.userData.label}`;}
+  if(this.hit?.object.userData.kind==='socket'&&circuitConnected(o,CIRCUITS.findIndex(pair=>pair.includes(this.hit.object.userData.id))))this.hint=this.hit.object.userData.label+' · already connected';
   if(this.held)this.hint=`Holding ${this.held} · `+this.hint+' · R to cancel';
   if(this.wire){const target=this.sockets.find(p=>p.userData.id===partner);this.hint=`Cable → ${target.userData.label} · ${Math.round(target.position.distanceTo(player))} m · E / Use · R to drop. `+this.hint;}
   if(this.noticeUntil>performance.now())this.hint=this.notice+' · '+this.hint;
@@ -113,9 +114,17 @@ export class Construction {
   if(d.kind==='battery-place'){this.placeBattery();return true;}
   if(d.kind==='charger-place'){if(o.chargerStep===1){o.chargerStep=2;this.sync();this.save();this.guide('Charger placed. Connect Base charger OUT to Rover charger IN.');}return true;}
   if(d.kind==='socket'){
+   const socketCircuit=CIRCUITS.findIndex(pair=>pair.includes(d.id));
+   if(circuitConnected(o,socketCircuit)){
+    if(this.wire&&CIRCUITS[socketCircuit]?.includes(this.wire))this.cancel();
+    this.guide(socketCircuit===2?'Charger cable already connected. Park the rover in the cyan bay. A full battery will not charge further.':'This cable is already connected. No need to connect it again.');return true;
+   }
+   if(this.wire===d.id){this.cancel();this.notify('Cable released.');return true;}
+   if(!this.wire&&!circuitReady(o,socketCircuit)){this.guide(socketCircuit===2?'First place the charging post and connect the base to its battery.':'First assemble and place the battery, then connect the solar array.');return true;}
    if(!this.wire){this.wire=d.id;this.guide('Cable selected. Walk to the matching socket and press E / Use. R cancels.');return true;}
    const index=circuitFor(this.wire,d.id);
-   if(index<0||!circuitReady(o,index)){this.guide('That connection is not ready or does not match. Connect solar OUT → battery IN, then battery OUT → base IN, then base OUT → charger IN.');return true;}
+   if(index<0){const pair=CIRCUITS.find(pair=>pair.includes(this.wire));const partner=this.sockets.find(p=>p.userData.id===pair?.find(id=>id!==this.wire));this.guide(`Wrong socket. Connect this cable to ${partner?.userData.label||'its matching socket'}. R / Drop cancels.`);return true;}
+   if(!circuitReady(o,index)){this.cancel();this.guide('The equipment changed. Finish placing and connecting its power supply first.');return true;}
    if(index===0)this.advance(5);else if(index===1)o.baseConnected=true;else o.chargerStep=3;
    this.wire=null;o.today=o.forecast();this.sync();this.save();this.guide(['Solar connected through the charge controller. Next: battery OUT to base IN.','Base connected. The battery can supply it after sunset while charge remains.','Charger connected. Park the rover in the bay to test it.'][index],true);return true;
   }
