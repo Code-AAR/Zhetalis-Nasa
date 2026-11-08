@@ -112,3 +112,6 @@ Expanded docking detection to the painted bay rectangle with a parking tolerance
 - First-meal objective keeps the next action visible: ice, water plant, seed request, delivery, collection, planting, watering, harvest and preparation. Existing crops retain progress.
 - Free starter seed delivery takes three game sols; orange minimap pod markers persist until collection. Short landing toast and cargo notice can be dismissed.
 - Moving relay dish collision covers its full bounds; greenhouse tank blocks the astronaut. Greenhouse glass has a subtle blue-green tint.
+
+## Revision 60
+Every mature crop harvest returns two planting units to the locker, allowing replanting and expansion. Seed returns are a simplified game reward; food preparation remains at the locker.

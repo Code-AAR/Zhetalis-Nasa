@@ -379,7 +379,8 @@ export class Colony {
     if (!h.gh.ready) return 0;
     const meals = Math.round(CROPS[h.gh.crop].meals * (1 + 0.4 * outpost.upgrades.greenhouse));
     this.s.produce = (this.s.produce || 0) + meals;
-    if(h.gh.crop==='potato')this.s.seeds.potato++; // reserve a seed tuber for replanting
+    // Two planting units per mature harvest: one to replant, one to expand (game rule).
+    this.s.seeds[h.gh.crop]=(this.s.seeds[h.gh.crop]||0)+2;
     outpost.harvestMeals += meals;
     Object.assign(h.gh, { crop: null, grown: 0, ready: false }); this.drawHouse(h); return meals;
   }
