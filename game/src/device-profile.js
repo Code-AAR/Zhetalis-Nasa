@@ -1,6 +1,7 @@
 // Device class is independent of the chosen UI layout. Resizing a desktop is not a phone.
 export function detectPhone({ mobile, ua = '', coarse = false, touchPoints = 0, width = 0, height = 0 } = {}) {
-  if (/iPad|Tablet|Silk/i.test(ua)) return false;
+  if (/iPad|Tablet|Silk|Windows NT|Macintosh|X11|CrOS/i.test(ua)) return false;
+  if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return false;
   if (mobile === true || /iPhone|iPod|Android.*Mobile/i.test(ua)) return true;
   if (mobile === false) return false;
   return coarse && touchPoints > 0 && Math.min(width, height) > 0 && Math.min(width, height) <= 600;

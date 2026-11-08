@@ -11,3 +11,9 @@ assert.equal(effectiveQuality('auto',false),'high');
 assert.equal(effectiveQuality('high',true),'high');
 assert.equal(effectiveQuality('low',false),'high');
 console.log('Phone detection, desktop resize, tablet exclusion and quality overrides passed.');
+
+for (const ua of ['Windows NT 10.0','Macintosh','X11; Linux x86_64','Android 14; Tablet']) {
+  assert.equal(detectPhone({ua,coarse:true,touchPoints:10,width:540,height:900}),false);
+}
+for (const requested of [undefined,'auto','low','balanced','high']) assert.equal(effectiveQuality(requested,false),'high');
+console.log('Small touch desktops, tablets and stale Lite preferences remain Full.');

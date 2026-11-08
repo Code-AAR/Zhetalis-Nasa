@@ -160,12 +160,18 @@ export class Launch {
     this.karmanLabel.scale.set(64, 8, 1); this.karman.add(this.karmanLabel);
 
     this.t = 0; this.countFrom = 10; this.done = false;
-    this.useNasaModels();
+    this.modelsReady=false;this.modelError=false;
+    this.ready=this.useNasaModels();
   }
 
   // Swap the simple shapes for NASA's official 3D models of SLS and the Mobile Launcher.
   async useNasaModels() {
-    const [sls, ml] = await Promise.all([loadModel('sls.glb'), loadModel('mobile-launcher.glb')]);
+    let timeout;
+    const [sls, ml] = await Promise.race([
+      Promise.all([loadModel('sls.glb'),loadModel('mobile-launcher.glb')]),
+      new Promise(resolve=>{timeout=setTimeout(()=>resolve([null,null]),30000);})
+    ]).finally(()=>clearTimeout(timeout));
+    if(!sls||!ml){this.modelError=true;return;}
     if (this.lit) return;                    // arrived too late - don't swap parts mid-flight
     const K = 82 / 98;                       // game units per metre (SLS Block 1 is 98 m tall)
     if (ml) {
@@ -198,6 +204,7 @@ export class Launch {
       const up = new THREE.Box3().setFromObject(this.upper.children.find(ch => ch.name === 'upper') || this.upper);
       this.upperFlame.position.y = this.rocket.worldToLocal(up.min.clone()).y - 4;
       this.nasa = true;
+      this.modelsReady=true;
     }
   }
 
@@ -212,7 +219,7 @@ export class Launch {
   // The flight, slowed down so there is time to read: about 50 seconds from lift-off to orbit
   // (the real climb to orbit takes about 8 minutes). Each stage gets several seconds.
   update(dt) {
-    this.t += dt;
+    if(this.modelsReady)this.t += dt;
     const left = this.countFrom - this.t;          // seconds until lift-off
     const lift = Math.max(0, -left);
     if (left <= 1.5 && !this.lit) { this.lit = true; this.flames.forEach(f => (f.visible = true)); }

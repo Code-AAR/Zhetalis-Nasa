@@ -241,6 +241,8 @@ function startNew() {
   const skip = document.createElement('button'); skip.textContent = 'Skip launch ›'; skip.id = 'skip';
   Object.assign(skip.style, { position: 'fixed', right: '16px', bottom: '16px', zIndex: 5 });
   skip.onclick = () => (launch.done = true); document.body.appendChild(skip);
+  const retry=document.createElement('button');retry.id='retry-launch';retry.textContent='Retry model download';retry.hidden=true;
+  Object.assign(retry.style,{position:'fixed',left:'16px',bottom:'16px',zIndex:5});retry.onclick=()=>location.reload();document.body.appendChild(retry);
   buildWorld(); // start building Mars in the background during the countdown
   loadMarsMap(); loadRoverPhotos(); loadEarthToday();   // and start fetching the real NASA pictures
 }
@@ -321,7 +323,7 @@ async function waitForBase(ready) {
 }
 
 async function arrive() {
-  $('#countdown').classList.add('hidden'); $('#skip')?.remove();
+  $('#countdown').classList.add('hidden'); $('#skip')?.remove(); $('#retry-launch')?.remove();
   // Clear launch captions before waiting for network-dependent base assets.
   const ready = await waitForBase(world.ready);
   if (!ready) return;
@@ -1174,7 +1176,8 @@ renderer.setAnimationLoop(() => {
     const { left, lifted, title, caption, km, karman } = launch.update(dt);
     const lift = -left;   // seconds since lift-off: engines start at T-1.5, full power after lift-off, quieter once the core stage is gone
     setSound({ thrust: left > 1.5 ? 0 : lift < 0 ? 0.5 : lift < 37 ? 1 : 0.25 }); tickSound(dt);
-    showCaption(lifted ? title : String(Math.max(0, left)), lifted ? 'cd-phase' : '', caption);
+    showCaption(launch.modelsReady ? (lifted ? title : String(Math.max(0,left))) : (launch.modelError ? 'Download interrupted' : 'Preparing launch'), lifted ? 'cd-phase' : '', launch.modelsReady ? caption : (launch.modelError ? 'The detailed rocket or launcher could not load. Retry, or skip to the Mars briefing.' : 'Loading the detailed NASA rocket and mobile launcher. Countdown begins when both are ready.'));
+    const retry=document.getElementById('retry-launch');if(retry)retry.hidden=!launch.modelError;
     cdAlt.classList.toggle('hidden', !lifted); cdAlt.classList.toggle('space', !!karman);
     cdAlt.textContent = `Height: ${Math.round(km)} km${km >= 100 ? ' · in space!' : ''}`;
     if (karman) logFact(F.karman);
