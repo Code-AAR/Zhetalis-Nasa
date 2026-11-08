@@ -6,6 +6,7 @@ import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
 import { Rover } from './rover.js';
 import { createRockContact } from './rock-contact.js';
+import { SURFACE_DETAIL, regolithMaps, rockMaterial, makeGroundDust } from './surface-detail.js';
 import { solarPanel, makeCellMat } from './models.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeStars, makePlanets } from './sky.js';
@@ -81,13 +82,13 @@ function makeSky(scene) {
 
 // Fine dust floating in the air around you, catching the sunlight (and a lot more of it in a dust storm).
 function makeMotes() {
-  const N = 420, R = 16, pos = new Float32Array(N * 3);
+  const N = SURFACE_DETAIL.dust, R = 24, pos = new Float32Array(N * 3);
   for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 2 * R;
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
   const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16); grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-  const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#ffd9b0', size: 0.07, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const mat = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#bca18a', size: 0.035, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.NormalBlending, fog: true });
   const points = new THREE.Points(geo, mat); points.frustumCulled = false;
   points.userData.update = (dt, cam, t, wind) => {
     // specks stay put in the world (so they slide past as you walk); any that fall too far behind you
@@ -96,7 +97,7 @@ function makeMotes() {
     for (let i = 0; i < N; i++) {
       const j = i * 3;
       a[j] += (wind + Math.sin(t * 0.3 + i) * 0.15) * dt; a[j + 1] += Math.sin(t * 0.5 + i * 1.7) * 0.05 * dt; a[j + 2] += Math.cos(t * 0.2 + i) * 0.12 * dt;
-      for (let k = 0; k < 3; k++) { const rel = a[j + k] - c[k]; if (rel > R) a[j + k] -= 2 * R; else if (rel < -R) a[j + k] += 2 * R; }
+      for (let k = 0; k < 3; k++) { const rel = a[j + k] - c[k]; a[j + k] = c[k] + ((rel + R) % (2 * R) + 2 * R) % (2 * R) - R; }
     }
     geo.attributes.position.needsUpdate = true;
   };
@@ -159,11 +160,11 @@ function gravelTexture() {
 }
 
 function makeTerrain() {
-  const seg = 384;
+  const seg = SURFACE_DETAIL.segments;
   const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, colors = [];
-  const rust = new THREE.Color('#b8643a'), dusty = new THREE.Color('#d99467'), basalt = new THREE.Color('#5e3626'), pale = new THREE.Color('#e2ab7f');
+  const rust = new THREE.Color('#9e7054'), dusty = new THREE.Color('#bc9470'), basalt = new THREE.Color('#55504a'), pale = new THREE.Color('#cab292');
   const col = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), y = heightAt(x, z);
@@ -175,7 +176,9 @@ function makeTerrain() {
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0, map: gravelTexture() }));
+  const detail = regolithMaps();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0, map: detail.map, bumpMap: detail.bump, bumpScale: .03 }));
+  mesh.name = "Mars terrain"; mesh.userData.segments = seg;
   mesh.receiveShadow = true;
   return mesh;
 }
@@ -205,10 +208,10 @@ export function rockGeometry(seed, { detail = 3, squash = 1, rough = .3 } = {}) 
 function makeRocks(rng) {
   const count = 520;
   const geo = new THREE.DodecahedronGeometry(1, 0);
-  const mat = new THREE.MeshLambertMaterial({ flatShading: true });
+  const mat = rockMaterial();
   const rocks = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
-  const tints = ['#8a4a2d', '#a85d39', '#6e3b28', '#c07a52'].map(c => new THREE.Color(c));
+  const tints = ['#786454', '#98795f', '#55514b', '#ad8a6d'].map(c => new THREE.Color(c));
   const colliders = [], lowRocks = [];
   const vertices = geo.attributes.position, vertex = new THREE.Vector3();
   for (let i = 0; i < count; i++) {
@@ -402,6 +405,7 @@ export class World {
     this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
     this.terrain = makeTerrain(); this.scene.add(this.terrain);
+    this.groundDust = makeGroundDust(heightAt); this.scene.add(this.groundDust);
 
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks); this.rocks=rocks;
@@ -588,8 +592,8 @@ export class World {
     u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
     u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
-    this.skyLights.motes.material.opacity = (0.12 + 0.45 * day) * (this.dustOn ? 2 : 1);
-    this.skyLights.motes.material.size = this.dustOn ? 0.1 : 0.07;
+    this.skyLights.motes.material.opacity = (0.06 + 0.12 * day) * (this.dustOn ? 2 : 1);
+    this.skyLights.motes.material.size = this.dustOn ? 0.055 : 0.025;
     this.nightness = 1 - day;
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
@@ -817,6 +821,7 @@ export class World {
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
     this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
     this.skyLights.moons.userData.place(this.phase, cam, (this.nightness ?? 0) * (this.dustOn ? 0.2 : 1));
+    this.groundDust.userData.update(cam, this.time, this.dustOn, this.nightness ?? 0);
     this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);
     const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
     this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);

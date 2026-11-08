@@ -10,6 +10,14 @@ The launcher serves only this folder at `http://127.0.0.1:8777/`.
 The new `Downloads/UNITY/game` browser build is merged into this game. See
 [INTEGRATION.md](INTEGRATION.md) for features, retained fixes and validation.
 
+## Graphics detail
+
+Use **Graphics** on the title screen or in the mission menu: Auto chooses a device-appropriate budget, Balanced uses 384 terrain subdivisions (294,912 triangles), and High uses 640 (819,200 triangles). Auto on desktop uses 512 (524,288 triangles). Changing quality saves and reloads; choose Resume. Phones default to the lighter budget. More polygons interpolate the existing height data; they do not add measured NASA terrain information.
+
+The detail update adds procedural sand/grit bump maps, muted basalt/dust colours, ground-level drifting dust, smoother dish and landing-ship curves, additional ship seams and panel fasteners. Existing rock outlines and collision geometry are unchanged. Imported habitat texture resolution is unchanged; this is not a photogrammetric reconstruction.
+
+References: [NASA's Observation Mountain sand ripples](https://science.nasa.gov/blog/reading-the-ripples-at-observation-mountain/) and [Perseverance's clear-sky panorama](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-perseverance-rover-captures-mars-vista-as-clear-as-day/). Generated surface patterns illustrate these features; they are not NASA imagery.
+
 ## Play
 
 - WASD / arrows: walk. Shift: run. Space: jump. Click the game: mouse look.

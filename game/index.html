@@ -16,71 +16,72 @@
   <meta name="description" content="A browser game for kids 7-12: run a Mars outpost and balance power, oxygen and radiation using real NASA and NOAA data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=integrated-survey-30">
-  <link rel="stylesheet" href="menu.css?v=integrated-survey-30">
-  <link rel="stylesheet" href="loading-screen.css?v=integrated-survey-30">
-  <link rel="stylesheet" href="phone.css?v=integrated-survey-30">
-  <link rel="stylesheet" href="briefing.css?v=integrated-survey-30">
-  <link rel="stylesheet" href="mobile.css?v=integrated-survey-30">
+  <link rel="stylesheet" href="style.css?v=mars-detail-31">
+  <link rel="stylesheet" href="menu.css?v=mars-detail-31">
+  <link rel="stylesheet" href="loading-screen.css?v=mars-detail-31">
+  <link rel="stylesheet" href="phone.css?v=mars-detail-31">
+  <link rel="stylesheet" href="briefing.css?v=mars-detail-31">
+  <link rel="stylesheet" href="mobile.css?v=mars-detail-31">
   <script type="importmap">
 {
   "imports": {
+      "./src/surface-detail.js": "./src/surface-detail.js?v=mars-detail-31",
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "./src/access.js": "./src/access.js?v=integrated-survey-30",
-    "./src/arrival-globe.js": "./src/arrival-globe.js?v=integrated-survey-30",
-    "./src/arrival.js": "./src/arrival.js?v=integrated-survey-30",
-    "./src/art.js": "./src/art.js?v=integrated-survey-30",
-    "./src/briefing.js": "./src/briefing.js?v=integrated-survey-30",
-    "./src/cable-crossings.js": "./src/cable-crossings.js?v=integrated-survey-30",
-    "./src/capsule.js": "./src/capsule.js?v=integrated-survey-30",
-    "./src/chart.js": "./src/chart.js?v=integrated-survey-30",
-    "./src/colony.js": "./src/colony.js?v=integrated-survey-30",
-    "./src/crew-interior.js": "./src/crew-interior.js?v=integrated-survey-30",
-    "./src/cutscenes.js": "./src/cutscenes.js?v=integrated-survey-30",
-    "./src/exploration-layout.js": "./src/exploration-layout.js?v=integrated-survey-30",
-    "./src/exterior-view.js": "./src/exterior-view.js?v=integrated-survey-30",
-    "./src/fieldmap.js": "./src/fieldmap.js?v=integrated-survey-30",
-    "./src/globe.js": "./src/globe.js?v=integrated-survey-30",
-    "./src/greenhouse.js": "./src/greenhouse.js?v=integrated-survey-30",
-    "./src/interior.js": "./src/interior.js?v=integrated-survey-30",
-    "./src/journey-visual.js": "./src/journey-visual.js?v=integrated-survey-30",
-    "./src/launch.js": "./src/launch.js?v=integrated-survey-30",
-    "./src/layout.js": "./src/layout.js?v=integrated-survey-30",
-    "./src/loading-screen.js": "./src/loading-screen.js?v=integrated-survey-30",
-    "./src/lookouts.js": "./src/lookouts.js?v=integrated-survey-30",
-    "./src/main.js": "./src/main.js?v=integrated-survey-30",
-    "./src/mapstate.js": "./src/mapstate.js?v=integrated-survey-30",
-    "./src/menu.js": "./src/menu.js?v=integrated-survey-30",
-    "./src/minimap.js": "./src/minimap.js?v=integrated-survey-30",
-    "./src/missionpath.js": "./src/missionpath.js?v=integrated-survey-30",
-    "./src/mist.js": "./src/mist.js?v=integrated-survey-30",
-    "./src/models.js": "./src/models.js?v=integrated-survey-30",
-    "./src/nasaimages.js": "./src/nasaimages.js?v=integrated-survey-30",
-    "./src/nasamodels.js": "./src/nasamodels.js?v=integrated-survey-30",
-    "./src/panel-contact.js": "./src/panel-contact.js?v=integrated-survey-30",
-    "./src/patch-art.js": "./src/patch-art.js?v=integrated-survey-30",
-    "./src/patch-fx.js": "./src/patch-fx.js?v=integrated-survey-30",
-    "./src/patches.js": "./src/patches.js?v=integrated-survey-30",
-    "./src/pedia.js": "./src/pedia.js?v=integrated-survey-30",
-    "./src/phone-layout.js": "./src/phone-layout.js?v=integrated-survey-30",
-    "./src/quiz.js": "./src/quiz.js?v=integrated-survey-30",
-    "./src/reveal.js": "./src/reveal.js?v=integrated-survey-30",
-    "./src/rock-contact.js": "./src/rock-contact.js?v=integrated-survey-30",
-    "./src/rover-terrain.js": "./src/rover-terrain.js?v=integrated-survey-30",
-    "./src/rover.js": "./src/rover.js?v=integrated-survey-30",
-    "./src/scancine.js": "./src/scancine.js?v=integrated-survey-30",
-    "./src/settlement.js": "./src/settlement.js?v=integrated-survey-30",
-    "./src/sim.js": "./src/sim.js?v=integrated-survey-30",
-    "./src/sky.js": "./src/sky.js?v=integrated-survey-30",
-    "./src/sound.js": "./src/sound.js?v=integrated-survey-30",
-    "./src/spaceweather.js": "./src/spaceweather.js?v=integrated-survey-30",
-    "./src/starship-landing.js": "./src/starship-landing.js?v=integrated-survey-30",
-    "./src/suit.js": "./src/suit.js?v=integrated-survey-30",
-    "./src/survival.js": "./src/survival.js?v=integrated-survey-30",
-    "./src/touch.js": "./src/touch.js?v=integrated-survey-30",
-    "./src/ui.js": "./src/ui.js?v=integrated-survey-30",
-    "./src/world.js": "./src/world.js?v=integrated-survey-30"
+    "./src/access.js": "./src/access.js?v=mars-detail-31",
+    "./src/arrival-globe.js": "./src/arrival-globe.js?v=mars-detail-31",
+    "./src/arrival.js": "./src/arrival.js?v=mars-detail-31",
+    "./src/art.js": "./src/art.js?v=mars-detail-31",
+    "./src/briefing.js": "./src/briefing.js?v=mars-detail-31",
+    "./src/cable-crossings.js": "./src/cable-crossings.js?v=mars-detail-31",
+    "./src/capsule.js": "./src/capsule.js?v=mars-detail-31",
+    "./src/chart.js": "./src/chart.js?v=mars-detail-31",
+    "./src/colony.js": "./src/colony.js?v=mars-detail-31",
+    "./src/crew-interior.js": "./src/crew-interior.js?v=mars-detail-31",
+    "./src/cutscenes.js": "./src/cutscenes.js?v=mars-detail-31",
+    "./src/exploration-layout.js": "./src/exploration-layout.js?v=mars-detail-31",
+    "./src/exterior-view.js": "./src/exterior-view.js?v=mars-detail-31",
+    "./src/fieldmap.js": "./src/fieldmap.js?v=mars-detail-31",
+    "./src/globe.js": "./src/globe.js?v=mars-detail-31",
+    "./src/greenhouse.js": "./src/greenhouse.js?v=mars-detail-31",
+    "./src/interior.js": "./src/interior.js?v=mars-detail-31",
+    "./src/journey-visual.js": "./src/journey-visual.js?v=mars-detail-31",
+    "./src/launch.js": "./src/launch.js?v=mars-detail-31",
+    "./src/layout.js": "./src/layout.js?v=mars-detail-31",
+    "./src/loading-screen.js": "./src/loading-screen.js?v=mars-detail-31",
+    "./src/lookouts.js": "./src/lookouts.js?v=mars-detail-31",
+    "./src/main.js": "./src/main.js?v=mars-detail-31",
+    "./src/mapstate.js": "./src/mapstate.js?v=mars-detail-31",
+    "./src/menu.js": "./src/menu.js?v=mars-detail-31",
+    "./src/minimap.js": "./src/minimap.js?v=mars-detail-31",
+    "./src/missionpath.js": "./src/missionpath.js?v=mars-detail-31",
+    "./src/mist.js": "./src/mist.js?v=mars-detail-31",
+    "./src/models.js": "./src/models.js?v=mars-detail-31",
+    "./src/nasaimages.js": "./src/nasaimages.js?v=mars-detail-31",
+    "./src/nasamodels.js": "./src/nasamodels.js?v=mars-detail-31",
+    "./src/panel-contact.js": "./src/panel-contact.js?v=mars-detail-31",
+    "./src/patch-art.js": "./src/patch-art.js?v=mars-detail-31",
+    "./src/patch-fx.js": "./src/patch-fx.js?v=mars-detail-31",
+    "./src/patches.js": "./src/patches.js?v=mars-detail-31",
+    "./src/pedia.js": "./src/pedia.js?v=mars-detail-31",
+    "./src/phone-layout.js": "./src/phone-layout.js?v=mars-detail-31",
+    "./src/quiz.js": "./src/quiz.js?v=mars-detail-31",
+    "./src/reveal.js": "./src/reveal.js?v=mars-detail-31",
+    "./src/rock-contact.js": "./src/rock-contact.js?v=mars-detail-31",
+    "./src/rover-terrain.js": "./src/rover-terrain.js?v=mars-detail-31",
+    "./src/rover.js": "./src/rover.js?v=mars-detail-31",
+    "./src/scancine.js": "./src/scancine.js?v=mars-detail-31",
+    "./src/settlement.js": "./src/settlement.js?v=mars-detail-31",
+    "./src/sim.js": "./src/sim.js?v=mars-detail-31",
+    "./src/sky.js": "./src/sky.js?v=mars-detail-31",
+    "./src/sound.js": "./src/sound.js?v=mars-detail-31",
+    "./src/spaceweather.js": "./src/spaceweather.js?v=mars-detail-31",
+    "./src/starship-landing.js": "./src/starship-landing.js?v=mars-detail-31",
+    "./src/suit.js": "./src/suit.js?v=mars-detail-31",
+    "./src/survival.js": "./src/survival.js?v=mars-detail-31",
+    "./src/touch.js": "./src/touch.js?v=mars-detail-31",
+    "./src/ui.js": "./src/ui.js?v=mars-detail-31",
+    "./src/world.js": "./src/world.js?v=mars-detail-31"
   }
 }
   </script>
@@ -132,7 +133,7 @@
       </main>
       <footer class="mission-footer">
         <div class="mission-weather"><span class="weather-symbol" aria-hidden="true"></span><p id="sun-line" class="sun-line">Checking the latest space-weather report…</p></div>
-        <div class="mission-settings"><div class="screen-pick" id="screen-pick"><span>Display</span></div><button class="fs-btn" id="fs-btn-title" aria-label="Play full screen">Full screen ↗</button></div>
+        <div class="mission-settings"><div class="screen-pick" id="screen-pick"><span>Display</span></div><button class="graphics-btn">Graphics</button><button class="fs-btn" id="fs-btn-title" aria-label="Play full screen">Full screen ↗</button></div>
       </footer>
     </div>
   </section>
@@ -166,6 +167,7 @@
         <button id="sound-btn">Sound (M)</button>
         <button id="data-btn">NASA data</button>
         <button id="pedia-btn">📖 Mars-pedia</button>
+        <button class="graphics-btn">Graphics</button>
         <button id="screen-btn">📱 Screen</button>
         <button class="fs-btn" id="fs-btn">⛶ Full screen</button>
       </div>
@@ -184,8 +186,8 @@
   <div id="toast"></div>
   <div id="loading">Loading Mars…</div>
 
-  <script type="module" src="src/loading-screen.js?v=integrated-survey-30"></script>
-  <script type="module" src="src/main.js?v=integrated-survey-30"></script>
-  <script type="module" src="src/phone-layout.js?v=integrated-survey-30"></script>
+  <script type="module" src="src/loading-screen.js?v=mars-detail-31"></script>
+  <script type="module" src="src/main.js?v=mars-detail-31"></script>
+  <script type="module" src="src/phone-layout.js?v=mars-detail-31"></script>
 </body>
 </html>

@@ -23,10 +23,10 @@ export function cellTexture() {
 }
 export const makeCellMat = () => new THREE.MeshStandardMaterial({ map: cellTexture(), roughness: .3, metalness: .5, color: '#ffffff', emissive: '#12305c', emissiveMap: cellTexture(), emissiveIntensity: .55 });
 
-const cyl = (r, len, mat, seg = 8) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg), mat);
+const cyl = (r, len, mat, seg = 20) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg), mat);
 const box = (w, h, d, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; };
 // A tube between two points.
-export function tube(a, b, r, mat, seg = 6) {
+export function tube(a, b, r, mat, seg = 12) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), seg), mat);
   m.position.copy(A).add(B).multiplyScalar(.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m;
 }
@@ -38,6 +38,11 @@ export function solarPanel(cellMat, { w = 3.2, d = 2, tilt = .5, low = .6 } = {}
   tilted.add(box(w, .045, d, MAT.dark, 0, -.025, 0));
   const face = new THREE.Mesh(new THREE.PlaneGeometry(w - .1, d - .1), cellMat); face.rotation.x = -Math.PI / 2; face.position.y = .005; tilted.add(face);
   for (const [bw, bd, x, z] of [[w, .06, 0, d / 2 - .03], [w, .06, 0, -d / 2 + .03], [.06, d, w / 2 - .03, 0], [.06, d, -w / 2 + .03, 0]]) tilted.add(box(bw, .07, bd, MAT.alu, x, .0, z));
+  // Recessed hex fasteners on the frame, batched into one draw call per panel.
+  const fasteners=new THREE.InstancedMesh(new THREE.CylinderGeometry(.025,.025,.025,6),MAT.steel,8);
+  const fm=new THREE.Matrix4();let fi=0;
+  for(const x of [-w/2+.035,w/2-.035]) for(const z of [-d/2+.08,-d/6,d/6,d/2-.08]) fasteners.setMatrixAt(fi++,fm.makeTranslation(x,.045,z));
+  tilted.add(fasteners);
   tilted.add(box(.28, .1, .2, MAT.dark, w * .3, -.1, d * .28));   // junction box on the back
   for (const k of [-.3, .3]) { const along = k * d, rail = cyl(.035, w * .96, MAT.steel, 6); rail.rotation.z = Math.PI / 2; rail.position.set(0, -.1, along); tilted.add(rail); }
   // legs: from the rails straight down to ballast blocks on the ground
@@ -55,11 +60,11 @@ export function solarPanel(cellMat, { w = 3.2, d = 2, tilt = .5, low = .6 } = {}
 // and a feed horn held on three struts that really meet the rim. Returns { group, az, el } (az turns, el tilts).
 export function dishAssembly(R = 1.8) {
   const group = new THREE.Group(), az = new THREE.Group(), el = new THREE.Group(); group.add(az);
-  const f = R * .42, prof = []; for (let i = 0; i <= 14; i++) { const r = i / 14 * R; prof.push(new THREE.Vector2(r, r * r / (4 * f))); }
+  const f = R * .42, prof = []; for (let i = 0; i <= 28; i++) { const r = i / 28 * R; prof.push(new THREE.Vector2(r, r * r / (4 * f))); }
   prof.push(new THREE.Vector2(R, R * R / (4 * f) - .06), new THREE.Vector2(0, -.06));       // a little thickness at the rim
   const dishMat = new THREE.MeshStandardMaterial({ color: '#f1efe8', roughness: .4, metalness: .35, emissive: '#5a554c', side: THREE.DoubleSide });
-  const bowl = new THREE.Mesh(new THREE.LatheGeometry(prof, 56), dishMat); el.add(bowl);
-  const rimY = R * R / (4 * f), ring = new THREE.Mesh(new THREE.TorusGeometry(R, .045, 6, 56), MAT.alu); ring.rotation.x = Math.PI / 2; ring.position.y = rimY; el.add(ring);
+  const bowl = new THREE.Mesh(new THREE.LatheGeometry(prof, 96), dishMat); el.add(bowl);
+  const rimY = R * R / (4 * f), ring = new THREE.Mesh(new THREE.TorusGeometry(R, .045, 12, 96), MAT.alu); ring.rotation.x = Math.PI / 2; ring.position.y = rimY; el.add(ring);
   for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; el.add(tube([Math.cos(a) * .25, -.18, Math.sin(a) * .25], [Math.cos(a) * R * .96, rimY - .06, Math.sin(a) * R * .96], .025, MAT.steel, 4)); }   // ribs behind the bowl
   const hub = cyl(.32, .5, MAT.white, 14); hub.position.y = -.14; el.add(hub);
   const cone = new THREE.Mesh(new THREE.ConeGeometry(.5, .35, 14), MAT.steel); cone.position.y = -.42; cone.rotation.x = Math.PI; el.add(cone);

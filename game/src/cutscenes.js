@@ -14,7 +14,7 @@ const seeded = seed => () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
 let puffTex = null;
 function puffTexture() {
   if (puffTex) return puffTex;
-  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), r = seeded(9);
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), r = seeded(9); x.scale(2,2);
   for (let i = 0; i < 16; i++) {
     const px = 64 + (r() - .5) * 56, py = 64 + (r() - .5) * 56, rad = 22 + r() * 30, g = x.createRadialGradient(px, py, 0, px, py, rad);
     g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(.6, 'rgba(255,255,255,.18)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
@@ -24,7 +24,7 @@ function puffTexture() {
 let glowTex = null;
 function glowTexture() {
   if (glowTex) return glowTex;
-  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
   g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
   glowTex = new THREE.CanvasTexture(c); return glowTex;
 }
@@ -78,11 +78,11 @@ const SHIP_H = 50, SHIP_R = 4.5, LAND = { x: 70, z: -60 };
 function makeShip() {
   const g = new THREE.Group(), inner = new THREE.Group(); inner.position.y = -SHIP_H / 2; g.add(inner);
   const prof = []; for (let y = 0; y <= 36; y += 6) prof.push(new THREE.Vector2(SHIP_R, y));
-  for (let i = 1; i <= 12; i++) { const k = i / 12, y = 36 + k * 14; prof.push(new THREE.Vector2(SHIP_R * Math.sqrt(Math.max(0, 1 - Math.pow(k, 1.9))), y)); }
+  for (let i = 1; i <= 28; i++) { const k = i / 28, y = 36 + k * 14; prof.push(new THREE.Vector2(SHIP_R * Math.sqrt(Math.max(0, 1 - Math.pow(k, 1.9))), y)); }
   const steel = new THREE.MeshStandardMaterial({ color: '#dfe3e6', metalness: .55, roughness: .4 }), tile = new THREE.MeshStandardMaterial({ color: '#17181b', roughness: .85, metalness: .1 });
-  inner.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 40), steel));
-  const half = prof.map(p => new THREE.Vector2(p.x + .06, p.y)); inner.add(new THREE.Mesh(new THREE.LatheGeometry(half, 20, -Math.PI * .3, Math.PI * .6), tile));
-  for (const y of [8, 17, 26, 34]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(SHIP_R + .03, .05, 6, 40).rotateX(Math.PI / 2), steel); ring.position.y = y; inner.add(ring); }
+  inner.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 96), steel));
+  const half = prof.map(p => new THREE.Vector2(p.x + .06, p.y)); inner.add(new THREE.Mesh(new THREE.LatheGeometry(half, 48, -Math.PI * .3, Math.PI * .6), tile));
+  for (const y of [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(SHIP_R + .03, .05, 10, 96).rotateX(Math.PI / 2), steel); ring.position.y = y; inner.add(ring); }
   const flapGeo = (wd, ln) => new THREE.BoxGeometry(wd, ln, .35);
   const flaps = [];
   for (const [y, wd, ln, hinge] of [[42, 3.6, 7.5, 1], [9.5, 5.2, 11, -1]]) for (const s of [-1, 1]) {
@@ -92,12 +92,12 @@ function makeShip() {
   const flames = new THREE.Group(), outer = new THREE.MeshBasicMaterial({ color: '#ff9a3c', transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), core = new THREE.MeshBasicMaterial({ color: '#cfe8ff', transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
   const engines = [[0, 0], ...[0, 1, 2, 3, 4, 5].map(i => [Math.cos(i * 1.047) * 2.4, Math.sin(i * 1.047) * 2.4])];
   for (const [ex, ez] of engines) {
-    const n = new THREE.Mesh(new THREE.CylinderGeometry(.55, .95, 1.4, 12, 1, true), motor); n.position.set(ex, .1, ez); inner.add(n);
+    const n = new THREE.Mesh(new THREE.CylinderGeometry(.55, .95, 1.4, 32, 1, true), motor); n.position.set(ex, .1, ez); inner.add(n);
     const o = new THREE.Mesh(new THREE.ConeGeometry(1.15, 1, 14, 1, true).translate(0, -.5, 0), outer), c = new THREE.Mesh(new THREE.ConeGeometry(.55, 1, 12, 1, true).translate(0, -.5, 0), core); o.position.set(ex, 0, ez); c.position.set(ex, 0, ez); flames.add(o, c);
   }
   inner.add(flames);
   const legs = []; for (let i = 0; i < 6; i++) { const a = i * 1.047 + .52, pv = new THREE.Group(); pv.position.set(Math.cos(a) * (SHIP_R - .4), 4, Math.sin(a) * (SHIP_R - .4)); pv.rotation.order = 'YXZ'; pv.rotation.y = -a + Math.PI / 2;
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(.5, 9.5, .6), steel); leg.position.y = -4.4; const foot = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, .25, 12), steel); foot.position.y = -9.5; pv.add(leg, foot); inner.add(pv); legs.push(pv); }
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(.5, 9.5, .6), steel); leg.position.y = -4.4; const foot = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.2, .25, 32), steel); foot.position.y = -9.5; pv.add(leg, foot); inner.add(pv); legs.push(pv); }
   const light = new THREE.PointLight('#ff9040', 0, 160, 1.2); light.position.set(0, -4, 0); g.add(light);
   const setFlame = (k, t) => { const fl = 1 + .1 * Math.sin(t * 60) + .06 * Math.sin(t * 97); flames.visible = k > .01; flames.children.forEach((m, i) => { const core_ = i & 1; m.scale.set(k * (core_ ? 1.1 : 1.7), (core_ ? 20 : 42) * k * fl, k * (core_ ? 1.1 : 1.7)); }); light.intensity = k * 900 * fl; };
   const setLegs = k => legs.forEach(p => { p.rotation.x = smooth(k) * .62; });

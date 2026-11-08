@@ -1,3 +1,4 @@
+import { GRAPHICS_MODE } from './surface-detail.js';
 import * as THREE from 'three';
 import { renderInteriorView } from './exterior-view.js';
 import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS, SITES } from './sim.js';
@@ -1260,3 +1261,14 @@ renderer.setAnimationLoop(() => {
   if (world) { world.yaw += dt * 0.05; world.update(dt, false); renderer.render(world.scene, world.camera); }
   else renderer.clear();
 });
+
+// Quality changes rebuild geometry once, retaining the current mission through its normal save.
+for (const button of document.querySelectorAll('.graphics-btn')) {
+  button.textContent = `Graphics: ${GRAPHICS_MODE}`;
+  button.onclick = () => modal({ title: 'Graphics detail', html: '<p>Auto adapts to your device. Balanced uses fewer terrain polygons; High gives the smoothest terrain. Applying saves your mission and reloads the game. Choose Resume afterwards.</p>', choices: [
+    ...['auto','balanced','high'].map(mode => ({label: mode[0].toUpperCase()+mode.slice(1), primary:mode===GRAPHICS_MODE, onPick:()=>{
+      saveGame(); try {localStorage.setItem('mars-graphics',mode);} catch {}
+      const url=new URL(location.href);url.searchParams.set('graphics',mode);location.assign(url.href);
+    }})), {label:'Cancel'}
+  ] });
+}
