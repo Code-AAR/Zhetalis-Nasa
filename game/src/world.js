@@ -1,3 +1,4 @@
+import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
 import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
@@ -160,27 +161,11 @@ function gravelTexture() {
 }
 
 function makeTerrain() {
-  const seg = SURFACE_DETAIL.segments;
-  const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, seg, seg);
-  geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position, colors = [];
-  const rust = new THREE.Color('#9e7054'), dusty = new THREE.Color('#bc9470'), basalt = new THREE.Color('#55504a'), pale = new THREE.Color('#cab292');
-  const col = new THREE.Color();
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i), y = heightAt(x, z);
-    pos.setY(i, y);
-    const slope = Math.abs(heightAt(x + 1.5, z) - y) + Math.abs(heightAt(x, z + 1.5) - y);
-    const n = fbm(x * 0.08, z * 0.08, 3);
-    col.copy(rust).lerp(dusty, n).lerp(pale, THREE.MathUtils.clamp((y - 25) / 60, 0, 0.6)).lerp(basalt, THREE.MathUtils.clamp(slope / 4 - 0.15, 0, 0.75));
-    colors.push(col.r, col.g, col.b);
-  }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geo.computeVertexNormals();
-  const detail = regolithMaps();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0, map: detail.map, bumpMap: detail.bump, bumpScale: .03 }));
-  mesh.name = "Mars terrain"; mesh.userData.segments = seg;
-  mesh.receiveShadow = true;
-  return mesh;
+  const rust=new THREE.Color('#9e7054'),dusty=new THREE.Color('#bc9470'),basalt=new THREE.Color('#55504a'),pale=new THREE.Color('#cab292');
+  return makeTerrainChunks(heightAt,(x,z,y,col)=>{
+    const slope=Math.abs(heightAt(x+1.5,z)-y)+Math.abs(heightAt(x,z+1.5)-y);
+    col.copy(rust).lerp(dusty,fbm(x*.08,z*.08,3)).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15,0,.75)).offsetHSL(0,-.2,-.015);
+  });
 }
 
 // Boulders, flat slabs and loose pebbles like the Perseverance photo of Jezero Crater. The stones are lumpy
@@ -411,6 +396,7 @@ export class World {
     const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks); this.rocks=rocks;
     this.lowRocks = lowRocks;
     this.rockContact = createRockContact(rocks);
+    rocks.visible=false;this.rockDisplay=nearbyRocks(rocks);this.scene.add(this.rockDisplay);
     this.outpost = makeOutpost(); this.scene.add(this.outpost.group);
     this.solar = makeSolarField(); this.scene.add(this.solar.group);
     this.colliders = [...colliders, ...this.outpost.colliders];
@@ -814,6 +800,8 @@ export class World {
 
   // Sun, glow, stars, sky and headlamp follow the camera; the sun's direction follows the time of day.
   placeSky(p) {
+    const focus=this.cinematic?this.camera.position:p;
+    this.terrain.userData.update(focus);this.rockDisplay.userData.update(focus);
     const cam = this.camera.position, dir = this.sunDir || new THREE.Vector3(0.5, 0.8, 0.3);
     this.sun.position.set(p.x + dir.x * 120, p.y + Math.max(dir.y, 0.05) * 120, p.z + dir.z * 120); this.sun.target.position.copy(p);
     this.sky.position.copy(cam);

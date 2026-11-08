@@ -1,0 +1,66 @@
+import * as THREE from 'three';
+import { chunkPlan, CHUNK_SIZE } from './chunk-plan.js';
+import { SURFACE_DETAIL, WORLD_RADIUS, regolithMaps } from './surface-detail.js';
+
+export function makeTerrainChunks(heightAt,colourAt) {
+  const group=new THREE.Group();group.name='Streamed Mars terrain';
+  const maps=regolithMaps();
+  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0,map:maps.map,bumpMap:maps.bump,bumpScale:.03});
+  group.material=material; // shared material also supports team ground artwork
+  const coarse=new Map(), loaded=new Map();let queue=[],last='';
+  const segments=Math.ceil(SURFACE_DETAIL.segments/10);
+  function tile(ix,iz,n) {
+    const geo=new THREE.PlaneGeometry(CHUNK_SIZE,CHUNK_SIZE,n,n);geo.rotateX(-Math.PI/2);
+    const pos=geo.attributes.position,uv=geo.attributes.uv,norm=geo.attributes.normal,colour=new Float32Array(pos.count*3),c=new THREE.Color(),normal=new THREE.Vector3();
+    const cx=-320+(ix+.5)*CHUNK_SIZE,cz=-320+(iz+.5)*CHUNK_SIZE;
+    for(let i=0;i<pos.count;i++) {
+      const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,y=heightAt(x,z);pos.setXYZ(i,x,y,z);
+      uv.setXY(i,(x+320)/640,(320-z)/640);
+      normal.set(heightAt(x-.25,z)-heightAt(x+.25,z),.5,heightAt(x,z-.25)-heightAt(x,z+.25)).normalize();norm.setXYZ(i,normal.x,normal.y,normal.z);
+      colourAt(x,z,y,c);colour.set([c.r,c.g,c.b],i*3);
+    }
+    geo.setAttribute('color',new THREE.BufferAttribute(colour,3));
+    // Vertical edge skirts conceal gaps where coarse and detailed samples meet.
+    const edge=[];
+    for(let i=0;i<=n;i++)edge.push(i);
+    for(let i=1;i<=n;i++)edge.push(i*(n+1)+n);
+    for(let i=n-1;i>=0;i--)edge.push(n*(n+1)+i);
+    for(let i=n-1;i>0;i--)edge.push(i*(n+1));
+    const p=Array.from(pos.array),u=Array.from(uv.array),no=Array.from(norm.array),co=Array.from(colour),indices=Array.from(geo.index.array);
+    const start=pos.count;
+    for(const id of edge){p.push(pos.getX(id),pos.getY(id)-12,pos.getZ(id));u.push(uv.getX(id),uv.getY(id));no.push(norm.getX(id),norm.getY(id),norm.getZ(id));co.push(colour[id*3],colour[id*3+1],colour[id*3+2]);}
+    for(let i=0;i<edge.length;i++){const j=(i+1)%edge.length;indices.push(edge[i],start+i,edge[j],edge[j],start+i,start+j);}
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));geo.setAttribute('normal',new THREE.Float32BufferAttribute(no,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(co,3));geo.setIndex(indices);geo.computeBoundingSphere();
+    const mesh=new THREE.Mesh(geo,material);mesh.receiveShadow=true;mesh.name=`Terrain ${ix},${iz} (${n})`;return mesh;
+  }
+  // A tiny horizon mesh remains available while detailed tiles are generated.
+  for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,4);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
+  group.userData.stats={loaded:0,queued:0,limit:(WORLD_RADIUS*2+1)**2,segments};
+  group.userData.update=(focus)=>{
+    const plan=chunkPlan(focus.x,focus.z,WORLD_RADIUS),signature=plan.map(c=>c.key).join(';');
+    if(signature!==last){
+      last=signature;const wanted=new Set(plan.map(c=>c.key));
+      for(const [key,mesh] of loaded)if(!wanted.has(key)){group.remove(mesh);mesh.geometry.dispose();loaded.delete(key);coarse.get(key).visible=true;}
+      queue=plan.filter(c=>!loaded.has(c.key));
+    }
+    // At most one allocation per frame: never generate an entire ring in one hitch.
+    const next=queue.shift();if(next){const mesh=tile(next.x,next.z,segments);loaded.set(next.key,mesh);group.add(mesh);coarse.get(next.key).visible=false;}
+    Object.assign(group.userData.stats,{loaded:loaded.size,queued:queue.length});
+  };
+  group.userData.dispose=()=>{for(const m of [...coarse.values(),...loaded.values()])m.geometry.dispose();material.dispose();group.clear();};
+  return group;
+}
+
+// Keep the original collision mesh untouched, and submit only nearby rock instances.
+export function nearbyRocks(source) {
+  const render=new THREE.InstancedMesh(source.geometry,source.material,source.count);
+  render.castShadow=render.receiveShadow=true;render.name='Nearby rocks';render.frustumCulled=false;
+  const matrix=new THREE.Matrix4(),point=new THREE.Vector3(),colour=new THREE.Color();let last='';
+  render.userData.update=focus=>{
+    const key=`${Math.floor(focus.x/16)},${Math.floor(focus.z/16)},${source.instanceMatrix.version}`;if(key===last)return;last=key;
+    let count=0;const radius=(WORLD_RADIUS+1)*CHUNK_SIZE+24;
+    for(let i=0;i<source.count;i++){source.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);if(point.y < -1000 || Math.hypot(point.x-focus.x,point.z-focus.z)>radius)continue;render.setMatrixAt(count,matrix);source.getColorAt(i,colour);render.setColorAt(count,colour);count++;}
+    render.count=count;render.instanceMatrix.needsUpdate=true;if(render.instanceColor)render.instanceColor.needsUpdate=true;
+  };
+  return render;
+}

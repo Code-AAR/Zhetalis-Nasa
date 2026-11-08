@@ -70,8 +70,6 @@ export async function installSettlement(world){
   world.player.position.set(28,heightAt(28,-35),-35);world.yaw=Math.atan2(layout.door.x-28,layout.door.z+35);world.move.set(0,0,0);world.vel.set(0,0,0);
   layout.door.set(access.entrances[0].x,access.entrances[0].y,access.entrances[0].z);
   world.door.copy(layout.door);layout.locations.base=[world.door.x,world.door.z];world.outpost.beacon.position.set(layout.door.x,.15,layout.door.z);world.outpost.beacon.visible=true;
-  const colours=world.terrain.geometry.getAttribute('color'),shade=new THREE.Color();
-  for(let i=0;i<colours.count;i++){shade.fromBufferAttribute(colours,i).offsetHSL(0,-.2,-.015);colours.setXYZ(i,shade.r,shade.g,shade.b);}colours.needsUpdate=true;
   const shielding=new THREE.Group(),berms=new THREE.Group();world.scene.add(shielding,berms);
   const waterMat=new THREE.MeshStandardMaterial({color:'#c5c8bb',roughness:.85}),soilMat=new THREE.MeshStandardMaterial({color:'#80614c',roughness:1});
   for(const c of layout.moduleColliders){

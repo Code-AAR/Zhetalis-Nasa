@@ -1,4 +1,4 @@
-import { GRAPHICS_MODE } from './surface-detail.js';
+import { GRAPHICS_MODE, WORLD_RADIUS } from './surface-detail.js';
 import * as THREE from 'three';
 import { renderInteriorView } from './exterior-view.js';
 import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS, SITES } from './sim.js';
@@ -35,10 +35,10 @@ loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models st
 
 // Phones and tablets: draw fewer pixels, and skip shadows on small screens, so the game stays smooth
 const coarse = matchMedia('(pointer: coarse)').matches, smallScreen = Math.min(screen.width, screen.height) < 600;
-const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: !(coarse && smallScreen) });
-renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.25 : 1.75));
+const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: GRAPHICS_MODE !== 'low' && !(coarse && smallScreen) });
+renderer.setPixelRatio(Math.min(devicePixelRatio, GRAPHICS_MODE === 'low' ? 1 : coarse ? 1.25 : 1.75));
 renderer.setSize(innerWidth, innerHeight, false);
-renderer.shadowMap.enabled = !(coarse && smallScreen);
+renderer.shadowMap.enabled = GRAPHICS_MODE !== 'low' && !(coarse && smallScreen);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
@@ -1264,11 +1264,11 @@ renderer.setAnimationLoop(() => {
 
 // Quality changes rebuild geometry once, retaining the current mission through its normal save.
 for (const button of document.querySelectorAll('.graphics-btn')) {
-  button.textContent = `Graphics: ${GRAPHICS_MODE}`;
-  button.onclick = () => modal({ title: 'Graphics detail', html: '<p>Auto adapts to your device. Balanced uses fewer terrain polygons; High gives the smoothest terrain. Applying saves your mission and reloads the game. Choose Resume afterwards.</p>', choices: [
-    ...['auto','balanced','high'].map(mode => ({label: mode[0].toUpperCase()+mode.slice(1), primary:mode===GRAPHICS_MODE, onPick:()=>{
+  button.textContent = `Graphics: ${GRAPHICS_MODE === 'low' ? 'low memory' : GRAPHICS_MODE}`;
+  button.onclick = () => modal({ title: 'Graphics detail', html: '<p>Low memory reduces texture size, terrain detail and effects, and disables shadows. Auto adapts to your device. Balanced uses fewer terrain polygons; High gives the smoothest terrain. Nearby terrain loads in 64 m chunks; distant terrain stays coarse. Unloaded chunks retain mission progress. Applying saves your mission and reloads the game. Choose Resume afterwards.</p>', choices: [
+    ...['low','auto','balanced','high'].map(mode => ({label: mode==='low'?'Low memory':mode[0].toUpperCase()+mode.slice(1), primary:mode===GRAPHICS_MODE, onPick:()=>{
       saveGame(); try {localStorage.setItem('mars-graphics',mode);} catch {}
       const url=new URL(location.href);url.searchParams.set('graphics',mode);location.assign(url.href);
-    }})), {label:'Cancel'}
+    }})), ...[1,2,3].map(radius=>({label:`World limit: ${radius} chunk${radius>1?'s':''} radius (up to ${(radius*2+1)**2} detailed tiles)`,primary:radius===WORLD_RADIUS,onPick:()=>{saveGame();try{localStorage.setItem('mars-chunks',String(radius));}catch{}const url=new URL(location.href);url.searchParams.set('chunks',radius);location.assign(url.href);}})), {label:'Cancel'}
   ] });
 }

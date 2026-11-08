@@ -12,7 +12,13 @@ The new `Downloads/UNITY/game` browser build is merged into this game. See
 
 ## Graphics detail
 
-Use **Graphics** on the title screen or in the mission menu: Auto chooses a device-appropriate budget, Balanced uses 384 terrain subdivisions (294,912 triangles), and High uses 640 (819,200 triangles). Auto on desktop uses 512 (524,288 triangles). Changing quality saves and reloads; choose Resume. Phones default to the lighter budget. More polygons interpolate the existing height data; they do not add measured NASA terrain information.
+Use **Graphics** on the title screen or in the mission menu. **Low memory** reduces terrain detail, procedural texture size, dust particles and pixel resolution, and disables shadows and antialiasing. Auto picks a device-appropriate budget; Balanced and High offer more detail.
+
+**World limit** selects a 1, 2 or 3-chunk radius (at most 9, 25 or 49 detailed tiles). Each tile covers 64 x 64 game metres. Detailed terrain is created nearest-first, one tile per frame. Leaving the radius disposes its geometry instead of retaining an ever-growing cache. A coarse 100-tile horizon remains visible, so there is no void beyond the limit. Nearby rocks are submitted separately from their stable collision mesh; distant rocks are not drawn. Buildings and mission entities remain loaded: this limits terrain residency, not every asset or total browser RAM, and cannot guarantee that a device will never crash.
+
+Low memory plus 1-chunk radius is the lightest combination. Changing settings saves and reloads; choose Resume. Chunk unloading never deletes buildings, discoveries, flags, supplies or mission progress. The same height sampler and rock collision shapes are retained. Quality controls interpolate the existing terrain data rather than adding new measured NASA detail.
+
+Validation: chunk planner tests cover limits, edges and movement; browser travel checks verified disposal of outgoing geometry, the nine-tile budget, retained rock ray contacts, disabled shadows and 1x pixel ratio in Low memory mode. Existing rover slope and landing integration tests pass.
 
 The detail update adds procedural sand/grit bump maps, muted basalt/dust colours, ground-level drifting dust, smoother dish and landing-ship curves, additional ship seams and panel fasteners. Existing rock outlines and collision geometry are unchanged. Imported habitat texture resolution is unchanged; this is not a photogrammetric reconstruction.
 
