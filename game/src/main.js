@@ -1,3 +1,4 @@
+import {recordLesson,tutorialLessons,questHelp} from './player-tutorial.js';
 import {RECIPES,builderQuest} from './builder-recipes.js';
 import { Construction } from './construction.js';
 import { firstMissionReport } from './construction-state.js';
@@ -618,6 +619,7 @@ function mine(dep) {
   world.swingTool(() => {
     footstep(1);
     const r = colony.strike(dep), o = ORES[dep.ore];
+    if(r.broke){recordLesson(colony.s,'mine');saveGame();}
     toolbarKey = '';
     if (r.full) return toast(`🎒 Your sample bag is full (${BAG}). Unload it at the storage locker inside the base.`);
     if (!r.broke) return toast(`⛏ ${o.name}: ${r.left} more swing${r.left === 1 ? '' : 's'}`, 900);
@@ -656,14 +658,25 @@ function drawVisor() {
   if (html !== visorKey) { visorKey = html; $('#visor').innerHTML = html; }
 }
 
+function selectPlayerTool(slot){
+  if(!colony||isModalOpen()||world?.cinematic)return;
+  if(!colony.select(slot))return;
+  recordLesson(colony.s,colony.tool?'equip':'unequip');toolbarKey='';saveGame();
+  toast(colony.tool?`${TOOLS[colony.tool].name} equipped · tap again or Q to put away`:'Empty hands · tools remain in your belt',2200);
+}
+function openTutorial(){
+  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s),lessons=tutorialLessons(outpost,colony.s),done=lessons.filter(l=>l.done).length;
+  modal({title:'Field guide · learn by doing',html:`${zhetelaPortraitHTML()}<h4>Now: ${task.title}</h4><p>${questHelp(task)}</p><p>${done}/${lessons.length} skills practised. Help does not reset your mission.</p>${lessons.map((l,i)=>`<details ${!l.done&&i===lessons.findIndex(x=>!x.done)?'open':''}><summary>${l.done?'✓ ':''}${i+1}. ${l.title}</summary><p>${l.text}</p></details>`).join('')}<p>Low air? Return inside to refill. T opens the quest log; the current objective stays at the side of the screen.</p>`,choices:[{label:'Repeat current hint',onPick:()=>zhetela(questHelp(task))},{label:'Back to game',primary:true}]});
+}
+
 function drawToolbar() {
   const s = colony.s, key = JSON.stringify([s.belt, s.held, s.bag, s.jug, isTouch()]);
   if (key === toolbarKey) return;
   toolbarKey = key;
   const tb = $('#toolbar');
-  tb.innerHTML = `<button data-slot="-1" class="${s.held===-1?'held':''}" title="Unequip tools (Q)">✋<small>Empty hands</small></button>` + s.belt.map((t, i) => `<button data-slot="${i}" class="${i === s.held ? 'held' : ''}" title="${TOOLS[t].name}: ${TOOLS[t].desc}">${TOOLS[t].icon}<small>${keyWord(`${i + 1} · `, '')}${TOOLS[t].name}${t === 'jug' ? ` ${s.jug} L` : ''}</small></button>`).join('')
+  tb.innerHTML = `<button data-slot="-1" aria-pressed="${s.held===-1}" class="${s.held===-1?'held':''}" title="Unequip tools (Q)">✋<small>Empty hands</small></button>` + s.belt.map((t, i) => `<button data-slot="${i}" aria-pressed="${i===s.held}" class="${i === s.held ? 'held' : ''}" title="${TOOLS[t].name}: ${TOOLS[t].desc}">${TOOLS[t].icon}<small>${keyWord(`${i + 1} · `, '')}${TOOLS[t].name}${t === 'jug' ? ` ${s.jug} L` : ''}</small></button>`).join('')
     + `<div class="bag" title="Rock samples you are carrying - unload them at the storage locker">${Object.keys(ORES).map(k => `<span>${oreDot(k)}${s.bag[k]}</span>`).join(' ')}<small>bag ${colony.bagCount()}/${BAG}</small></div>`;
-  tb.querySelectorAll('[data-slot]').forEach(b => (b.onclick = e => { e.stopPropagation(); colony.select(+b.dataset.slot); toolbarKey = ''; }));
+  tb.querySelectorAll('[data-slot]').forEach(b => (b.onclick = e => { e.stopPropagation(); selectPlayerTool(+b.dataset.slot); }));
 }
 
 // The hazard monitor: live readings, and storms the instruments have spotted before they arrive.
@@ -696,7 +709,7 @@ function openMonitor() {
 
 // The storage locker: tools, samples, seeds and water - and the radio link for trading with Earth.
 function openLocker() {
-  const unloaded = colony.unload(); if (unloaded) toast(`🪨 Unloaded ${unloaded} rock sample${unloaded === 1 ? '' : 's'} into storage.`);
+  const unloaded = colony.unload(); if(unloaded){recordLesson(colony.s,'unload');saveGame();} if (unloaded) toast(`🪨 Unloaded ${unloaded} rock sample${unloaded === 1 ? '' : 's'} into storage.`);
   const s = colony.s, o = outpost, link = o.today.link, beltFull = s.belt.length >= 2;
   const onWay = pending.filter(p => p.cargo);
   const req = s.request;
@@ -731,7 +744,7 @@ function openLocker() {
     o.food += s.produce; s.freshMeals = (s.freshMeals || 0) + s.produce; s.produce = 0; farmProgress('prepared'); again();
   });
   box.querySelector('[data-rations]').onclick = () => { o.food += o.rations; o.rations = 0; saveGame(); again(); };
-  box.querySelectorAll('[data-take]').forEach(b => (b.onclick = () => { colony.take(b.dataset.take); again(); }));
+  box.querySelectorAll('[data-take]').forEach(b => (b.onclick = () => { if(colony.take(b.dataset.take)){recordLesson(colony.s,'equip');saveGame();} again(); }));
   box.querySelectorAll('[data-store]').forEach(b => (b.onclick = () => { colony.store(b.dataset.store); again(); }));
   box.querySelector('[data-fill]')?.addEventListener('click', () => { const l = colony.fillJug(); toast(`💧 Filled the jug with ${l} L.`); again(); });
   box.querySelectorAll('[data-buy]').forEach(b => (b.onclick = () => {
@@ -785,7 +798,7 @@ function openBuild() {
   let buildSubmitted=false;
   const close=modal({title:'Builder · choose a project',html:`<p>Collect minerals, unload at the locker, then equip the builder. Track a recipe for one step at a time.</p>${rows}<details><summary>Game rules & starter kits</summary><p>Ore deposits replenish each sol in safe, unoccupied spots. This is a renewable game resource; real minerals do not regrow. Mineral costs represent simplified processing with landed components, not making electronics directly from raw rocks.</p><p>Your first array, battery and charger use landed kits. Assemble those at the workbench and connect their sockets.</p></details>`,choices:[{label:'Back to game',primary:true}]});
   const box=$('#modal .modal-box');
-  box.querySelectorAll('[data-track]').forEach(b=>b.onclick=()=>{s.buildPlan=s.buildPlan===b.dataset.track?null:b.dataset.track;missionKey='';saveGame();close();if(s.buildPlan)zhetela(builderQuest(outpost,s)?.step||'Project tracked. Finish the current starter power step first.');});
+  box.querySelectorAll('[data-track]').forEach(b=>b.onclick=()=>{s.buildPlan=s.buildPlan===b.dataset.track?null:b.dataset.track;if(s.buildPlan)recordLesson(s,'track');missionKey='';saveGame();close();if(s.buildPlan)zhetela(builderQuest(outpost,s)?.step||'Project tracked. Finish the current starter power step first.');});
   box.querySelectorAll('[data-recipe]').forEach(b=>b.onclick=()=>{
     const key=b.dataset.recipe,r=RECIPES[key];
     if(buildSubmitted)return;
@@ -950,8 +963,8 @@ function pressKey(code) {
     if (inside) { const s = room.nearest(); if (s) stationAction(s); }
     else { const n = world.nearest(); if (n) collect(n); else if (colony.tool === 'builder' && !world.driving) openBuild(); }
   }
-  if ((code === 'Digit1' || code === 'Digit2') && colony) { colony.select(+code.slice(5) - 1); toolbarKey = ''; }
-  if(code==='KeyQ'&&colony){colony.select(-1);toolbarKey='';}
+  if ((code === 'Digit1' || code === 'Digit2') && colony) { selectPlayerTool(+code.slice(5) - 1); }
+  if(code==='KeyQ'&&colony){selectPlayerTool(-1);}
   if(code==='KeyT')openMissionLog();
   if (code === 'KeyG') $('#map-btn').click();
   if (code === 'KeyP') openPower();
@@ -1385,6 +1398,7 @@ function setupMissionHud(){
   if(missionCard)return;
   missionCard=document.createElement('details');missionCard.id='mission-objective';missionCard.innerHTML='<summary></summary><small class="mission-progress"></small><p></p><button type="button">Quest log (T)</button>';
   $('#hud').appendChild(missionCard);missionCard.querySelector('button').onclick=openMissionLog;
+  const help=document.createElement('button');help.textContent='How do I do this?';help.onclick=openTutorial;missionCard.append(help);
   const buildButton=document.createElement('button');buildButton.textContent='Builder (B)';buildButton.onclick=openBuild;$('#map-btn').after(buildButton);
   const button=document.createElement('button');button.textContent='Quest log (T)';button.onclick=openMissionLog;$('#map-btn').after(button);
 }
@@ -1455,7 +1469,7 @@ function researchMenu(){openResearch(outpost,colony,world,saveGame);}
 function openMissionLog(){
   if(!outpost||!colony)return;
   const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s);
-  modal({title:'Mission objectives',choices:[{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><p>Builder projects completed: ${Object.entries(colony.s.buildHistory||{}).map(([k,n])=>`${RECIPES[k]?.name||k} × ${n}`).join(', ')||'none yet'}.</p><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
+  modal({title:'Mission objectives',choices:[{label:'Tutorial & current step',onPick:openTutorial},{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><p>Builder projects completed: ${Object.entries(colony.s.buildHistory||{}).map(([k,n])=>`${RECIPES[k]?.name||k} × ${n}`).join(', ')||'none yet'}.</p><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
 }
 function updateMissionPower(dt){
   if(!outpost||!world.settlement)return;

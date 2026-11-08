@@ -128,3 +128,9 @@ Auto graphics now uses full quality on computers/tablets and phone-only Lite. A 
 Equip the builder from the locker, or open its menu with B / Menu → Builder. Choose greenhouse, extra battery or extra solar panel and Track materials & build. The tracked quest shows missing ore counts, points to the nearest matching deposit, then asks you to unload at the locker, find parts and build. Starter power quests retain priority until the habitat is connected. The existing landed-kit assembly remains unchanged.
 
 Mineral deposits are seeded, clustered surface patches. Depleted deposits replenish once per game sol at their original positions, except occupied spots near the player or structures; these wait for another sol. Mined scenery boulders stay cleared. Reloading during the same sol does not renew deposits. This is explicitly a game rule, not real mineral regrowth; recipe costs abstract processing and imported electronics.
+
+## Tool controls and field guide
+
+Press 1 or 2 / tap a belt slot to equip; repeat to unequip. Q / Empty hands puts away the current tool without removing it from the belt. Equipment choices now save immediately and show a short confirmation. Slot numbers follow your actual belt order.
+
+Open T → Tutorial & current step, or expand the current quest and choose How do I do this? Seven lessons track actual practice: equip, unequip, mine, unload, track a recipe, assemble/connect and build an expansion. The first unfinished lesson opens automatically, and Repeat current hint asks Zhetela to explain the active objective again. Tutorial progress survives reload and never resets mission progress.

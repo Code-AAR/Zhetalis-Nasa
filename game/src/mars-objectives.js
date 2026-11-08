@@ -8,7 +8,7 @@ export const POWER_TASKS=[
  ['Connect panels to battery','Select Solar OUT, then Battery controller IN. Press E / Use at each socket. R cancels the cable.','power']
 ];
 export function marsObjective(o,c){
- if(o.powerStep===2){const b=o.construction||{},cleared=b.cleared?.length||0,placed=b.placed?.field?.length||0;return {id:'power-2',title:cleared<4?'Clear the remote power site':'Place the solar panels',step:cleared<4?`${cleared}/4 rocks cleared · equip pickaxe (1)`:`${placed}/3 panels placed`,detail:cleared<4?'Walk to the marked field away from camp. Aim at each site rock and strike it with your pickaxe using E / Use.':'Aim at each highlighted panel footprint and press E / Use to place an assembled panel.',target:'power'};}
+ if(o.powerStep===2){const b=o.construction||{},cleared=b.cleared?.length||0,placed=b.placed?.field?.length||0;return {id:'power-2',title:cleared<4?'Clear the remote power site':'Place the solar panels',step:cleared<4?`${cleared}/4 rocks cleared · equip pickaxe from belt`:`${placed}/3 panels placed`,detail:cleared<4?'Walk to the marked field away from camp. Aim at each site rock and strike it with your pickaxe using E / Use.':'Aim at each highlighted panel footprint and press E / Use to place an assembled panel.',target:'power'};}
  if(o.powerStep<6){const [title,detail,target]=POWER_TASKS[o.powerStep];return {id:'power-'+o.powerStep,title,detail,target};}
  if(!o.baseConnected)return {id:'base',title:'Connect battery to base',detail:'Select Battery protected OUT at the field, then walk to Base IN beside Airlock 01 and select it.',target:'base'};
  if(!c?.farmQuest?.rewarded)return firstMealObjective(o,c);

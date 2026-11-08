@@ -86,7 +86,7 @@ export class Construction {
   if(this.blocked||!this.hit)return false;
   const o=this.state(),s=buildState(o),mesh=this.hit.object,d=mesh.userData;
   if(mesh===this.world.rocks||d.kind==='rubble'){
-   if(this.colony().tool!=='pickaxe'){this.guide('Equip your pickaxe with 1 before breaking this rock.');return true;}
+   if(this.colony().tool!=='pickaxe'){this.guide('Equip the pickaxe from your tool belt before breaking this rock.');return true;}
    if(mesh===this.world.rocks){const near=this.world.nearest();if(near&&['ore','ice','pod','panels','door'].includes(near.type)&&near.d<1.8)return false;}
    let strikes=3;if(mesh===this.world.rocks){const matrix=new THREE.Matrix4(),size=new THREE.Vector3();mesh.getMatrixAt(this.hit.instanceId,matrix);size.setFromMatrixScale(matrix);if(Math.max(size.x,size.z)>6){this.notify('Boulder too large for a hand pickaxe · go around it');return true;}strikes=Math.min(12,3+Math.ceil(Math.max(size.x,size.y,size.z)));}
    const id=mesh===this.world.rocks?'rock-'+this.hit.instanceId:'site-'+d.id,instance=this.hit.instanceId;

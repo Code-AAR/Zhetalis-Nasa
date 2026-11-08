@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {recordLesson,tutorialLessons,questHelp} from '../game/src/player-tutorial.js';
+const o={powerStep:0,baseConnected:false},s={};
+assert.equal(tutorialLessons(o,s).filter(x=>x.done).length,0);
+recordLesson(s,'equip');recordLesson(s,'unequip');
+assert.equal(tutorialLessons(o,s).filter(x=>x.done).length,2);
+const saved=JSON.parse(JSON.stringify(s));assert.equal(tutorialLessons(o,saved)[1].done,true);
+assert.match(questHelp({id:'base'}),/OUT socket/);
+assert.match(questHelp({target:'build-ore'}),/pickaxe/);
+assert.equal(tutorialLessons({powerStep:6,baseConnected:true},{buildHistory:{battery:1}})[6].done,true);
+console.log('Tutorial action tracking, save persistence and contextual instructions passed.');
