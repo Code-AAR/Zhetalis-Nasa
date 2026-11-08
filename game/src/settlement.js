@@ -50,10 +50,11 @@ export async function installSettlement(world){
       for(const x of [box.min.x+.15,box.max.x-.15])for(const z of [box.min.z+.15,box.max.z-.15]){
         const ground=heightAt(x,z),top=Math.max(ground+.18,box.min.y);
         const foot=new THREE.Mesh(new THREE.BoxGeometry(.4,top-ground+.04,.4),footMat);
-        foot.position.set(x,(top+ground)/2-.02,z);foot.castShadow=foot.receiveShadow=true;world.scene.add(foot);
+        foot.position.set(x,(top+ground)/2-.02,z);foot.castShadow=foot.receiveShadow=true;foot.visible=false;world.scene.add(foot);
       }
     }
   }
+  if(cells)cells.visible=false;world.fixedSolar=[];
   const staticCrew=model.getObjectByName('Object_16');staticCrew?.removeFromParent();
   model.updateMatrixWorld(true);model.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
   const layout=await createOpenLayout(world,model);
@@ -125,7 +126,12 @@ export async function installSettlement(world){
   const waterMat=new THREE.MeshStandardMaterial({color:'#c5c8bb',roughness:.85}),soilMat=new THREE.MeshStandardMaterial({color:'#80614c',roughness:1});
   for(const c of layout.moduleColliders){
     const wall=new THREE.Mesh(new THREE.BoxGeometry(4.9,3.8,.5),waterMat);wall.position.set(c.x,1.9,c.z-3.2);shielding.add(wall);
-    const berm=new THREE.Mesh(new THREE.BoxGeometry(5,3,2),soilMat);berm.position.set(c.x,1.5,c.z-4.1);berm.rotation.x=-.12;berms.add(berm);
+    // Filled regolith bags in supported courses at the shelter wall.
+    for(let row=0;row<5;row++)for(let i=0;i<6;i++){
+      const bag=new THREE.Mesh(new THREE.SphereGeometry(1,20,12),soilMat);
+      bag.scale.set(.46,.24,.5);bag.position.set(c.x-2.4+i*.91+(row%2)*.15,.24+row*.44,c.z-3.5);
+      bag.castShadow=bag.receiveShadow=true;berms.add(bag);
+    }
   }
   shielding.visible=false;berms.visible=false;
   const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
@@ -140,17 +146,32 @@ export async function installSettlement(world){
   const powerSite={x:pack.position.x,z:pack.position.z+1.6};
   const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cablePoints),48,.07,8,false),new THREE.MeshStandardMaterial({color:'#42494b',roughness:.8}));world.scene.add(cable);
   const serviceCables=layServiceCables(model,world.scene,heightAt);
+  model.getObjectByName('Object_13').visible=false;
   const crossings=cableCrossings([serviceCables,cable],heightAt);
   const previousSurface=world.sev.surfaceAt;
   world.sev.surfaceAt=(x,z)=>crossings.height(x,z,previousSurface(x,z));
   const panelRay=new THREE.Raycaster(),panelOrigin=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0);
   world.panelHeight=(x,z,ceiling=1000)=>{
+    world.solar.group.updateMatrixWorld(true);
     panelOrigin.set(x,ceiling,z);panelRay.set(panelOrigin,down);panelRay.far=Infinity;
-    const surfaces=[model.getObjectByName('Object_14'),...world.solar.panels.filter(p=>p.visible).map(p=>p.children[0])].filter(Boolean);
+    const surfaces=[model.getObjectByName('Object_14'),...world.solar.panels.filter(p=>p.visible).map(p=>p.children[0])].filter(o=>o&&o.visible);
     return panelRay.intersectObjects(surfaces,true)[0]?.point.y??-Infinity;
   };
+  const charging=new THREE.Group();charging.position.set(-34,heightAt(-34,26),26);world.scene.add(charging);
+  const cyan=new THREE.MeshStandardMaterial({color:'#5bc8cd',roughness:.5,emissive:'#073a40',emissiveIntensity:.4});
+  for(const x of[-2.4,2.4]){const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.035,7),cyan);stripe.position.set(x,.025,0);charging.add(stripe);}
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.5,1.35,.45),waterMat);post.position.set(3.2,.675,0);charging.add(post);
+  const chargerLamp=new THREE.Mesh(new THREE.SphereGeometry(.13,16,12),cyan);chargerLamp.position.set(3.2,1.45,0);charging.add(chargerLamp);
+  const chargerCable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([pack.position.clone(),new THREE.Vector3(34,.08,24),new THREE.Vector3(-30,.08,26),new THREE.Vector3(-30.8,.6,26)]),64,.055,8,false),new THREE.MeshStandardMaterial({color:'#30393e'}));
+  world.scene.add(chargerCable);charging.visible=chargerCable.visible=false;
+  world.colliders.push({x:-30.8,z:26,r:.5,object:charging});
+  world.clearRocksAround(-34,26,6);
+  const shelter=layout.moduleColliders[0],shelterSite={x:shelter.x,z:shelter.z-shelter.r-1.8},soilSite={x:shelter.x-9,z:shelterSite.z-3};
+  const soilPile=new THREE.Mesh(new THREE.SphereGeometry(1,48,24),soilMat);soilPile.scale.set(2,.7,1.5);soilPile.position.set(soilSite.x,heightAt(soilSite.x,soilSite.z),soilSite.z);world.scene.add(soilPile);
   const equipmentBlock=equipmentContact(model);
-  const mission={crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;},updateGreenhouse:(beds,powered=true)=>{
+  const objectiveBeacon=new THREE.Mesh(new THREE.RingGeometry(.8,1,64),new THREE.MeshBasicMaterial({color:'#c78aff',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));objectiveBeacon.rotation.x=-Math.PI/2;world.scene.add(objectiveBeacon);
+  const inlet=new THREE.Mesh(new THREE.BoxGeometry(.42,.7,.22),cyan);inlet.position.set(access.entrances[0].x+2.7,.65,access.entrances[0].doorZ+1);world.scene.add(inlet);
+  const mission={objectiveBeacon,charging,chargerCable,chargerSite:{x:-30.8,z:26},chargingBay:{x:-34,z:26},shelterSite,soilSite,crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;},updateGreenhouse:(beds,powered=true)=>{
     const room=mission.greenhouseRoom;if(!room)return;
     room.draw(beds,GREENHOUSE.tank,powered);
     const key=room.beds.map(b=>b.key).join(';');if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;
@@ -190,7 +211,7 @@ function equipmentContact(model){
   const key=(x,z)=>x+','+z;
   for(const name of ['Object_13','Object_14','Object_29','Object_31']){
     const mesh=model.getObjectByName(name);
-    if(!mesh?.isMesh)continue;
+    if(!mesh?.isMesh||!mesh.visible)continue;
     const geometry=mesh.geometry,position=geometry.attributes.position,index=geometry.index;
     for(let i=0;i<(index?.count??position.count);i+=3){
       vertices.forEach((v,j)=>v.fromBufferAttribute(position,index?index.getX(i+j):i+j).applyMatrix4(mesh.matrixWorld));

@@ -274,3 +274,13 @@ body.quest-open .cabin { visibility: hidden; pointer-events: none; }
   body.alert-on .quest-log, body.layout-phone.alert-on .quest-log { top: 88px; }
   body.quest-open .alert-banner { left: 12px; right: 12px; top: 12px; bottom: auto; transform: none; }
 }
+
+@media(max-width:600px){
+  #task.objective{top:218px;bottom:auto;left:8px;width:190px;max-height:190px;border-radius:12px}
+  #task .obj-head b{font-size:12px}#task .obj-detail{display:none}
+  #task .obj-step{font-size:11px;line-height:1.35}#task .obj-actions button{min-height:44px;font-size:10px;padding:5px}
+  #toast{top:auto;bottom:220px;width:calc(100% - 24px)}#toast div{font-size:11px;padding:6px 10px;border-radius:10px}
+  #fact-pop{top:auto;bottom:260px;right:8px;left:8px;width:auto;max-height:150px;overflow:auto;font-size:11px;padding:8px}
+  #fact-pop h4{font-size:12px;margin:0 0 4px}#fact-pop p{margin:4px 0}#fact-pop button{font-size:10px;padding:5px;min-height:44px}
+  #fact-pop>a{display:none}#prompt{max-width:calc(100% - 16px);white-space:normal;font-size:11px}
+}

@@ -32,7 +32,7 @@ export function createRockContact(rocks) {
       origin.set(x, 1000, z); ray.set(origin, down); ray.far = Infinity;
       const hit = cast();
       return hit && hit.point.y > ground
-        ? {height:hit.point.y, normalY:normalY(hit)}
+        ? {height:hit.point.y, normalY:normalY(hit), obstacleHeight:hit.point.y-ground}
         : {height:ground, normalY:1};
     },
     height(x, z, ceiling) {

@@ -23,7 +23,7 @@ export function initControls(canvas) {
   canvas.addEventListener('mousedown', e => { dragging = true; lx = e.clientX; ly = e.clientY; if (!coarse() && document.body.classList.contains('surface')) canvas.requestPointerLock?.(); });
   addEventListener('mouseup', () => { dragging = false; });
   addEventListener('mousemove', e => {
-    if (document.pointerLockElement === canvas) { input.lookX += e.movementX; input.lookY += e.movementY; }
+    if (document.pointerLockElement === canvas) { if(Math.abs(e.movementX)<250&&Math.abs(e.movementY)<250){input.lookX += e.movementX; input.lookY += e.movementY;} }
     else if (dragging) { input.lookX += e.clientX - lx; input.lookY += e.clientY - ly; lx = e.clientX; ly = e.clientY; }
   });
   canvas.addEventListener('wheel', e => { input.zoom += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
@@ -35,7 +35,7 @@ export function readKeys() {
   const f = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
   const r = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
   const stick = touch.active ? touch : null;
-  input.x = stick ? stick.x : r; input.z = stick ? -stick.y : -f;   // z: -1 = forward
+  input.x = stick ? stick.x : r; input.z = stick ? stick.y : -f;   // z: -1 = forward
   input.run = k('ShiftLeft') || k('ShiftRight') || (stick && Math.hypot(stick.x, stick.y) > 0.92);
   input.keys = { left: k('ArrowLeft') || k('KeyA'), right: k('ArrowRight') || k('KeyD'), up: k('ArrowUp') || k('KeyW'), down: k('ArrowDown') || k('KeyS') };
   if (stick) input.keys = { left: stick.x < -0.3, right: stick.x > 0.3, up: stick.y < -0.3, down: stick.y > 0.3 };

@@ -14,3 +14,6 @@ for(const surface of [
 }
 assert.equal(ROVER_MOTION.max,18);assert.equal(ROVER_MOTION.accel,9);
 console.log('Rover ramp ascent/descent, wall, steep face and high-speed sweep checks passed');
+
+const small=(x,z)=>({height:Math.abs(z)<1?.6:0,normalY:.15,obstacleHeight:Math.abs(z)<1?.6:0});
+const p={x:0,z:-5};assert.equal(moveOverSurface(p,0,12,0,small),1,'Small rocks must not trip the steep-face blocker');

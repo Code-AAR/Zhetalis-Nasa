@@ -85,11 +85,11 @@ export class Outpost {
     this.o2 = d.o2;
     this.food = this.crew * 3;
     this.rations = d.food;
-    this.powerStep = 0;
+    this.powerStep = 0; this.baseConnected=false; this.chargerStep=0; this.roverCharged=false; this.soilStep=0; this.chargeReserve=0;
     this.harvestMeals = 0;
     this.parts = Math.max(0, d.parts + SITES[this.site].parts);
     this.dose = 0; this.science = 0; this.scienceSent = 0;
-    this.panels = 3; this.clean = 1;                       // panel cleanliness 0..1
+    this.panels = 0; this.clean = 1;                       // panel cleanliness 0..1
     this.battery = TUNED.batteryStart; this.reactors = 0;
     this.upgrades = { suit: 0, battery: 0, regolith: 0, greenhouse: 0, moxie: 0, wall: 0 };
     this.split = { life: 0.4, comms: 0.15, science: 0.25, shield: 0.2 };
@@ -114,7 +114,8 @@ export class Outpost {
   }
   delayMinutes(sol = this.sol) { return this.distanceKm(sol) / C / 60; }
 
-  solar() { return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1); }
+  solar() { if(this.powerStep<6 || this.baseConnected===false)return 0; return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1); }
+  chargerAllocation() { return this.chargerStep>=3 ? Math.max(0,this.energy()-TUNED.heaterKWh)*.15 : 0; }
   energy() { return this.solar() + this.reactors * TUNED.reactorKWh; }
 
   setSplit(split) {
@@ -125,7 +126,7 @@ export class Outpost {
 
   // What one sol looks like with the current choices - shown live in the power console.
   forecast() {
-    const total = this.energy();
+    const total = Math.max(0,this.energy()-this.chargerAllocation());
     const heater = TUNED.heaterKWh * this.s.heater;
     const cold = this.battery < heater && this.reactors === 0;   // batteries run flat before morning
     const e = Math.max(0, total - heater);                       // the heater's night power is set aside first

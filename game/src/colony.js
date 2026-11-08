@@ -291,7 +291,7 @@ export class Colony {
 
   // ---------- tools ----------
   get tool() { return this.s.belt[this.s.held] || null; }
-  select(i) { if (i < this.s.belt.length) { this.s.held = i; this.equip(); return true; } return false; }
+  select(i) { if (i >= -1 && i < this.s.belt.length) { this.s.held = this.s.held === i ? -1 : i; this.equip(); return true; } return false; }
   equip() {
     if (this.s.held >= this.s.belt.length) this.s.held = Math.max(0, this.s.belt.length - 1);
     const t = this.tool;

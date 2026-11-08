@@ -1,6 +1,7 @@
 // The lunar surface scene: streamed crater terrain (bounded), a distant horizon shaped by NASA LOLA data,
 // boulders, a black sky with stars, the Sun and Earth. No fog, no haze: the Moon has no air.
 import * as THREE from 'three';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { effectiveQuality } from '../../src/device-profile.js';
 import { WORLD, CHUNKS_PER_SIDE } from './config.js';
 import { heightAt, permanentShadow, chunkPlan, chunkOrigin, CRATERS, MAP_CHUNK_CAP } from './terrain.js';
@@ -25,7 +26,7 @@ function regolithTextures() {
   const g = c.getContext('2d'), h = b.getContext('2d'), ci = g.createImageData(n, n), hi = h.createImageData(n, n);
   let seed = 9; const r = () => (seed = seed * 16807 % 2147483647) / 2147483647;
   const hgt = new Float32Array(n * n);
-  for (let i = 0; i < n * n; i++) hgt[i] = r() * 0.5;
+  for (let i = 0; i < n * n; i++) hgt[i] = r() * 0.34;
   for (let k = 0; k < 60; k++) {   // craterlets
     const cx = r() * n, cy = r() * n, rad = 2 + r() * r() * 14;
     for (let y = -rad * 2; y < rad * 2; y++) for (let x = -rad * 2; x < rad * 2; x++) {
@@ -36,7 +37,7 @@ function regolithTextures() {
   }
   for (let i = 0; i < n * n; i++) {
     const peb = r() > 0.996 ? 0.8 : 0, v = hgt[i] + peb;
-    const shade = 150 + v * 40 + r() * 18 + peb * 30;
+    const shade = 105 + v * 65 + r() * 30 + peb * 24;
     ci.data.set([shade, shade, shade * 0.985, 255], i * 4);
     const hv = Math.max(0, Math.min(255, 128 + v * 60)); hi.data.set([hv, hv, hv, 255], i * 4);
   }
@@ -62,12 +63,12 @@ export class MoonWorld {
   constructor(scene, site) {
     this.scene = scene; this.site = site;
     this.tex = regolithTextures();
-    this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: this.tex.map, bumpMap: this.tex.bump, bumpScale: 0.6 });
+    this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: this.tex.map, bumpMap: this.tex.bump, bumpScale: 0.055 });
     this.tex.map.repeat.set(0.25, 0.25); this.tex.bump.repeat.set(0.25, 0.25);   // 4 m texture tiles (world-space UVs)
     this.group = new THREE.Group(); this.group.name = 'Moon terrain'; scene.add(this.group);
     this.coarse = new Map(); this.detailed = new Map(); this.queue = []; this.sig = '';
     for (let iz = 0; iz < CHUNKS_PER_SIDE; iz++) for (let ix = 0; ix < CHUNKS_PER_SIDE; ix++) {
-      const m = this.tile(ix, iz, 8); this.coarse.set(ix + ',' + iz, m); this.group.add(m);
+      const m = this.tile(ix, iz, QUALITY.name === 'low' ? 8 : 24); this.coarse.set(ix + ',' + iz, m); this.group.add(m);
     }
     this.addHorizon();
     this.addRocks();
@@ -108,6 +109,8 @@ export class MoonWorld {
     if (next) { const m = this.tile(next.x, next.z, QUALITY.seg); this.detailed.set(next.key, m); this.group.add(m); this.coarse.get(next.key).visible = false; }
     this.stats.detailed = this.detailed.size; this.stats.queued = this.queue.length;
     this.rocks.position.set(0, 0, 0);
+    const reach=QUALITY.radius==='map'?200:(QUALITY.radius+1)*WORLD.chunk;
+    for(const batch of this.rocks.children){const p=batch.userData.centre;batch.visible=Math.hypot(focus.x-p.x,focus.z-p.z)<reach;}
   }
 
   // Distant land out to 6 km. Its skyline uses the real horizon angles computed from NASA LOLA elevation
@@ -136,10 +139,16 @@ export class MoonWorld {
   }
 
   addRocks() {
-    const geo = new THREE.IcosahedronGeometry(1, 1), p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) { const s = 0.75 + Math.abs(Math.sin(i * 12.9898) * 43758.5453 % 1) * 0.5; p.setXYZ(i, p.getX(i) * s, p.getY(i) * s * 0.7, p.getZ(i) * s); }
-    geo.computeVertexNormals();
-    const mat = new THREE.MeshStandardMaterial({ color: '#8d8c88', roughness: 0.95, flatShading: true, bumpMap: this.tex.bump, bumpScale: 0.2 });
+    // Deform by position, not vertex index: shared corners stay watertight.
+    let geo = new THREE.IcosahedronGeometry(1, QUALITY.name==='low'?1:5);
+    const p=geo.attributes.position;
+    for(let i=0;i<p.count;i++){
+      const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+      const shape=.9+.12*Math.sin(x*7+z*3)*Math.cos(y*5-z*4)+.045*Math.sin((x-y+z)*19);
+      p.setXYZ(i,x*shape,y*shape*.72,z*shape);
+    }
+    geo.deleteAttribute('normal');geo=mergeVertices(geo);geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({ color:'#999994', roughness:.96, bumpMap:this.tex.bump,bumpScale:.025 });
     const n = QUALITY.rocks, rocks = new THREE.InstancedMesh(geo, mat, n), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     let seed = 77; const r = () => (seed = seed * 16807 % 2147483647) / 2147483647;
     this.rockList = [];
@@ -148,21 +157,28 @@ export class MoonWorld {
     for (const c of CRATERS) {
       if (c.r < 5) continue;
       const count = Math.min(40, Math.round(c.r * 0.9 * (0.3 + c.fresh)));
-      for (let i = 0; i < count && k < n; i++) {
+      for (let i = 0; i < count && k < n-400; i++) {
         const a = r() * Math.PI * 2, d = c.r * (0.9 + r() * r() * 1.6), x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
         if (Math.abs(x) > WORLD.half - 3 || Math.abs(z) > WORLD.half - 3 || Math.hypot(x, z) < 26) continue;
         const s = 0.15 + r() * r() * (c.r > 30 ? 1.8 : 0.8);
         e.set(r() * 3, r() * 6, r() * 3); q.setFromEuler(e);
-        m.compose(new THREE.Vector3(x, heightAt(x, z) + s * 0.25, z), q, new THREE.Vector3(s, s, s));
-        rocks.setMatrixAt(k++, m); if (s > 0.6) this.rockList.push({ x, z, r: s * 0.9 });
+        m.compose(new THREE.Vector3(x, heightAt(x, z) - s * 0.12, z), q, new THREE.Vector3(s, s, s));
+        rocks.setMatrixAt(k++, m); if (s > 0.6) this.rockList.push({ x, z, r: s * 0.9, rock:true, height:s*.88 });
       }
     }
     while (k < n) {   // pebbles everywhere else
-      const x = (r() * 2 - 1) * (WORLD.half - 3), z = (r() * 2 - 1) * (WORLD.half - 3); if (Math.hypot(x, z) < 22) continue;
+      const spread=k>n-400?95:WORLD.half-3;
+      const x=(r()*2-1)*spread,z=(r()*2-1)*spread;if(Math.hypot(x,z)<22)continue;
       const s = 0.06 + r() * r() * 0.3; e.set(r() * 3, r() * 6, r() * 3); q.setFromEuler(e);
-      m.compose(new THREE.Vector3(x, heightAt(x, z) + s * 0.2, z), q, new THREE.Vector3(s, s, s)); rocks.setMatrixAt(k++, m);
+      m.compose(new THREE.Vector3(x, heightAt(x, z) - s * 0.12, z), q, new THREE.Vector3(s, s, s)); rocks.setMatrixAt(k++, m);
     }
-    rocks.castShadow = rocks.receiveShadow = true; rocks.name = 'Boulders'; this.rocks = rocks; this.scene.add(rocks);
+    // Shared full-detail geometry, culled by spatial batch. No mesh/texture reduction.
+    const batches=new Map(),matrix=new THREE.Matrix4(),position=new THREE.Vector3();
+    for(let i=0;i<n;i++){rocks.getMatrixAt(i,matrix);position.setFromMatrixPosition(matrix);const key=Math.floor(position.x/80)+','+Math.floor(position.z/80);if(!batches.has(key))batches.set(key,[]);batches.get(key).push(matrix.clone());}
+    this.rocks=new THREE.Group();this.rocks.name='Boulders';
+    for(const [key,list] of batches){const mesh=new THREE.InstancedMesh(geo,mat,list.length);list.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.computeBoundingSphere();mesh.castShadow=mesh.receiveShadow=true;const [x,z]=key.split(',').map(Number);mesh.userData.centre={x:x*80+40,z:z*80+40};this.rocks.add(mesh);}
+    rocks.dispose();this.scene.add(this.rocks);
+    this.rockGeometryTriangles=geo.index.count/3;
   }
 
   addSky() {

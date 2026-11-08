@@ -84,6 +84,8 @@ export class Rover {
 
   // keys: the shared key state (W/S = drive, A/D = steer). driving = someone is at the wheel.
   update(dt, keys, driving, nearHome, night) {
+    if(dt>1/60+1e-6){const n=Math.ceil(Math.min(dt,.25)*60);for(let i=0;i<n;i++)this.update(Math.min(dt,.25)/n,keys,driving,nearHome,night);return;}
+    this.dustLight=night?0:1;
     let throttle = 0, steer = 0;
     if (driving) {
       throttle = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
@@ -114,7 +116,8 @@ export class Rover {
     if (rr > lim) { this.pos.x *= lim / rr; this.pos.z *= lim / rr; this.speed *= 0.5; }
     // battery
     if (driving && Math.abs(this.speed) > 0.2) this.battery = Math.max(0, this.battery - DRAIN * dt * (0.4 + 0.6 * Math.abs(this.speed) / MAX));
-    if (nearHome && Math.abs(this.speed) < 0.5) this.battery = Math.min(1, this.battery + CHARGE * dt);
+    // Roof solar charges slowly in sunlight; the commissioned bay adds faster charging.
+    if(!night)this.battery=Math.min(1,this.battery+dt/300);
     this.lights.intensity = driving && night ? 60 : 0;
     this.place(dt, step);
   }
@@ -177,7 +180,7 @@ function makeDust(scene) {
       }
       for (const p of puffs) if (p.life > 0) {
         p.life -= dt; p.sp.position.addScaledVector(p.vel, dt);
-        const t = 1 - p.life / 1.6; p.sp.scale.setScalar(0.8 + t * 3.5); p.sp.material.opacity = 0.45 * (1 - t);
+        const t = 1 - p.life / 1.6; p.sp.scale.setScalar(0.10 + t * .45); p.sp.material.opacity = 0.18 * (1 - t) * (rover.dustLight??1);
         if (p.life <= 0) p.sp.visible = false;
       }
     },

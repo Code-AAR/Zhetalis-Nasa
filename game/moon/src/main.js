@@ -16,6 +16,7 @@ import { MoonWorld, QUALITY } from './world.js';
 import { buildLander, BallisticDust, descentHeight, DESCENT_T, LANDER } from './lander.js';
 import { Outpost } from './base.js';
 import { Astronaut, Prints, lerpAngle } from './player.js';
+import { LunarCabin } from './cabin.js';
 import { MoonRover } from './moon-rover.js';
 import { Flyby } from './flyby.js';
 import { MISSIONS } from './orion.js';
@@ -55,7 +56,7 @@ sunLight.castShadow = true; sunLight.shadow.mapSize.set(QUALITY.shadow, QUALITY.
 const S = QUALITY.name === 'low' ? 45 : 70; Object.assign(sunLight.shadow.camera, { left: -S, right: S, top: S, bottom: -S, near: 1, far: 600 });
 sunLight.shadow.bias = -0.0006; sunLight.shadow.normalBias = 0.06;
 scene.add(sunLight, sunLight.target);
-const fill = new THREE.HemisphereLight('#1a2232', '#4a4a48', 0.32); scene.add(fill);   // earthshine + light bounced off the ground
+const fill = new THREE.HemisphereLight('#bdc5cf', '#77736c', 0.8); scene.add(fill);   // earthshine + light bounced off the ground
 const world = new MoonWorld(scene, SITE);
 const lander = buildLander(); lander.position.set(0, heightAt(0, 0) + 1.7, 0); scene.add(lander);
 const outpost = new Outpost(scene, lander);
@@ -63,6 +64,7 @@ const dust = new BallisticDust(scene);
 const prints = new Prints(scene);
 const astro = new Astronaut(scene);
 const rover = new MoonRover(scene);
+const cabin = new LunarCabin();
 const colliders = outpost.colliders();
 
 // ---------- flyby scene ----------
@@ -97,6 +99,7 @@ function factModal(id) {
 
 // ---------- UI helpers ----------
 function toast(text, kind = '') {
+  $('#toast').replaceChildren();
   const d = document.createElement('div'); d.textContent = text; if (kind) d.className = kind; $('#toast').appendChild(d);
   setTimeout(() => d.remove(), 4200); while ($('#toast').children.length > 3) $('#toast').firstChild.remove();
 }
@@ -220,7 +223,7 @@ function startSurface(resume) {
     setMode('surface'); if (place === 'hab') enterCabin(); toast('Mission resumed.', 'good');
   } else {
     state = sim.newState(); prints.load([]); place = 'hab';
-    rover.pos.set(SITES.rover.x, 0, SITES.rover.z); rover.yaw = 0.6; rover.settle();
+    rover.pos.set(SITES.rover.x, 0, SITES.rover.z); rover.yaw = Math.PI + 0.6; rover.settle();
     astro.pos.set(0, heightAt(0, LANDER.radius + 2.6), LANDER.radius + 2.6);
     descentT = 0; setMode('descent');
   }
@@ -230,7 +233,7 @@ function startSurface(resume) {
 function enterCabin() {
   place = 'hab'; astro.group.visible = false; document.exitPointerLock?.();
   const msg = sim.stowSamples(state); if (msg) { toast(msg, 'good'); beep('done'); }
-  drawCabin(); $('#cabin').hidden = false;
+  cabin.enter(); $('#cabin').hidden = true; toast('Inside the lander · WASD to walk · E / Use at a station.');
 }
 function drawCabin() {
   const s = state;
@@ -239,10 +242,11 @@ function drawCabin() {
     <div class="actions">
       <button class="primary" data-c="out">Go outside<small>Ride the crew elevator down (${Math.round(LANDER.hatchY)} m)</small></button>
       <button data-c="o2">${s.electrolysis ? 'Switch oxygen maker OFF' : 'Switch oxygen maker ON'}<small>${s.electrolysis ? 'Saves power' : 'Costs power and water, makes oxygen'}</small></button>
-      <button data-c="menu">Save and go to menu</button>
+      <button data-c="close">Back to cabin</button><button data-c="menu">Save and go to menu</button>
     </div>`;
   updateCabin();
   $('#cabin').querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+    if (b.dataset.c === 'close') $('#cabin').hidden=true;
     if (b.dataset.c === 'out') { $('#cabin').hidden = true; place = 'lift'; liftDir = -1; liftT = 0; }
     if (b.dataset.c === 'o2') { toast(sim.toggleElectrolysis(state)); drawCabin(); }
     if (b.dataset.c === 'menu') { saveNow(); setMode('menu'); }
@@ -254,6 +258,7 @@ function updateCabin() { const el = document.querySelector('#cabin .cabin-meters
 function doAction(spot) {
   let msg = '';
   const roverNear = rover.pos.distanceTo(astro.pos) < 25;
+  if (spot.id === 'rover') { enterRover(); return; }
   if (spot.id === 'elevator') { place = 'lift'; liftDir = 1; liftT = 0; astro.pos.set(0, astro.pos.y, LANDER.radius + 1.25); return; }
   if (spot.id === 'mast') msg = sim.deployMast(state, spot.i);
   if (spot.id === 'drill') { msg = sim.drillIce(state, roverNear); dust.kick(spot.x, heightAt(spot.x, spot.z), spot.z, 0, 0, 25, 1.4); }
@@ -283,7 +288,7 @@ function endMission() {
     choices: [won ? { label: 'Keep exploring', primary: true, onPick: () => { s.status = 'playing'; s.tasks = Object.fromEntries(Object.keys(s.tasks).map(k => [k, true])); } } : { label: 'Try again', primary: true, onPick: () => { clearSave(); startSurface(false); } }, { label: 'Menu', onPick: () => setMode('menu') }],
   });
 }
-function enterRover() { place = 'rover'; astro.group.visible = false; rover.vy = 0; toast('In the rover. W/S drive, A/D steer, R to get out.'); }
+function enterRover() { place = 'rover'; astro.group.visible = false; rover.vy = 0; toast('In the rover · W/S drive · A/D steer · E / Use or R to exit.'); }
 function exitRover() { const p = rover.exitPoint(); astro.pos.set(p.x, heightAt(p.x, p.z), p.z); astro.vel.set(0, 0, 0); astro.grounded = true; place = 'outside'; astro.group.visible = view !== 'first'; }
 function toggleView() { view = view === 'third' ? 'first' : 'third'; astro.group.visible = place === 'outside' && view === 'third'; toast(view === 'first' ? 'Helmet view' : 'Follow camera'); }
 
@@ -291,7 +296,7 @@ function pause() {
   if (mode === 'menu') return; saveNow();
   modal({ title: 'Paused', html: '<p>Your mission is saved.</p>', choices: [
     { label: 'Resume', primary: true }, { label: 'Settings', onPick: () => openSettings({ tab: 'audio' }) },
-    ...(mode === 'surface' ? [{ label: 'Restart surface training', cost: 'Clears this save', onPick: () => { clearSave(); startSurface(false); } }] : []),
+    ...(mode === 'surface' ? [{label:'Recover rover to base',cost:'Training rescue; battery is not refilled',onPick:()=>{if(place==='rover')exitRover();rover.pos.set(SITES.rover.x,0,SITES.rover.z);rover.yaw=Math.PI+.6;rover.speed=0;rover.air=false;rover.vy=0;rover.settle();saveNow();toast('Rover returned to the base charging area.');}}, { label: 'Restart surface training', cost: 'Clears this save', onPick: () => { clearSave(); startSurface(false); } }] : []),
     { label: 'Main menu', onPick: () => setMode('menu') }] });
 }
 
@@ -314,7 +319,19 @@ initControls(canvas);
 let audioOn = false;
 function unlockAudio() { if (audioOn) return; audioOn = true; startAudio(); startMusic(); }
 addEventListener('pointerdown', unlockAudio, { once: true }); addEventListener('keydown', unlockAudio, { once: true });
-on('use', () => { if (mode === 'surface' && place === 'outside' && nearSpot && !nearSpot.hold) doAction(nearSpot); });
+on('use', () => {
+  if(mode!=='surface')return;
+  if(place==='rover'){if(Math.abs(rover.speed)<.6)exitRover();else toast('Stop before getting out.');return;}
+  if(place==='hab'){
+    const station=cabin.nearest();if(!station)return;
+    if(station.id==='exit'){$('#cabin').hidden=true;place='lift';liftDir=-1;liftT=0;}
+    else if(station.id==='oxygen')toast(sim.toggleElectrolysis(state));
+    else if(station.id==='samples')toast(sim.stowSamples(state)||'Sample locker is empty. Collect marked samples outside.');
+    else {drawCabin();$('#cabin').hidden=false;document.exitPointerLock?.();}
+    return;
+  }
+  if(place==='outside'&&nearSpot&&!nearSpot.hold)doAction(nearSpot);
+});
 on('rover', () => {
   if (mode !== 'surface') return;
   if (place === 'rover') { if (Math.abs(rover.speed) > 0.6) { toast('Stop the rover first.'); return; } exitRover(); }
@@ -354,17 +371,17 @@ function step(dt) {
   const lightEl = 6 + Math.max(0, sun.el) * 2, focus = place === 'rover' ? rover.pos : astro.pos;
   const dir = skyVector(sun.az, lightEl);
   sunLight.position.set(focus.x + dir.x * 300, focus.y + dir.y * 300, focus.z + dir.z * 300); sunLight.target.position.copy(focus);
-  sunLight.intensity = 3.6 * sun.lit; fill.intensity = 0.42 + 0.2 * sun.lit;
+  sunLight.intensity = 3.2 * sun.lit; fill.intensity = 0.65 + 0.35 * sun.lit; // Exaggerated ground bounce for readable training shadows; no atmosphere.
   const sd = skyVector(sun.az, sun.el), ed = skyVector(earth.az, earth.el);
   world.sky(camera.position, tmp.set(sd.x, sd.y, sd.z), new THREE.Vector3(ed.x, ed.y, ed.z));
   world.sun.material.opacity = 0.15 + 0.85 * sun.lit;
   world.update(focus);
-  prints.update(); dust.update(paused ? 0 : dt);
+  prints.update(); dust.points.material.opacity=.35*Math.max(0,lastSun?.lit??0)*(1-permanentShadow(focusPos().x,focusPos().z)); dust.update(paused ? 0 : dt);
   const dark = sun.lit < 0.5 || permanentShadow(focus.x, focus.z) > 0.3;
   astro.lamp.intensity = (lamp === 'on' || (lamp === 'auto' && dark)) && place === 'outside' ? 45 : 0;
   rover.setLights(place === 'rover' && (lamp === 'on' || (lamp === 'auto' && dark)));
   outpost.update(dt, state, sun.az, sun.lit, earth.az, earth.el);
-  renderer.render(scene, camera);
+  renderer.render(mode==='surface'&&place==='hab'?cabin.scene:scene,mode==='surface'&&place==='hab'?cabin.camera:camera);
   hudT += dt; if (hudT > 0.2 && mode === 'surface') { hudT = 0; drawHud(sun, earth); }
   if (mode === 'surface' && state) drawMap();
   lastSun = sun; consume();
@@ -410,6 +427,7 @@ function surfaceFrame(dt, sun) {
   let env = { place: place === 'lift' ? 'hab' : place, lit: sun.lit, alertGap };
   if (place === 'outside') {
     const spots = outpost.spots(state, place);
+    const boarding=rover.exitPoint();spots.push({id:'rover',x:boarding.x,z:boarding.z,r:3.5,label:'Board rover · E / Use or R',hold:0});
     nearSpot = null; let best = 1e9;
     for (const sp of spots) { const d = Math.hypot(sp.x - astro.pos.x, sp.z - astro.pos.z); if (d < sp.r && d < best) { best = d; nearSpot = sp; } }
     if (nearSpot?.hold && input.useHeld) { holdT += dt; astro.swing = nearSpot.id === 'drill' ? (holdT * 1.2) % 1 : -1; if (holdT >= nearSpot.hold) { holdT = 0; astro.swing = -1; doAction(nearSpot); } }
@@ -428,16 +446,21 @@ function surfaceFrame(dt, sun) {
     tickAudio(dt, { effort: Math.min(1, astro.speed / 3 + (astro.grounded ? 0 : 0.4)), inSuit: true });
   } else if (place === 'rover') {
     const noPower = state.roverBattery <= 0;
-    const r = rover.update(dt, { throttle: noPower ? 0 : -input.z, steer: -input.x, noPower }, colliders, prints, dust);
+    const r = rover.update(dt, { throttle: noPower ? 0 : -input.z, steer: -input.x, noPower }, colliders.concat(world.rockList.filter(r=>Math.hypot(r.x-rover.pos.x,r.z-rover.pos.z)<12)), prints, dust);
     if (r.bump > 0.3) thump(r.bump);
     if (!state.tasks.drive && permanentShadow(rover.pos.x, rover.pos.z) > 0.5) { state.tasks.drive = true; onEvents([{ type: 'task', id: 'drive' }]); }
     if (rover.hitEdge && performance.now() - edgeToast > 6000) { edgeToast = performance.now(); toast('Edge of the 1 km training area.', 'warn'); }
-    env = { ...env, driving: r.driving, nearBase: false };
+    env = { ...env, driving: r.driving, shadow:permanentShadow(rover.pos.x,rover.pos.z), nearBase: false };
     astro.pos.copy(rover.pos);
-    if (!input.lookX && Math.abs(rover.speed) > 0.5) camYaw = lerpAngle(camYaw, rover.yaw + (rover.speed < 0 ? Math.PI : 0), Math.min(1, dt * 1.5));
+    // Leave the view under mouse/touch control while driving.
     chase(rover.pos, 2.4, Math.max(camDist, 9) + 3);
-    $('#prompt').hidden = true;
+    $('#prompt').hidden=false;$('#prompt span').textContent='W/S drive · A/D steer · E / Use or R to exit when stopped';$('#prompt .hold b').style.width='0%';
     tickAudio(dt, { driving: r.driving, inSuit: false });
+  } else if(place==='hab'){
+    cabin.update(dt,$('#cabin').hidden?input:{});
+    const station=cabin.nearest();$('#prompt').hidden=!station;
+    if(station){$('#prompt span').textContent='E / Use · '+station.label;$('#prompt .hold b').style.width='0%';}
+    cabinT+=dt;if(cabinT>.3){cabinT=0;updateCabin();}tickAudio(dt,{inSuit:false});
   } else {
     // in the cabin (or riding the lift): look out over the base from the hatch
     camYaw += dt * 0.05; camPitch = 0.22;
@@ -501,7 +524,7 @@ function updateObjective() {
     $('#obj-detail').textContent = o.detail;
     // A new objective shows its full explanation for a few seconds, then folds down to its title.
     if (newTask || first) {
-      setObjectiveOpen(true); objUntil = state.t + 9;   // game seconds: pausing or Settings does not eat the reading time
+      setObjectiveOpen(true); objUntil = state.t + (innerWidth<600?4:9);   // game seconds: pausing or Settings does not eat the reading time
       const card = $('#task'); card.classList.remove('fresh'); void card.offsetWidth; if (!reducedMotion.matches) card.classList.add('fresh');
     }
   }
@@ -597,7 +620,7 @@ window.MoonMission = {
   debug: () => ({ mode, place, quality: QUALITY, chunks: { ...world.stats }, dust: dust.n, prints: prints.list.length, player: { x: +astro.pos.x.toFixed(2), y: +astro.pos.y.toFixed(2), z: +astro.pos.z.toFixed(2), grounded: astro.grounded, vy: +astro.vy.toFixed(2) }, rover: { x: +rover.pos.x.toFixed(2), z: +rover.pos.z.toFixed(2), speed: +rover.speed.toFixed(2) }, gravity: MOON.gravity, sun: lastSun, renderer: renderer.info.render, memory: renderer.info.memory }),
   info,
   quests: () => ({ objective, warnings: currentWarnings, log: state ? questLog(state, questCtx()) : null, open: questOpen, expanded: !$('#task').classList.contains('collapsed'), marker: objective?.target ? mapMarker(objective.target, focusPos()) : null }),
-  three: () => ({ THREE, scene, camera, renderer, sunLight, fill, world, flyby }),
+  three: () => ({ THREE, scene, camera, renderer, sunLight, fill, world, flyby, cabin, rover }),
 };
 
 const want = new URLSearchParams(location.search).get('start');

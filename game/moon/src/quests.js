@@ -29,7 +29,7 @@ export function currentObjective(s, ctx = {}) {
   const go = (p, label) => { target = { x: p.x, z: p.z, label }; };
   switch (task.id) {
     case 'stepDown':
-      if (inHab) { step = 'Press "Go outside" to ride the elevator down.'; sub = 'cabin'; }
+      if (inHab) { step = 'Walk to the cabin hatch and press E / Use to ride the elevator down.'; sub = 'cabin'; }
       else { step = 'Walk away from the lander.'; go({ x: 0, z: 18 }, 'Clear of the lander'); sub = 'walk'; }
       break;
     case 'mast': {

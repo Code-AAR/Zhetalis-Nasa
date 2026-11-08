@@ -66,6 +66,7 @@ export function tick(s, dt, env = {}) {
     if (s.meltProgress >= R.waterPerIce) { s.meltProgress -= R.waterPerIce; s.processorIce--; done(s, 'deliver', ev); ev.push({ type: 'info', text: 'One ice load melted into water.' }); }
   }
   if (env.nearBase && s.roverBattery < 100 && place !== 'rover' && powered) { s.roverBattery += R.roverCharge * dt; load += R.roverChargeCost; }
+  s.roverBattery += Math.max(0,lit) * (1-(env.shadow||0)) * dt/3; // onboard solar: accelerated training rate
   s.battery += (solar - load) * dt;
   // crew
   s.oxygen -= (R.breathe + (powered ? 0 : R.darkScrubbers)) * dt;

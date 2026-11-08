@@ -16,7 +16,8 @@ export function moveOverSurface(pos, dx, dz, yaw, sample) {
       const before = sample(x, z), after = sample(x + sx, z + sz);
       const rise = after.height - before.height;
       // Tyres can step over a small lip; a tall vertical side still blocks.
-      if (rise > .22 + distance / count || (rise > .04 && after.normalY < slopeLimit)) return i / count;
+      const smallObstacle=after.obstacleHeight !== undefined && after.obstacleHeight < .9;
+      if (!smallObstacle && (rise > .22 + distance / count || (rise > .04 && after.normalY < slopeLimit))) return i / count;
     }
     pos.x += sx; pos.z += sz;
   }

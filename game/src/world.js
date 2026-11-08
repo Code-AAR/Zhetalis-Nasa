@@ -592,8 +592,8 @@ export class World {
     u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
     u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
-    this.skyLights.motes.material.opacity = (0.06 + 0.12 * day) * (this.dustOn ? 2 : 1);
-    this.skyLights.motes.material.size = this.dustOn ? 0.014 : 0.006;
+    this.skyLights.motes.material.opacity = (0.10 * day * day) * (this.dustOn ? 2 : 1);
+    this.skyLights.motes.material.size = this.dustOn ? 0.007 : 0.003;
     this.nightness = 1 - day;
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
@@ -697,7 +697,7 @@ export class World {
     for (const c of this.colliders) {
       if (c.rock) continue;
       if(c.object && !c.object.visible)continue;
-      if(c.solar){const top=this.panelHeight?.(pos.x,pos.z)??Infinity;if(pos.y>=top-.18)continue;}
+      if(c.solar){const x=Math.max(c.x-c.halfX+.12,Math.min(c.x+c.halfX-.12,pos.x)),z=Math.max(c.z-.7,Math.min(c.z+.7,pos.z));const top=this.panelHeight?.(x,z)??Infinity;if(pos.y>=top-.25)continue;}
       if(c.halfX !== undefined){if(c.minY===undefined||(pos.y<c.maxY&&pos.y+1.85>c.minY))blockPanel(pos,c,0.45);continue;}
       if(c.habitatIndex!==undefined&&this.settlement?.onAccessRamp(pos,c.habitatIndex))continue;
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
@@ -766,17 +766,18 @@ export class World {
       this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
       this.placeSky(p);
             // Collectibles rest on the soil; their light beams mark their locations.
-      if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+      if (this.linkUp && !this.relayTracking) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
       return;
     }
     this.player.visible = true; this.viewSlot.visible = false;
     // third-person camera
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
-    for (const c of this.colliders) {                      // keep the camera out of buildings and boulders
-      if (c.r < 2 || (c.object && !c.object.visible)) continue;
-      const dx = eye.x - c.x, dz = eye.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.8;
-      if (d < min) { const k = d > 0.001 ? min / d : 1; eye.x = c.x + dx * k; eye.z = c.z + (d > 0.001 ? dz * k : min); }
-    }
+    // Retract along the viewing ray; never push the camera sideways across the player.
+    const anchor=new THREE.Vector3(p.x,p.y+1.6,p.z),boom=eye.clone().sub(anchor),length=boom.length();
+    this.cameraRay??=new THREE.Raycaster();this.cameraRay.set(anchor,boom.normalize());this.cameraRay.far=length;
+    const objects=[this.rocks,...this.colliders.filter(c=>c.object?.visible).map(c=>c.object)];
+    const hit=this.cameraRay.intersectObjects(objects,true)[0];
+    if(hit)eye.copy(anchor).addScaledVector(boom,Math.max(.65,hit.distance-.25));
     eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
     this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
     this.cameraTarget??=new THREE.Vector3(p.x,p.y+1.6,p.z);
@@ -787,7 +788,7 @@ export class World {
     this.placeSky(p);
     
     // Collectibles rest on the soil; their light beams mark their locations.
-    if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+    if (this.linkUp && !this.relayTracking) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
   }
 
   // In the rover: you ride inside; the camera follows behind (or sits in the cockpit in first person).
@@ -799,10 +800,10 @@ export class World {
     if (this.firstPerson) {
       const f = 1.4, eye = new THREE.Vector3(r.pos.x + Math.sin(r.yaw) * f, r.pos.y + 2.3, r.pos.z + Math.cos(r.yaw) * f);
       this.camera.position.copy(eye);
-      const yaw = r.yaw;   // look ahead through the windows
+      const yaw = this.yaw; // mouse-controlled cockpit view
       this.camera.lookAt(eye.x + Math.sin(yaw), eye.y - 0.12 + Math.sin(this.lookPitch), eye.z + Math.cos(yaw));
     } else {
-      if (Math.abs(r.speed) > 0.5) this.yaw += angleTo(this.yaw, r.yaw) * (1 - Math.exp(-dt * 2.5));   // swing round behind as you drive
+      // Camera yaw belongs to the mouse, including while driving.
       const dist = 12, eye = new THREE.Vector3(r.pos.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), r.pos.y + 3 + Math.sin(this.pitch) * dist, r.pos.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
       eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 1);
       this.camera.position.lerp(eye, 1 - Math.exp(-dt * 6));
@@ -810,7 +811,7 @@ export class World {
     }
     this.placeSky(r.pos);
     // Collectibles rest on the soil; their light beams mark their locations.
-    if (this.linkUp) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
+    if (this.linkUp && !this.relayTracking) this.outpost.dish.rotation.z = Math.sin(this.time * 0.3) * 0.25;
   }
 
   // Sun, glow, stars, sky and headlamp follow the camera; the sun's direction follows the time of day.

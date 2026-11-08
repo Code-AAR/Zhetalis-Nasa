@@ -16,6 +16,9 @@ export class Minimap {
     if (show !== this.shown) { this.shown = show; this.cv.classList.toggle('hidden', !show); this.t = 9; }
     if (!show || (this.t += dt) < .25) return; this.t = 0;
     const w = this.world, ms = w.mapState, p = w.driving ? w.sev.pos : w.player.position;
-    drawMini(this.ctx, this.size, { cx: p.x, cz: p.z, span: this.span, circles: revealCircles(w), layer: ms?.layer, dust: ms?.weather().dust === 'now', overlay: (c, P) => ms?.draw(c, P, { mini: true }) });
+    drawMini(this.ctx, this.size, { cx: p.x, cz: p.z, span: this.span, circles: revealCircles(w), layer: ms?.layer, dust: ms?.weather().dust === 'now', overlay: (c,P)=>{
+      ms?.draw(c,P,{mini:true});
+      if(w.objectiveTarget){const [x,y]=P.toPx(w.objectiveTarget.x,w.objectiveTarget.z),r=5+2*Math.sin(performance.now()/250);c.save();c.strokeStyle='#bf86ff';c.fillStyle='#e0c1ff';c.shadowColor='#b674ff';c.shadowBlur=10;c.lineWidth=2;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.stroke();c.beginPath();c.arc(x,y,2.5,0,Math.PI*2);c.fill();c.restore();}
+    } });
   }
 }

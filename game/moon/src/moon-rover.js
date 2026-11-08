@@ -8,18 +8,18 @@ import { splitGeometry } from '../../src/suit.js';
 import { MOON } from './config.js';
 import { heightAt, clampToWorld } from './terrain.js';
 
-const MAX = 5.2, REVERSE = 2, ACCEL = 1.6, BRAKE = 3.2, STEER = 0.55;   // m/s, m/s^2 (game handling)
+const MAX = 8, REVERSE = 3, ACCEL = 2.6, BRAKE = 3.2, STEER = 0.55;   // m/s, m/s^2 (game handling)
 
 export class MoonRover {
   constructor(scene) {
     this.group = new THREE.Group(); this.group.name = 'Rover'; scene.add(this.group);
     this.body = new THREE.Group(); this.group.add(this.body);
-    this.pos = new THREE.Vector3(-12, 0, -14); this.yaw = 0.6; this.speed = 0; this.vy = 0; this.steer = 0; this.air = false;
+    this.pos = new THREE.Vector3(-12, 0, -14); this.yaw = Math.PI + 0.6; this.speed = 0; this.vy = 0; this.steer = 0; this.air = false;
     this.wheels = []; this.r = 0.42; this.length = 4.6; this.width = 3; this.trackT = 0;
     const lamp = (x) => { const l = new THREE.SpotLight('#f4f7ff', 0, 70, 0.5, 0.55, 1.1); l.position.set(x, 1.7, 2.3); l.target.position.set(x * 2, 0, 18); this.body.add(l, l.target); return l; };
     this.lights = [lamp(-0.8), lamp(0.8)];
     this.placeholder = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2, 4.4), new THREE.MeshStandardMaterial({ color: '#d8d8d4' })); this.placeholder.position.y = 1.4; this.body.add(this.placeholder);
-    this.load();
+    this.loading=this.load().catch(error=>{this.loadError=error.message;console.warn("Lunar rover asset failed",error);});
     this.settle();
   }
 
@@ -67,23 +67,26 @@ export class MoonRover {
 
   // input: throttle -1..1, steer -1..1. Returns { driving 0..1, bump 0..1 }
   update(dt, input, colliders, prints, dust) {
+    if(dt>1/60+1e-6){const n=Math.ceil(Math.min(dt,.25)*60);let result;for(let i=0;i<n;i++)result=this.update(Math.min(dt,.25)/n,input,colliders,prints,dust);return result;}
+    this.nearRocks=colliders.filter(c=>c.rock&&c.height<.9);
     const want = input.throttle > 0 ? MAX * input.throttle : input.throttle < 0 ? -REVERSE * -input.throttle : 0;
     const grip = this.air ? 0.1 : 1;
     if (input.throttle === 0) this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), BRAKE * 0.5 * dt * grip);
     else if (Math.sign(want) !== Math.sign(this.speed) && Math.abs(this.speed) > 0.1) this.speed += Math.sign(want) * BRAKE * dt * grip;
     else this.speed += THREE.MathUtils.clamp(want - this.speed, -ACCEL * dt, ACCEL * dt) * grip;
-    if (input.noPower) this.speed *= 1 - Math.min(1, dt * 1.5);
+    if (input.noPower) this.speed *= 1 - Math.min(1, dt * 4);
     this.steer = THREE.MathUtils.damp(this.steer, input.steer * STEER, 4, dt);
     if (!this.air) this.yaw += this.speed * Math.tan(this.steer) / 3.2 * dt;
     const nx = this.pos.x + Math.sin(this.yaw) * this.speed * dt, nz = this.pos.z + Math.cos(this.yaw) * this.speed * dt;
     this.pos.x = nx; this.pos.z = nz;
     let bump = 0;
     for (const c of colliders) {
+      if(c.rock&&c.height<.9)continue;
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), r = c.r + 1.8;
-      if (d < r && d > 1e-4) { this.pos.x = c.x + dx / d * r; this.pos.z = c.z + dz / d * r; bump = Math.min(1, Math.abs(this.speed) / 4); this.speed *= -0.25; }
+      if (d < r && d > 1e-4) { this.pos.x = c.x + dx / d * r; this.pos.z = c.z + dz / d * r; bump = Math.min(1, Math.abs(this.speed) / 4); this.speed = 0; }
     }
     if (clampToWorld(this.pos, 6)) { this.speed *= 0.5; this.hitEdge = true; } else this.hitEdge = false;
-    const ground = heightAt(this.pos.x, this.pos.z);
+    const ground = this.support(this.pos.x, this.pos.z);
     if (!this.air && this.pos.y - ground > 0.35 && Math.abs(this.speed) > 2) { this.air = true; this.vy = 0; }
     if (this.air) {
       this.vy -= MOON.gravity * dt; this.pos.y += this.vy * dt;
@@ -104,9 +107,13 @@ export class MoonRover {
     return { driving: Math.min(1, Math.abs(this.speed) / MAX), bump };
   }
 
+  support(x,z){
+    let h=heightAt(x,z);
+    for(const r of this.nearRocks||[]){const d=Math.hypot(x-r.x,z-r.z);if(d<r.r)h=Math.max(h,heightAt(r.x,r.z)+r.height*Math.sqrt(Math.max(0,1-(d/r.r)**2)));}return h;
+  }
   place(dt) {
     const L = 1.9, W = 1.3, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
-    const h = (f, r) => heightAt(this.pos.x + s * f + c * r, this.pos.z + c * f - s * r);
+    const h = (f, r) => this.support(this.pos.x + s * f + c * r, this.pos.z + c * f - s * r);
     const pitch = this.air ? this.body.rotation.x : Math.atan2(h(-L, 0) - h(L, 0), 2 * L), roll = this.air ? this.body.rotation.z : Math.atan2(h(0, W) - h(0, -W), 2 * W);
     const k = dt ? Math.min(1, dt * 8) : 1;
     this.group.position.copy(this.pos); this.group.rotation.y = this.yaw;

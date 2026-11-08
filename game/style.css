@@ -555,3 +555,10 @@ body.touch #rations { bottom: calc(150px + env(safe-area-inset-bottom)); }
 body.layout-phone #minimap, body.touch #minimap { display: none; }
 
 #modal.cine-hide { opacity: 0; pointer-events: none; }
+
+/* Compact, expandable construction objective; detailed history stays in the log. */
+#mission-objective{position:fixed;left:16px;top:94px;width:min(280px,calc(100vw - 32px));padding:10px 12px;background:#171b22e8;border:1px solid #b781ea80;border-radius:12px;color:#f4efff;font-size:13px;pointer-events:auto;z-index:12}
+#mission-objective summary{cursor:pointer;font-weight:600;min-height:24px}
+#mission-objective p{font-size:12px;line-height:1.5;margin:8px 0}
+#mission-objective button{min-height:40px;padding:6px 12px;font-size:12px}
+@media(max-width:600px){#mission-objective{top:130px;left:8px;width:190px;padding:8px;font-size:12px}#mission-objective p{max-height:95px;overflow:auto}}

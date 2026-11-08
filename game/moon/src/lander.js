@@ -28,14 +28,19 @@ export const LANDER = { radius: 4.2, height: 40, hatchY: 29.5, legReach: 7.2 };
 export function buildLander() {
   const g = new THREE.Group(); g.name = 'Training lander (HLS-inspired)';
   const R = LANDER.radius, add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; };
-  add(new THREE.CylinderGeometry(R, R, 32, 48, 1), white, 0, 4 + 16);                     // main body
+  add(new THREE.CylinderGeometry(R, R, 32, 96, 1), white, 0, 4 + 16);                     // main body
   // ogive nose
   const prof = []; for (let i = 0; i <= 16; i++) { const t = i / 16; prof.push(new THREE.Vector2(R * Math.cos(t * Math.PI / 2) ** 0.8, t * 8)); }
-  add(new THREE.LatheGeometry(prof, 48), white, 0, 36);
+  add(new THREE.LatheGeometry(prof, 96), white, 0, 36);
   add(new THREE.CylinderGeometry(R + 0.04, R + 0.04, 3.2, 48, 1, true), solar, 0, 21);      // solar band
   add(new THREE.CylinderGeometry(R + 0.05, R + 0.05, 0.25, 48), grey, 0, 19.3);
   add(new THREE.CylinderGeometry(R + 0.05, R + 0.05, 0.25, 48), grey, 0, 22.7);
   add(new THREE.CylinderGeometry(R * 0.98, R * 0.9, 4, 48), dark, 0, 2);                    // aft skirt
+  // Weld rings, service panels and handrails give scale without substituting a flat image.
+  for(let y=5;y<36;y+=2){const ring=add(new THREE.TorusGeometry(R+.015,.018,8,96),grey,0,y,0);ring.rotation.x=Math.PI/2;}
+  for(let i=0;i<12;i++){
+    const a=i*Math.PI/6,panel=add(new THREE.BoxGeometry(.65,1.1,.055),grey,Math.sin(a)*(R+.03),8,Math.cos(a)*(R+.03));panel.rotation.y=a;
+  }
   // crew deck windows
   for (let i = 0; i < 8; i++) {
     const a = i / 8 * Math.PI * 2 + 0.2, w = add(new THREE.BoxGeometry(0.9, 0.6, 0.12), glass, Math.sin(a) * (R + 0.02), 31.2, Math.cos(a) * (R + 0.02));
@@ -77,7 +82,7 @@ export class BallisticDust {
     this.max = max; this.n = 0;
     this.pos = new Float32Array(max * 3); this.vel = new Float32Array(max * 3);
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3)); geo.setDrawRange(0, 0);
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#b9b7b0', size: 0.025, transparent: true, opacity: 0.65, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#b9b7b0', size: 0.008, transparent: true, opacity: 0.65, depthWrite: false }));
     this.points.frustumCulled = false; scene.add(this.points);
   }
   // Emit grains around (x,z) where the plume hits. strength 0..1.
