@@ -12,9 +12,9 @@ The new `Downloads/UNITY/game` browser build is merged into this game. See
 
 ## Graphics detail
 
-Use **Graphics** on the title screen or in the mission menu. **Low memory** reduces terrain detail, procedural texture size, dust particles and pixel resolution, and disables shadows and antialiasing. Auto picks a device-appropriate budget; Balanced and High offer more detail.
+Use **Settings → Display & world** on the title screen or in the mission menu. **Low memory** reduces terrain detail, procedural texture size, dust particles and pixel resolution, and disables shadows and antialiasing. Auto picks a device-appropriate budget; Balanced and High offer more detail.
 
-**World limit** selects a 1, 2 or 3-chunk radius (at most 9, 25 or 49 detailed tiles). Each tile covers 64 x 64 game metres. Detailed terrain is created nearest-first, one tile per frame. Leaving the radius disposes its geometry instead of retaining an ever-growing cache. A coarse 100-tile horizon remains visible, so there is no void beyond the limit. Nearby rocks are submitted separately from their stable collision mesh; distant rocks are not drawn. Buildings and mission entities remain loaded: this limits terrain residency, not every asset or total browser RAM, and cannot guarantee that a device will never crash.
+**World limit** defaults to **Match minimap**, a 240 m circle following the astronaut or rover. All intersecting 64 m tiles are included, with a tile-edge margin. Smaller/larger manual options select a 1, 2 or 3-chunk radius (at most 9, 25 or 49 detailed tiles). Each tile covers 64 x 64 game metres. Detailed terrain is created nearest-first, one tile per frame. Leaving the radius disposes its geometry instead of retaining an ever-growing cache. A coarse 100-tile horizon remains visible, so there is no void beyond the limit. Nearby rocks are submitted separately from their stable collision mesh; distant rocks are not drawn. Buildings and mission entities remain loaded: this limits terrain residency, not every asset or total browser RAM, and cannot guarantee that a device will never crash.
 
 Low memory plus 1-chunk radius is the lightest combination. Changing settings saves and reloads; choose Resume. Chunk unloading never deletes buildings, discoveries, flags, supplies or mission progress. The same height sampler and rock collision shapes are retained. Quality controls interpolate the existing terrain data rather than adding new measured NASA detail.
 
@@ -29,7 +29,7 @@ References: [NASA's Observation Mountain sand ripples](https://science.nasa.gov/
 - WASD / arrows: walk. Shift: run. Space: jump. Click the game: mouse look.
 - Esc or C: release/capture the mouse. V: first/third person. E: interact.
 - B: plant a map flag. Hold F indoors or in the pressurised rover to eat.
-- G: surface operations map. P: power. L: logbook. M: sound.
+- G: surface operations map. P: power. L: Settings information library. M: mute.
 - Enter the green-marked airlock for the six linked crew modules. Power, storage,
   workshop, life support, shelter, observation and hazard stations are inside.
 - The rover is near camp. Use it for longer survey trips; suit air and the return
@@ -92,3 +92,20 @@ Revision 8: greenhouse glass and all three lander windows now look into the actu
 Phone revision 9: dynamic viewport sizing, safe-area-aware controls, at least 44 px touch targets, narrower joystick on small screens, multitouch movement and look, cancellation on rotation/focus loss, suspended controls while menus are open, scrollable panels with sticky dismiss buttons, and messages hidden behind menu/modal overlays. Tested at 320x568, 360x640, 390x844, 430x932, 640x360 and 844x390 with emulated native touch events. Touch stair climbing and Use entry, power-panel scrolling, map fit, simultaneous movement/look and rotation release passed without runtime errors. Room dimensions, planet diameter ratios and world scale are unchanged. Real-device Safari/Chrome browser chrome, safe areas and sustained frame rate still need hardware testing. For a local phone preview, run Start Phone Preview.cmd on the computer and open its displayed URL from a phone on the same private Wi-Fi; it does not change firewall rules and stops when Enter is pressed. The published GitHub Pages URL is directly usable from a phone. No additional Unity/engine splash was added, per the user’s follow-up.
 
 At normal speed, one complete day/night cycle takes 5 real minutes (about 2.5 minutes each). A real Martian sol lasts about 24 Earth hours 39 minutes. Faster speed settings shorten the cycle; pausing stops it.
+
+## Settings, soundtrack and information
+
+**Settings** combines Sound & music, Display & world, Controls and Information. Music, environment ambience, effects/movement and recorded voice have separate persistent volumes and a master mute. The quiet music is an original synthesized score, not a recording of sound travelling in space. The optional Mars wind track remains separately adjustable.
+
+Facts during play use short, simple summaries. **More in Settings → Information** opens the exact article, with explanations, sources and applicable diagrams/equations. Search or filter by destination and topic. Three credited diagrams come from the supplied Singapore Polytechnic EM0508 lecture slides; equations include units and assumptions. The library distinguishes observed data, future mission concepts and tuned game rules. Mars' full day/night cycle lasts five real minutes; a real sol is about 24 h 39 min 35 s.
+
+Science corrections include dry explanations for dark Mars slope streaks, condition-specific RAD radiation measurements, orbital-height-dependent speed, and a clear distinction between Orion flybys and lunar surface landers. Procedural terrain is not a reconstruction of a surveyed site.
+
+The NASA API key stays in local `.env` and fetch scripts; browser modules never need it. NASA Image Library records do not require an API key. Saved media/data show their source and retrieval date instead of being described as live.
+
+
+## Moon companion
+
+Choose **Explore the Moon** from the Mars title, or open `moon/`. Artemis I and II offer interactive Orion flybys with photo objectives; both are labelled as flights that did not land. The separate south-pole mission is a future training scenario with an HLS-inspired lander, astronaut, pressurised rover, footprints/tracks, solar masts, ice processing, oxygen production and science tasks.
+
+The Moon uses 1.62 m/s² gravity and no wind. Dust follows ballistic paths. Its five-minute game cycle represents a 29.53-Earth-day lunar day. NASA LRO/LOLA elevation informs the distant horizon; local traversable craters are procedural. See `moon/README.md` for data provenance, controls and tests. Settings and the information library are shared across both destinations.

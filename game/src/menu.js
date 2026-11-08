@@ -6,7 +6,7 @@ import { latLonDir } from './globe.js';
 const BODIES = {
   mars: { name: 'Mars', context: 'Your destination', description: 'A small step for you. A new home for your crew.', credit: 'Surface map: NASA 3D Resources · Rendered globe', map: 'mars-map.jpg', colour: '#b87550' },
   earth: { name: 'Earth', context: 'Where your journey begins', description: 'Home, mission control, and the crew cheering you on.', credit: 'Surface map: NASA Blue Marble · Rendered globe', map: 'earth-map.jpg', colour: '#577e9c' },
-  moon: { name: 'The Moon', context: 'A future destination', description: 'Our nearest neighbour. Moon missions are coming later.', credit: 'Surface map: NASA SVS / Ernie Wright · LRO / LROC · Rendered globe', map: 'moon-map.jpg', colour: '#96948e' },
+  moon: { name: 'The Moon', context: 'Explore the Moon', description: 'Follow Orion around the Moon, or try a future lunar surface mission.', credit: 'Surface map: NASA SVS / Ernie Wright · LRO / LROC · Rendered globe', map: 'moon-map.jpg', colour: '#96948e' },
 };
 // Equatorial diameters, km: NASA's Planetary Fact Sheet.
 // Orthographic projection keeps these ratios the same everywhere on screen.

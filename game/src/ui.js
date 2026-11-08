@@ -1,5 +1,5 @@
+import {audioVolume} from './audio-preferences.js';
 // Small DOM helpers for the HUD, pop-ups and panels.
-import { artHTML } from './art.js';
 export const $ = s => document.querySelector(s);
 // Pop-up titles and toasts are written with an emoji in front. The HUD draws its own icons, so the emoji is
 // dropped here to keep the screen looking like a game rather than a chat.
@@ -9,10 +9,10 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 export function factHTML(f, log = true, open = false) {
   if (log) logFact(f);
-  const body = `${f.id ? artHTML('fact-' + f.id, '', 'fact-art') : ''}${esc(f.kid)}<div class="source">Source: <a href="${f.url}" target="_blank" rel="noopener">${esc(f.source)}</a></div>`;
-  // Younger players (ages 7-9 on the title screen) see each fact folded up, so pop-ups stay short.
-  if (!open && document.body.classList.contains('young')) return `<details class="fact fact-fold"><summary>🔎 Real NASA fact - tap to read</summary>${body}</details>`;
-  return `<div class="fact">${body}</div>`;
+  if(open)return `<div class="fact">${esc(f.kid)}<div class="source">Source: <a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.source)}</a></div></div>`;
+  const line=f.short || f.kid?.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() || f.kid || 'Learn more about this discovery.';
+  return `<div class="fact fact-short"><p>${esc(line)}</p><button type="button" class="information-link" data-info="${esc(f.id||'')}">More in Settings → Information</button></div>`;
+
 }
 
 // The mission logbook: every real fact the player meets is saved as a card, in the order they found it.
@@ -36,6 +36,8 @@ export const isPaused = () => modalOpen && modalPauses;   // the outpost panel l
 export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause = true }) {
   modalPauses = pause;
   const box = $('#modal .modal-box');
+  const previousFocus=document.activeElement;
+  box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label',plain(title));
   box.innerHTML = `<header class="message-header"><h3>${plain(title)}</h3><button type="button" class="modal-dismiss" aria-label="Close message">×</button></header>${html || ''}<div class="choices"></div>`;
   box.scrollTop = 0;   // every new pop-up starts at its title
   const list = box.querySelector('.choices');
@@ -47,11 +49,12 @@ export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause
     list.appendChild(b);
   });
   box.querySelector('.modal-dismiss').onclick = close;
+  box.onkeydown=e=>{if(e.key!=='Tab')return;const focusable=[...box.querySelectorAll('button,input,select,a[href]')].filter(el=>!el.disabled&&el.getClientRects().length);const first=focusable[0],last=focusable.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}};
   let closed = false;
   dismissCurrent = close;
-  $('#modal').classList.remove('hidden'); modalOpen = true;
+  $('#modal').classList.remove('hidden'); modalOpen = true;box.querySelector('.modal-dismiss').focus();
   document.exitPointerLock?.();
-  function close() { if (closed) return; closed = true; if (dismissCurrent === close) { $('#modal').classList.add('hidden'); modalOpen = false; dismissCurrent = null; } onClose?.(); }
+  function close() { if (closed) return; closed = true; if (dismissCurrent === close) { $('#modal').classList.add('hidden'); modalOpen = false; dismissCurrent = null;if(previousFocus?.isConnected)previousFocus.focus?.(); } onClose?.(); }
   return close;
 }
 
@@ -59,7 +62,7 @@ export function modal({ title, html, choices = [{ label: 'OK' }], onClose, pause
 // Missing files are simply skipped, so the game works before any lines are recorded.
 let voice;
 export function say(name) {
-  try { voice?.pause(); voice = new Audio(`audio/${name}.mp3`); voice.play().catch(() => {}); } catch { /* no audio */ }
+  try { voice?.pause(); voice = new Audio(`audio/${name}.mp3`); voice.volume=audioVolume('voice'); voice.play().catch(() => {}); } catch { /* no audio */ }
 }
 
 let toastTimer;
@@ -87,3 +90,7 @@ export function alerts(list) {
 export function sourcesHTML(sources) {
   return sources.map(s => `<p class="source">• <a href="${s.url}" target="_blank" rel="noopener">${esc(s.name)}</a>${s.note ? ` - ${esc(s.note)}` : ''}</p>`).join('');
 }
+
+addEventListener('audio-levels',()=>{if(voice)voice.volume=audioVolume('voice');});
+addEventListener('mission-mute',()=>{if(voice)voice.volume=audioVolume('voice');});
+document.addEventListener('click',event=>{const link=event.target.closest('[data-info]');if(link){event.preventDefault();dispatchEvent(new CustomEvent('open-settings',{detail:{tab:'information',topic:link.dataset.info}}));}});

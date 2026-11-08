@@ -1,10 +1,11 @@
 // The little HUD map in the corner: a round, north-up crop of the same chart, fogged where nothing is charted.
 // Tap or click it to open the full map.
+import { MINIMAP_SPAN } from './chunk-plan.js';
 import { drawMini, makeCanvas } from './chart.js';
 import { revealCircles } from './mapstate.js';
 
 export class Minimap {
-  constructor(world, hud, { onOpen, size = 132, span = 240 } = {}) {
+  constructor(world, hud, { onOpen, size = 132, span = MINIMAP_SPAN } = {}) {
     this.world = world; this.size = size; this.span = span; this.t = 0; this.shown = false;
     this.cv = makeCanvas(size, size); this.cv.id = 'minimap'; this.cv.className = 'hidden'; this.cv.title = 'Open the surface map (G)';
     this.cv.setAttribute('role', 'button'); this.cv.setAttribute('aria-label', 'Mini map. Open the surface map');

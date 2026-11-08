@@ -1,3 +1,4 @@
+import {audioVolume} from './audio-preferences.js';
 // The "you got a patch" moment: sound and animation. No imports, so the preview page can use it too.
 //
 // Inspired by how Breath of the Wild treats pickups: it has a short fanfare for ordinary items, a longer one
@@ -121,11 +122,13 @@ export function scheduleAward(ctx, out, tier, t0 = 0, root = 1) {
   glass(ctx, out, at(T.fly + .55), D.D7 * r, .8, .05);
 }
 
+const activeBuses=new Set();
+for(const event of ['audio-levels','mission-mute'])addEventListener(event,()=>{for(const bus of activeBuses)bus.gain.setTargetAtTime(.9*audioVolume('effects'),bus.context.currentTime,.04);});
 let live = null, gate = () => true;
 export const setSoundGate = fn => { gate = fn; };      // the game passes "not muted"
 function chain(ctx, dest) {
   const bus = ctx.createGain(), comp = ctx.createDynamicsCompressor(), conv = ctx.createConvolver(), wet = ctx.createGain();
-  bus.gain.value = .9; conv.buffer = reverbIR(ctx); wet.gain.value = .55;
+  bus.gain.value = .9*audioVolume('effects'); if(ctx===live){activeBuses.add(bus);setTimeout(()=>{activeBuses.delete(bus);bus.disconnect();comp.disconnect();conv.disconnect();wet.disconnect();},20000);} conv.buffer = reverbIR(ctx); wet.gain.value = .55;
   bus.connect(comp); bus.connect(conv); conv.connect(wet); wet.connect(comp); comp.connect(dest);
   return bus;
 }

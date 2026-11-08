@@ -1,11 +1,14 @@
+import {audioLevels,audioMuted,setAudioMuted} from './audio-preferences.js';
+import {startMusic,tickMusic} from './ambient-music.js';
 // The soundscape, built around a REAL recording of Mars: wind heard by the SuperCam microphone on
 // NASA's Perseverance rover on its 4th sol (22 Feb 2021) - assets/sound/mars-wind-perseverance.mp3.
 // Everything else is made live with the Web Audio API (no files): breathing and the fan inside your
 // suit, soft footsteps, the hum of the outpost's life support, and the launch rumble.
 //
 // Mars facts behind the mix (NASA/JPL, Perseverance microphones): sound on Mars is much quieter than on
-// Earth, fades out within about 8 m, and high pitches are lost first - so the wind is kept soft and muffled.
+// Earth, and high pitches fade quickly - the wind is kept soft and muffled, not cut off at a fixed distance.
 
+let fxBus, ambienceBus;
 let ctx, master, wind, windFilter, windGain, suitGain, breathGain, breathFilter, humGain, rumbleGain, rumbleFilter, noise;
 let muted = false, started = false, breathT = 0, gustT = 0, gust = 1, state = { scene: 'title' };
 try { muted = localStorage.getItem('ja-muted') === '1'; } catch { /* storage blocked */ }
@@ -38,17 +41,19 @@ function seamless(buf, fade = 2) {
 
 // Browsers only allow sound after a click, so the Launch button calls this.
 export async function startSound() {
+  startMusic();
   if (started) { ctx?.resume(); return; }
   started = true;
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
   ctx = new AC();
-  master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = muted ? 0 : audioLevels().master; master.connect(ctx.destination);
+  fxBus=ctx.createGain();ambienceBus=ctx.createGain();fxBus.connect(master);ambienceBus.connect(master);updateLevels();
   noise = { white: makeNoise(2), brown: makeNoise(4, true) };
 
   // Mars wind (real NASA recording), through a filter that muffles it more when you are indoors
   windFilter = ctx.createBiquadFilter(); windFilter.type = 'lowpass'; windFilter.frequency.value = 2400;
   windGain = ctx.createGain(); windGain.gain.value = 0;
-  windFilter.connect(windGain).connect(master);
+  windFilter.connect(windGain).connect(ambienceBus);
   fetch('assets/sound/mars-wind-perseverance.mp3').then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b))
     .then(buf => { wind = loop(seamless(buf), windFilter); })
     .catch(() => { wind = loop(noise.brown, windFilter); });      // no file? soft brown noise instead
@@ -56,13 +61,13 @@ export async function startSound() {
   // inside your suit: the fan, and your breathing (faster when your air is low)
   suitGain = ctx.createGain(); suitGain.gain.value = 0;
   const fan = ctx.createBiquadFilter(); fan.type = 'lowpass'; fan.frequency.value = 220;
-  loop(noise.brown, fan); fan.connect(suitGain).connect(master);
+  loop(noise.brown, fan); fan.connect(suitGain).connect(fxBus);
   breathFilter = ctx.createBiquadFilter(); breathFilter.type = 'bandpass'; breathFilter.frequency.value = 700; breathFilter.Q.value = 0.7;
   breathGain = ctx.createGain(); breathGain.gain.value = 0;
-  loop(noise.white, breathFilter); breathFilter.connect(breathGain).connect(master);
+  loop(noise.white, breathFilter); breathFilter.connect(breathGain).connect(fxBus);
 
   // the outpost: a low life-support hum and air circulation
-  humGain = ctx.createGain(); humGain.gain.value = 0; humGain.connect(master);
+  humGain = ctx.createGain(); humGain.gain.value = 0; humGain.connect(ambienceBus);
   for (const [f, v] of [[55, 0.5], [110, 0.18], [165, 0.06]]) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; g.gain.value = v; o.connect(g).connect(humGain); o.start();
   }
@@ -72,7 +77,7 @@ export async function startSound() {
   // the launch: a deep rumble that grows with the thrust
   rumbleFilter = ctx.createBiquadFilter(); rumbleFilter.type = 'lowpass'; rumbleFilter.frequency.value = 120;
   rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0;
-  loop(noise.brown, rumbleFilter); rumbleFilter.connect(rumbleGain).connect(master);
+  loop(noise.brown, rumbleFilter); rumbleFilter.connect(rumbleGain).connect(fxBus);
   apply();
 }
 
@@ -94,6 +99,7 @@ function apply() {
 // Runs every frame from the game loop: breathing rhythm, wind gusts, then volumes.
 let tickT = 0, applyT = 0;
 export function tickSound(dt) {
+  tickMusic();
   if (!ctx || ctx.state !== 'running') return;
   tickT += dt; applyT += dt;
   if (tickT < 0.05) return;                 // 20 updates a second is plenty for volumes
@@ -116,18 +122,14 @@ export function footstep(hard = 0, indoor = false) {
   const t = ctx.currentTime, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
   src.buffer = noise.brown; f.type = 'lowpass'; f.frequency.value = indoor ? 500 : 260 + hard * 120;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18 + hard * 0.1, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-  src.connect(f).connect(g).connect(master); src.start(t, Math.random() * 3, 0.3);
+  src.connect(f).connect(g).connect(fxBus); src.start(t, Math.random() * 3, 0.3);
 }
 
-export function toggleMute() {
-  muted = !muted;
-  try { localStorage.setItem('ja-muted', muted ? '1' : '0'); } catch { /* storage blocked */ }
-  if (master) ramp(master.gain, muted ? 0 : 0.9, 0.1);
-  return muted;
-}
+export function toggleMute() {setAudioMuted(!muted);return muted;}
+
 export const isMuted = () => muted;
 // Dip everything (wind, hum, steps) for a moment so an award can be heard, like the pause before a Zelda fanfare.
-export function duck(on) { if (master && !muted) ramp(master.gain, on ? 0.2 : 0.9, on ? 0.25 : 1.2); }
+export function duck(on) { if (master && !muted) ramp(master.gain, audioLevels().master*(on ? .25 : 1), on ? 0.25 : 1.2); }
 export const soundDebug = () => ({ context: ctx?.state ?? 'not started', windRecording: !!wind && wind.buffer?.duration > 30, windSeconds: wind?.buffer?.duration, muted });
 
 // Eating: a few quick, crunchy bites (made from the same noise as the footsteps).
@@ -136,7 +138,7 @@ export function crunch() {
   const t = ctx.currentTime, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
   src.buffer = noise.brown; f.type = 'bandpass'; f.frequency.value = 900 + Math.random() * 500; f.Q.value = 1.2;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  src.connect(f).connect(g).connect(master); src.start(t, Math.random() * 3, 0.12);
+  src.connect(f).connect(g).connect(fxBus); src.start(t, Math.random() * 3, 0.12);
 }
 
 // A mission patch: two soft rising notes.
@@ -146,6 +148,11 @@ export function chime() {
     const t = ctx.currentTime + d, o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'triangle'; o.frequency.value = hz;
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    o.connect(g).connect(master); o.start(t); o.stop(t + 0.55);
+    o.connect(g).connect(fxBus); o.start(t); o.stop(t + 0.55);
   });
 }
+
+function updateLevels(){if(!master)return;const v=audioLevels();ramp(master.gain,muted?0:v.master,.1);ramp(fxBus.gain,v.effects,.1);ramp(ambienceBus.gain,v.ambience,.1);}
+addEventListener('audio-levels',updateLevels);
+
+addEventListener("mission-mute",e=>{muted=e.detail?.muted??audioMuted();updateLevels();});

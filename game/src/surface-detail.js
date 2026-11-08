@@ -4,9 +4,10 @@ let saved; try { saved = localStorage.getItem('mars-graphics'); } catch {}
 const requested = new URLSearchParams(location.search).get('graphics') || saved;
 export const GRAPHICS_MODE = ['high','balanced','low'].includes(requested) ? requested : 'auto';
 const choice = GRAPHICS_MODE;
-let range;try{range=localStorage.getItem('mars-chunks');}catch{}
-const requestedRange=Number(new URLSearchParams(location.search).get('chunks')||range);
-export const WORLD_RADIUS=[1,2,3].includes(requestedRange)?requestedRange:(GRAPHICS_MODE==='low'||matchMedia('(pointer: coarse)').matches?1:2);
+let range;try{range=localStorage.getItem('mission-world-limit');}catch{}
+const requestedRange=new URLSearchParams(location.search).get('chunks')||range||'map';
+export const WORLD_LIMIT=['1','2','3'].includes(requestedRange)?Number(requestedRange):'map';
+export const WORLD_RADIUS=typeof WORLD_LIMIT==='number'?WORLD_LIMIT:2;
 const constrained = matchMedia('(pointer: coarse)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 4);
 export const SURFACE_DETAIL = choice === 'low' ? { segments: 256, texture: 256, dust: 180 } : choice === 'high' ? { segments: 640, texture: 1024, dust: 1000 } : choice === 'balanced' || constrained ? { segments: 384, texture: 512, dust: 420 } : { segments: 512, texture: 1024, dust: 720 };
 let maps;

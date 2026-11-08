@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { chunkPlan, CHUNK_SIZE } from './chunk-plan.js';
-import { SURFACE_DETAIL, WORLD_RADIUS, regolithMaps } from './surface-detail.js';
+import { chunkPlan, CHUNK_SIZE, MINIMAP_SPAN } from './chunk-plan.js';
+import { SURFACE_DETAIL, WORLD_RADIUS, WORLD_LIMIT, regolithMaps } from './surface-detail.js';
 
 export function makeTerrainChunks(heightAt,colourAt) {
   const group=new THREE.Group();group.name='Streamed Mars terrain';
@@ -35,9 +35,9 @@ export function makeTerrainChunks(heightAt,colourAt) {
   }
   // A tiny horizon mesh remains available while detailed tiles are generated.
   for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,4);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
-  group.userData.stats={loaded:0,queued:0,limit:(WORLD_RADIUS*2+1)**2,segments};
+  group.userData.stats={loaded:0,queued:0,limit:WORLD_LIMIT==='map'?36:(WORLD_RADIUS*2+1)**2,segments};
   group.userData.update=(focus)=>{
-    const plan=chunkPlan(focus.x,focus.z,WORLD_RADIUS),signature=plan.map(c=>c.key).join(';');
+    const plan=chunkPlan(focus.x,focus.z,WORLD_LIMIT),signature=plan.map(c=>c.key).join(';');
     if(signature!==last){
       last=signature;const wanted=new Set(plan.map(c=>c.key));
       for(const [key,mesh] of loaded)if(!wanted.has(key)){group.remove(mesh);mesh.geometry.dispose();loaded.delete(key);coarse.get(key).visible=true;}
@@ -58,7 +58,7 @@ export function nearbyRocks(source) {
   const matrix=new THREE.Matrix4(),point=new THREE.Vector3(),colour=new THREE.Color();let last='';
   render.userData.update=focus=>{
     const key=`${Math.floor(focus.x/16)},${Math.floor(focus.z/16)},${source.instanceMatrix.version}`;if(key===last)return;last=key;
-    let count=0;const radius=(WORLD_RADIUS+1)*CHUNK_SIZE+24;
+    let count=0;const radius=WORLD_LIMIT==='map'?MINIMAP_SPAN/2:(WORLD_RADIUS+1)*CHUNK_SIZE+24;
     for(let i=0;i<source.count;i++){source.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);if(point.y < -1000 || Math.hypot(point.x-focus.x,point.z-focus.z)>radius)continue;render.setMatrixAt(count,matrix);source.getColorAt(i,colour);render.setColorAt(count,colour);count++;}
     render.count=count;render.instanceMatrix.needsUpdate=true;if(render.instanceColor)render.instanceColor.needsUpdate=true;
   };

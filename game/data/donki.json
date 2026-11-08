@@ -1,0 +1,6 @@
+{
+  "mode": "unavailable",
+  "attempted": "2026-11-08",
+  "note": "NASA DONKI was unavailable. No real events are included. Run scripts/fetch-nasa-data.mjs to refresh using the local key.",
+  "flares": []
+}

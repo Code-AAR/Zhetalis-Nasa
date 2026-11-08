@@ -1,4 +1,5 @@
-import { GRAPHICS_MODE, WORLD_RADIUS } from './surface-detail.js';
+import {initSettings,openSettings} from './settings.js';
+import { GRAPHICS_MODE, WORLD_RADIUS, WORLD_LIMIT } from './surface-detail.js';
 import * as THREE from 'three';
 import { renderInteriorView } from './exterior-view.js';
 import { Outpost, DIFFICULTY, UPGRADES, TUNED, TIERS, SITES } from './sim.js';
@@ -43,18 +44,14 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
-const F = (await (await fetch('data/mars-facts.json?v=integrated-survey-30')).json()).facts;
+const F = (await (await fetch('data/mars-facts.json?v=settings-library-35')).json()).facts;
 await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
 for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
 onLog(n => { $('#log-btn').textContent = `Logbook ${n} (L)`; if (n >= 15) earn('scholar'); });
 
 // The mission logbook: every real fact you have met, as cards you can read again.
 function openLogbook() {
-  const cards = [...logbook.values()];
-  modal({ title: `📒 Mission logbook - ${cards.length} fact cards`, pause: !inside, html: `
-    <p>Every real NASA fact you discover on your mission is saved here. At the end of the mission there is a quick quiz to earn your <b>Junior Astronaut badge</b>!</p>
-    <div class="log-list">${cards.slice().reverse().map(f => factHTML(f, false)).join('') || '<p>No cards yet - explore!</p>'}</div>`,
-    choices: [{ label: 'Close', primary: true }] });
+  openSettings({tab:'information'});
 }
 let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
@@ -93,7 +90,7 @@ const setAge = a => {
 };
 $('#age-btn').onclick = () => { setAge(state.age === 'younger' ? 'older' : 'younger'); toast(state.age === 'younger' ? '🧒 Ages 7-9: shorter pop-ups - tap a fact to read it' : '🧑 Ages 10-12: all the facts, open'); };
 setAge(state.age);
-$('#pedia-btn-title').onclick = $('#pedia-btn').onclick = () => openPedia(F);
+$('#pedia-btn-title').onclick = $('#pedia-btn').onclick = () => openSettings({tab:'information'});
 
 function showSun() {
   const s = sunToday(weather);
@@ -995,13 +992,13 @@ function phoneTips() {   // once per game: on a phone held upright, suggest turn
 $('#power-btn').onclick = openPower;
 $('#log-btn').onclick = openLogbook;
 const soundLabel = () => { $('#sound-btn').textContent = `Sound ${isMuted() ? 'off' : 'on'}${keyWord(' (M)', '')}`; };
-function muteButton() { const m = toggleMute(); soundLabel(); toast(m ? '🔇 Sound off' : '🔊 Sound on - the wind is a real recording from Mars'); }
-$('#sound-btn').onclick = muteButton;
+function muteButton() { const m = toggleMute(); soundLabel(); toast(m ? '🔇 Sound off' : 'Sound on'); }
+$('#sound-btn').onclick = () => openSettings({tab:'audio'});
 soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: true });
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 let viewportFrame;
-function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch()?1.25:1.75));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=!(isTouch()&&Math.min(innerWidth,innerHeight)<600);world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
+function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,GRAPHICS_MODE==='low'?1:isTouch()?1.25:1.75));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=GRAPHICS_MODE!=='low'&&!(isTouch()&&Math.min(innerWidth,innerHeight)<600);world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
 addEventListener('resize',resizeGame);window.visualViewport?.addEventListener('resize',resizeGame);
 
 // ---------------- HUD ----------------
@@ -1269,6 +1266,16 @@ for (const button of document.querySelectorAll('.graphics-btn')) {
     ...['low','auto','balanced','high'].map(mode => ({label: mode==='low'?'Low memory':mode[0].toUpperCase()+mode.slice(1), primary:mode===GRAPHICS_MODE, onPick:()=>{
       saveGame(); try {localStorage.setItem('mars-graphics',mode);} catch {}
       const url=new URL(location.href);url.searchParams.set('graphics',mode);location.assign(url.href);
-    }})), ...[1,2,3].map(radius=>({label:`World limit: ${radius} chunk${radius>1?'s':''} radius (up to ${(radius*2+1)**2} detailed tiles)`,primary:radius===WORLD_RADIUS,onPick:()=>{saveGame();try{localStorage.setItem('mars-chunks',String(radius));}catch{}const url=new URL(location.href);url.searchParams.set('chunks',radius);location.assign(url.href);}})), {label:'Cancel'}
+    }})), ...['map',1,2,3].map(radius=>({label:radius==='map'?'Match minimap (240 m)':`World limit: ${radius} chunk${radius>1?'s':''} radius (up to ${(radius*2+1)**2} detailed tiles)`,primary:radius===WORLD_LIMIT,onPick:()=>{saveGame();try{localStorage.setItem('mission-world-limit',String(radius));}catch{}const url=new URL(location.href);url.searchParams.set('chunks',radius);location.assign(url.href);}})), {label:'Cancel'}
   ] });
 }
+
+initSettings({facts:F,destination:'Mars',actions:{save:saveGame,sources:showData,howto:()=>$('#howto').click(),graphics:()=>document.querySelector('.graphics-btn').click(),screen:()=>document.querySelector('#screen-btn').click(),fullscreen:()=>document.querySelector('#fs-btn').click(),view:()=>document.querySelector('#view-btn').click()}});
+document.querySelectorAll('.settings-open').forEach(b=>b.onclick=()=>openSettings());
+// Legacy controls remain wired for shortcuts, but their duplicate buttons live in Settings.
+for(const id of ['sound-btn','data-btn','pedia-btn','log-btn','screen-btn','fs-btn'])document.getElementById(id).hidden=true;
+document.querySelectorAll('.graphics-btn').forEach(b=>b.hidden=true);
+
+for(const id of ['screen-pick','fs-btn-title','data-btn-title','pedia-btn-title'])document.getElementById(id).hidden=true;
+
+$("#moon-mission").onclick=()=>{saveGame();location.assign(new URL("moon/",location.href).href);};

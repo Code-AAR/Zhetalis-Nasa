@@ -155,3 +155,12 @@ node scripts/snapshot-nasa-images.mjs  # saves backup links to real Perseverance
 node scripts/snapshot-mars-data.mjs    # saves Curiosity's latest Mars weather + today's Earth-Mars distance (JPL Horizons)
 node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when DONKI is online)
 ```
+
+## Shared Settings and fact library (8 November 2026)
+
+- `src/settings.js` exposes `initSettings({facts,destination,actions,controlsHtml})` and `openSettings({tab,topic})`. `actions.save` runs before graphics reload; optional `sources`, `fullscreen` and `view` wire destination-specific actions.
+- The browser event `open-settings` with `{tab:'information',topic:'moon-gravity'}` opens an article directly. Both destinations share `data/information.json`, Mars facts and Moon facts. Custom discovered facts come from `ui.js`'s logbook.
+- Keep gameplay facts short with `short`, then link the full sourced article. Equations have SI units and assumptions. Course images have separate provenance from NASA media.
+- `audio-preferences.js` owns master/music/ambience/effects/voice and mute. `ambient-music.js` starts on a gesture and advances via `tickMusic`. Music is an original score, not a scientific recording.
+- Default Mars detailed terrain covers the minimap's 240 m span. `test-chunk-plan.mjs` checks circle coverage and bounded residency. `test-audio-preferences.mjs` checks mute and unavailable storage.
+- Never expose `.env` through a static site. NASA image library requests need no API key; keyed feeds must be fetched by local/server scripts and published as dated snapshots.
