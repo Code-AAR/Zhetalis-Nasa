@@ -156,5 +156,45 @@
     "body": "On computers and tablets the flyby loads NASA’s original topographic GLB and 8192 × 4096 texture unchanged. Phones automatically load a separate Lite derivative; choose Full quality in Settings to load the original on a phone too. The Orion crew capsule uses NASA’s detailed STL; its service module and arrays are illustrative game geometry. The surface lander is an HLS-inspired training design. NASA’s astronaut and Space Exploration Vehicle models are also used. The walkable terrain is procedural with a NASA LOLA-derived distant horizon; it is not an exact survey of a landing site. Assets load once and are reused; nearby terrain uses bounded chunks.",
     "url": "https://svs.gsfc.nasa.gov/14959/",
     "source": "NASA Goddard Space Flight Center / LRO; NASA 3D Resources"
+  },
+  {
+    "id": "nasa-open-data",
+    "title": "Find the original NASA data",
+    "category": "Data sources",
+    "destination": "Both",
+    "short": "NASA’s catalogue helps you find mission datasets.",
+    "body": "NASA Open Data is a catalogue: it describes datasets and links to the archives that hold them. A catalogue entry is not itself a live measurement. Check the mission, instrument, observation date and units before comparing the data with the game.",
+    "source": "NASA Open Data Portal",
+    "url": "https://data.nasa.gov/"
+  },
+  {
+    "id": "earthdata-search",
+    "title": "Earthdata: compare our home planet",
+    "category": "Data sources",
+    "destination": "Both",
+    "short": "Earthdata helps us study Earth, not measure Mars weather.",
+    "body": "Earthdata Search helps you discover Earth-observation datasets. These are useful for comparisons with our home planet, such as ice, land temperature and atmosphere. They are not Mars or Moon surface measurements. Some downloads require an Earthdata Login, separate from a NASA API key.",
+    "source": "NASA Earthdata Search",
+    "url": "https://search.earthdata.nasa.gov/"
+  },
+  {
+    "id": "nasa-api-services",
+    "title": "NASA APIs and archived observations",
+    "category": "Data sources",
+    "destination": "Both",
+    "short": "An API delivers data; it does not automatically make a scene realistic.",
+    "body": "NASA APIs provide access to services such as space-weather records. Service availability varies: NASA listed the older Mars Rover Photos API as archived when checked on 8 November 2026. The game has separate rover-image and Earth-image loaders with archived fallbacks. Its private API key is used only by an offline data-fetch script, never shipped in the browser. A solar event record is not a direct measurement of radiation at your outpost.",
+    "source": "NASA Open APIs",
+    "url": "https://api.nasa.gov/"
+  },
+  {
+    "id": "mars-mola-data",
+    "title": "How scientists map Mars heights",
+    "category": "Data sources",
+    "destination": "Mars",
+    "short": "Laser measurements let scientists build maps of Mars heights.",
+    "body": "The Mars Orbiter Laser Altimeter (MOLA) measured Mars topography. Its gridded elevation products are archived by NASA’s Planetary Data System. They are a source for real elevation maps. This game currently uses a scaled Gusev-inspired height field with procedural surface detail; the sand grains and rocks are illustrative, not individual measured features. Adding a source link does not replace that landscape with a surveyed landing site.",
+    "source": "NASA PDS Geosciences Node — MOLA",
+    "url": "https://pds-geosciences.wustl.edu/missions/mgs/mola.html"
   }
 ]
