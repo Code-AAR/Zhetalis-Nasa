@@ -18,6 +18,17 @@ export async function installSettlement(world){
   model.updateMatrixWorld(true);world.fixedSolar=[];
   const cells=model.getObjectByName('Object_14');
   if(cells?.isMesh){
+    // Replace baked brown artwork with the same cells and dust state as the
+    // deployable arrays. World-space UVs keep cells uniformly sized per table.
+    cells.geometry=cells.geometry.clone();
+    const solarPosition=cells.geometry.attributes.position,uvs=[],point=new THREE.Vector3();
+    for(let i=0;i<solarPosition.count;i++){
+      point.fromBufferAttribute(solarPosition,i).applyMatrix4(cells.matrixWorld);
+      uvs.push(point.x/3.2,point.z/2);
+    }
+    cells.geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+    cells.material=world.solar.group.userData.panelMat;
+
     const geo=cells.geometry,pos=geo.attributes.position,idx=geo.index,count=(idx?.count??pos.count)/3;
     const parent=Array.from({length:count},(_,i)=>i),owners=new Map(),v=new THREE.Vector3();
     const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};

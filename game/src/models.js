@@ -21,7 +21,19 @@ export function cellTexture() {
   }
   cellTex = new THREE.CanvasTexture(c); cellTex.colorSpace = THREE.SRGBColorSpace; cellTex.anisotropy = 4; return cellTex;
 }
-export const makeCellMat = () => new THREE.MeshStandardMaterial({ map: cellTexture(), roughness: .3, metalness: .5, color: '#ffffff', emissive: '#12305c', emissiveMap: cellTexture(), emissiveIntensity: .55 });
+export function makeCellMat() {
+  const map=cellTexture();map.wrapS=map.wrapT=THREE.RepeatWrapping;
+  const material=new THREE.MeshStandardMaterial({map,roughness:.3,metalness:.5,color:'#ffffff',emissive:'#12305c',emissiveMap:map,emissiveIntensity:.55});
+  material.userData.dust={value:0};
+  material.onBeforeCompile=shader=>{
+    shader.uniforms.panelDust=material.userData.dust;
+    shader.fragmentShader='uniform float panelDust;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      diffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.55,0.29,0.12),panelDust * 0.92);`);
+  };
+  material.customProgramCacheKey=()=> 'solar-dust-v1';
+  return material;
+}
 
 const cyl = (r, len, mat, seg = 20) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg), mat);
 const box = (w, h, d, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; };

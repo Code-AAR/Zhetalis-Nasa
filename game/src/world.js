@@ -558,7 +558,14 @@ export class World {
   }
 
   setPanels(n) { this.solar.panels.forEach((p, i) => (p.visible = i < n)); }
-  setPanelDust(clean) { this.solar.group.userData.panelMat.color.set('#ffffff').lerp(new THREE.Color('#a8744f'), Math.min(1, (1 - clean) * 1.2)); }
+  setPanelDust(clean) {
+    const material=this.solar.group.userData.panelMat;
+    const dust=THREE.MathUtils.clamp(1-clean,0,1);
+    material.userData.dust.value=dust;
+    material.roughness=.3+.6*dust;
+    material.metalness=.5*(1-dust);
+    material.emissiveIntensity=.55*(1-dust);
+  }
   setWall(level) { if(this.settlement)return this.settlement.setWall(level);this.outpost.wall.visible = level > 0; }
   setRegolith(on) {
     if(this.settlement)return this.settlement.setRegolith(on);
