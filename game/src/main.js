@@ -534,10 +534,10 @@ function advancePower(expected) {
   toast(powerSteps[outpost.powerStep] || 'Power online. Walk through Life support to plant your first crop.');
 }
 function suitAirSeconds(){
-  const running=!!world&&(world.keys.ShiftLeft||world.keys.ShiftRight)&&!world.noRun&&world.move.lengthSq()>4;
-  const rate=(world?.night?TUNED.coldSuit:1)*(running?1.5:1)*(body?.starving?1.5:1);
-  return Math.max(40,outpost.suitSeconds()/rate);
+  // Two real minutes at baseline, including night and sprinting; upgrades add capacity.
+  return outpost.suitSeconds();
 }
+
 function syncPowerHardware(){
   world.setPanels(outpost.powerStep>=6?outpost.panels:outpost.powerStep>=3?3:0);
   if(world.settlement){
@@ -1379,7 +1379,9 @@ function missionTarget(kind){
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
   if(kind==='shelter')return m.shelterSite;if(kind==='soil')return m.soilSite;
-  return kind?m.entrances[kind==='greenhouse'?2:1]:null;
+  if(!kind)return null;
+  const e=m.entrances[kind==='greenhouse'?2:1];
+  return {x:e.x,z:e.bottom+.65,y:heightAt(e.x,e.bottom+.65)};
 }
 function performMissionWork(task){
   if(marsObjective(outpost,colony.s).id!==task.id)return;

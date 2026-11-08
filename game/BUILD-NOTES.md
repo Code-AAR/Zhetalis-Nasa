@@ -96,3 +96,8 @@ Validation: Mars full power/charger/soil workflow and save/resume; culture water
 - Unopened cargo pods have persistent pulsing orange squares on the minimap (clamped to its edge when distant). A cargo button reports incoming orders, landed cargo distance and coordinates; markers disappear upon collection and survive saves. Seeds are received when opening the pod, not automatically on landing.
 - Mars campaign lengths: 60/120/240 sols; early settlement victory waits until 75% of the campaign. Existing active saves adopt the longer limit.
 - Moon retains its 300-second full lunar cycle, now labelled in the HUD. Four additional objectives require all masts, all four sample types, 64 water/25 oxygen production and at least 20 active minutes with 25% reserves. Actual lunar solar day remains 29.53 Earth days; polar light is not an equal day/night split.
+
+### Revision 55 — reachable charger objective and two-minute suit air
+- Indoor-work objective rings point to the stair foot, rather than beneath the elevated landing. Airlock interaction works from its landing without precisely targeting the small handle; height checks prevent entering from underneath.
+- Workshop/locker interaction range accommodates their cabinet collision bounds. Browser check walked from outside up Airlock 02, entered with E, approached the workbench and assembled the charger.
+- Baseline Mars suit oxygen lasts 120 real seconds, including sprinting and night. Suit upgrades add capacity. Cargo button raised above the minimap.

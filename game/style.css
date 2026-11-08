@@ -564,3 +564,6 @@ body.layout-phone #minimap, body.touch #minimap { display: none; }
 @media(max-width:600px){#mission-objective{top:130px;left:8px;width:190px;padding:8px;font-size:12px}#mission-objective p{max-height:95px;overflow:auto}}
 
 #delivery-status{position:absolute;bottom:170px;right:16px;padding:8px 12px;max-width:220px;font-size:12px;border-color:#ffad52;color:#ffd1a0;background:#251a12e8;pointer-events:auto}#delivery-status[hidden]{display:none}@media(max-width:600px){#delivery-status{right:8px;bottom:175px;max-width:165px;font-size:11px}}
+
+/* Keep the cargo button above the minimap at every UI scale. */
+#delivery-status{bottom:calc(18px + 190px);z-index:12}

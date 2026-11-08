@@ -841,7 +841,7 @@ export class World {
     if (this.driving) return { type: 'sev-exit', d: 0 };
     const p = this.player.position, list = [];
     if (this.sev.ready) list.push({ type: 'sev', d: Math.hypot(p.x - this.sev.pos.x, p.z - this.sev.pos.z) - 2.6 });
-    if(this.settlement){for(const entrance of this.settlement.entrances)if(Math.hypot(p.x-entrance.x,p.z-entrance.z)<1.85 && this.aimsAt(entrance.handle))list.push({type:'door',entrance,range:1.8,d:Math.hypot(p.x-entrance.x,p.y-entrance.y,p.z-entrance.z)});}
+    if(this.settlement){for(const entrance of this.settlement.entrances)if(Math.hypot(p.x-entrance.x,p.z-entrance.z)<1.85 && Math.abs(p.y-entrance.y)<.65)list.push({type:'door',entrance,range:1.8,d:Math.hypot(p.x-entrance.x,p.y-entrance.y,p.z-entrance.z)});}
     else list.push({type:'door',d:Math.hypot(p.x-this.door.x,p.z-this.door.z)});
     list.push({type:'ghdoor',d:Math.hypot(p.x-(GH.x-GH.r-2.6),p.z-GH.z)});
     if (this.shipDoor) list.push({ type: 'ship', d: Math.hypot(p.x - this.shipDoor.x, p.z - this.shipDoor.z) + 0.8 });   // a little closer than the outpost door, so it doesn't pop up where you start

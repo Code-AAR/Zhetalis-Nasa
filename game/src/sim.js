@@ -45,7 +45,7 @@ export const TUNED = {
   regolithCuts: [0, 0.18, 0.28, 0.33],   // Mars soil piled on the outpost: 0, 1, 2, 3 layers. Each layer helps less than the one before
   supplyEvery: 12,         // Earth can send a supply pod every 12 sols
   stormDose: 110,          // extra mSv from an unshielded solar storm (stronger than reality - see facts)
-  suitSeconds: 75,         // seconds of spacewalk on a full suit tank (in daylight)
+  suitSeconds: 120,         // seconds of spacewalk on a full suit tank (in daylight)
   coldSuit: 1.4,           // at night the suit uses air 40% faster (its heater works harder)
   hazardLead: 2,           // sols between a storm being spotted and it arriving
   surpriseDose: 0.6,       // a solar storm nobody saw coming: the crew takes this share of a storm-sol's dose before reaching shelter

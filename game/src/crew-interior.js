@@ -69,5 +69,5 @@ export class CrewInterior extends Interior {
     this.step=(this.step||0)+Math.hypot(this.vel.x,this.vel.z)*dt;if(this.step>.8){this.step=0;this.onStep?.();}
     this.camera.position.set(this.pos.x,1.65,this.pos.z);this.camera.lookAt(this.pos.x+Math.sin(this.yaw)*Math.cos(this.pitch),1.65+Math.sin(this.pitch),this.pos.z+Math.cos(this.yaw)*Math.cos(this.pitch));
   }
-  nearest(){let best;for(const s of this.stations){const dx=s.x-this.pos.x,dz=s.z-this.pos.z,d=Math.hypot(dx,dz);const facing=d>.01?(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/d:1;if(d<1.75&&facing>-.1&&(!best||d<best.d))best={...s,d};}return best||null;}
+  nearest(){let best;for(const s of this.stations){const dx=s.x-this.pos.x,dz=s.z-this.pos.z,d=Math.hypot(dx,dz);const facing=d>.01?(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/d:1;if(d<(['workbench','locker'].includes(s.type)?2.5:2)&&facing>-.1&&(!best||d<best.d))best={...s,d};}return best||null;}
 }
