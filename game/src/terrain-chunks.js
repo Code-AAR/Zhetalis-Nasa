@@ -5,7 +5,7 @@ import { SURFACE_DETAIL, WORLD_RADIUS, WORLD_LIMIT, regolithMaps } from './surfa
 export function makeTerrainChunks(heightAt,colourAt) {
   const group=new THREE.Group();group.name='Streamed Mars terrain';
   const maps=regolithMaps();
-  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0,map:maps.map,bumpMap:maps.bump,bumpScale:.03});
+  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0,map:maps.map,bumpMap:maps.bump,bumpScale:.065});
   group.material=material; // shared material also supports team ground artwork
   const coarse=new Map(), loaded=new Map();let queue=[],last='';
   const segments=Math.ceil(SURFACE_DETAIL.segments/10);

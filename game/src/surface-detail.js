@@ -24,12 +24,27 @@ export function regolithMaps() {
     const patch=Math.pow(Math.max(0,.4+.25*Math.sin(u+Math.sin(v*2))+.3*Math.cos(v*2+Math.sin(u*3))),3);
     const crest=Math.pow(.5+.5*Math.sin(v*18+Math.sin(u*2)*1.6+Math.sin(v*3)*.45),5)*patch;
     const grain=random(), pebble=grain>.994?random()*50:0;
-    const shade=210+grain*20-crest*8-pebble;
-    const height=100+grain*32+crest*65+pebble;
+    const mottling=Math.sin(u*11+Math.sin(v*7))*Math.cos(v*13+Math.sin(u*5));
+    const grit=Math.sin(u*127+Math.sin(v*61))*Math.cos(v*113+Math.sin(u*79));
+    const shade=205+grain*25+mottling*4+grit*2-crest*24-pebble;
+    const height=95+grain*35+grit*4+crest*85+pebble;
     const i=(y*n+x)*4;
     ci.data.set([shade,shade*.985,shade*.96,255],i); hi.data.set([height,height,height,255],i);
   }
   c.putImageData(ci,0,0);h.putImageData(hi,0,0);
+  // Larger clustered grit survives mipmapping at normal walking-camera distance.
+  // Wrap each grain across texture edges to keep the repeated ground seamless.
+  const scale=n/2048;
+  for(let i=0;i<18000;i++) {
+    const x=random()*n,y=random()*n,r=(.7+random()*2.3)*scale;
+    const dark=random()<.7;
+    c.fillStyle=dark?'rgba(79,68,55,.25)':'rgba(249,236,212,.25)';
+    h.fillStyle=dark?'rgba(50,50,50,.3)':'rgba(210,210,210,.35)';
+    for(const dx of [-n,0,n])for(const dy of [-n,0,n]){
+      if(x+dx+r<0||x+dx-r>n||y+dy+r<0||y+dy-r>n)continue;
+      for(const ctx of [c,h]){ctx.beginPath();ctx.ellipse(x+dx,y+dy,r,r*.65,0,0,Math.PI*2);ctx.fill();}
+    }
+  }
   const map = new THREE.CanvasTexture(colour), bump = new THREE.CanvasTexture(relief);
   for(const t of [map,bump]) {t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(48,48);t.anisotropy=8;}
   map.colorSpace=THREE.SRGBColorSpace;
