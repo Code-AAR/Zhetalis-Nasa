@@ -4,7 +4,7 @@ export const POWER_TASKS=[
  ['Assemble the solar array','At the workbench, start assembly. Pick up each part, then fit it into its matching highlighted slot using E / Use.','workbench'],
  ['Set up the solar panels','Go to the marked power site outside and press Use to deploy the array.','power'],
  ['Assemble the battery','At the workbench, fit each battery part into its highlighted matching slot.','workbench'],
- ['Place the battery','Carry the battery kit to the field and select its highlighted placement slot.','power'],
+ ['Place the battery','Follow the marker to the battery slot beside the solar panels. Stand within 4 m, then press X or tap Place battery. You do not need to aim at the slot.','power'],
  ['Connect panels to battery','Select Solar OUT, then Battery controller IN. Press E / Use at each socket. R cancels the cable.','power']
 ];
 export function marsObjective(o,c){

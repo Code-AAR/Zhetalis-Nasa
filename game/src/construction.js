@@ -35,6 +35,7 @@ export class Construction {
   this.rockSamples=[];const rm=new THREE.Matrix4(),rp=new THREE.Vector3(),rs=new THREE.Vector3();for(let i=0;i<world.rocks.count;i++){world.rocks.getMatrixAt(i,rm);rp.setFromMatrixPosition(rm);rs.setFromMatrixScale(rm);if(rp.y>-1000)this.rockSamples.push({id:i,matrix:rm.clone(),position:rp.clone(),radius:Math.max(rs.x,rs.y,rs.z)*2});}
   this.rockProxy=new THREE.Mesh(world.rocks.geometry,world.rocks.material);this.rockProxy.matrixAutoUpdate=false;
   this.drop=document.createElement('button');this.drop.id='construction-drop';this.drop.textContent='Drop held item (R)';this.drop.hidden=true;document.getElementById('hud').append(this.drop);this.drop.onclick=()=>this.cancel();
+  this.placeBatteryButton=document.createElement('button');this.placeBatteryButton.id='construction-place-battery';this.placeBatteryButton.hidden=true;document.getElementById('hud').append(this.placeBatteryButton);this.placeBatteryButton.onclick=()=>this.placeBattery();
   this.heldDisplay=new THREE.Group();world.scene.add(this.heldDisplay);this.heldDisplay.visible=false;
  }
  begin(kind){this.heldDisplay.clear();this.heldDisplay.userData.name=null;document.getElementById('mission-objective').open=false;this.kind=kind;this.held=null;this.bench.traverse(m=>{if(m.isMesh){m.geometry.dispose();m.material.dispose();}});this.bench.clear();this.slots=[];this.bench.visible=true;
@@ -47,11 +48,20 @@ export class Construction {
    if(!isSlot&&/Solar module|controller/.test(name)){for(let j=0;j<4;j++){const rib=new THREE.Mesh(new THREE.BoxGeometry(.012,.025,.28),new THREE.MeshStandardMaterial({color:/Solar/.test(name)?'#a5c9db':'#616f72'}));rib.position.set(-.14+j*.09,.065,0);mesh.add(rib);}}mesh.position.set((i-1)*.52,isSlot?.3:.08,isSlot?-.3:.35);mesh.userData={kind:isSlot?'slot':'part',name,label:(isSlot?'Fit into slot: ':'Pick up: ')+name};this.bench.add(mesh);this.slots.push(mesh);}
   });this.guide('Pick up a part from the front row, then select its matching highlighted slot. E / Use places it.');
  }
+ placeBattery(){
+  if(this.state().powerStep!==4||this.inside||this.blocked||this.world.driving)return false;
+  const p=this.world.player.position,b=this.packGhost.position;
+  if(Math.hypot(p.x-b.x,p.z-b.z)>4||Math.abs(p.y-b.y)>3){this.notify('Walk to the highlighted battery slot beside the panels.');return false;}
+  this.advance(4);this.save();this.sync();this.placeBatteryButton.hidden=true;
+  this.guide('Battery placed. Next, connect Solar OUT to Battery controller IN.',true);return true;
+ }
  cancel(){this.wire=null;this.held=null;this.preview.visible=false;this.heldDisplay.visible=false;}
  notify(text){this.notice=text;this.noticeUntil=performance.now()+2400;}
  removeRock(id){const w=this.world,m=new THREE.Matrix4(),p=new THREE.Vector3();w.rocks.getMatrixAt(id,m);p.setFromMatrixPosition(m);if(p.y<-1000)return;w.rocks.setMatrixAt(id,new THREE.Matrix4().makeTranslation(p.x,-10000,p.z));w.rocks.instanceMatrix.needsUpdate=true;w.rocks.computeBoundingSphere();w.lowRocks=w.lowRocks.filter(c=>Math.hypot(c.x-p.x,c.z-p.z)>.01);for(let i=w.colliders.length-1;i>=0;i--){const c=w.colliders[i];if(c.rock&&Math.hypot(c.x-p.x,c.z-p.z)<.01)w.colliders.splice(i,1);}}
  update(inside,room,blocked){
   const o=this.state(),s=buildState(o);this.drop.hidden=!(this.held||this.wire)||blocked;document.body.classList.toggle('construction-active',!!this.kind&&inside);this.inside=inside;this.room=room;this.blocked=blocked||this.world.driving;
+  const batteryDistance=Math.hypot(this.world.player.position.x-this.packGhost.position.x,this.world.player.position.z-this.packGhost.position.z);
+  this.placeBatteryButton.hidden=o.powerStep!==4||inside||this.blocked;this.placeBatteryButton.disabled=batteryDistance>4||Math.abs(this.world.player.position.y-this.packGhost.position.y)>3;this.placeBatteryButton.textContent=this.placeBatteryButton.disabled?`Battery slot · ${Math.ceil(batteryDistance)} m away`:'Place battery (X)';
   for(const id of s.removed||[])if(!this.removedApplied.has(id)){this.removeRock(id);this.removedApplied.add(id);}
   this.rubble.forEach((m,i)=>m.visible=o.powerStep<=2&&!s.cleared.includes(i));
   this.ghosts.forEach((g,i)=>{g.material.opacity=s.cleared.length>=4?.3:.08;g.visible=o.powerStep===2&&!s.placed.field?.includes(i);if(o.powerStep===2)this.world.solar.panels[i].visible=!!s.placed.field?.includes(i);});
@@ -100,7 +110,7 @@ export class Construction {
    if(assemblyDone(o,this.kind)){const kind=this.kind;this.kind=null;this.bench.visible=false;if(kind==='array')this.advance(1);else if(kind==='battery')this.advance(3);else{o.chargerStep=1;this.sync();}this.guide(kind==='array'?'Kit assembled. Clear the four small marked rocks at the remote power site, then place the panels.':kind==='charger'?'Kit assembled. Carry it to the parking bay.':'Battery kit assembled. Place it at the remote power site.',true);}this.save();return true;
   }
   if(d.kind==='deploy'){if(o.powerStep!==2||s.cleared.length<4)return true;(s.placed.field??=[]);if(!s.placed.field.includes(d.id))s.placed.field.push(d.id);if(s.placed.field.length===3)this.advance(2);this.notify(`Solar panels placed: ${s.placed.field.length}/3.`);this.save();return true;}
-  if(d.kind==='battery-place'){if(o.powerStep===4)this.advance(4);return true;}
+  if(d.kind==='battery-place'){this.placeBattery();return true;}
   if(d.kind==='charger-place'){if(o.chargerStep===1){o.chargerStep=2;this.sync();this.save();this.guide('Charger placed. Connect Base charger OUT to Rover charger IN.');}return true;}
   if(d.kind==='socket'){
    if(!this.wire){this.wire=d.id;this.guide('Cable selected. Walk to the matching socket and press E / Use. R cancels.');return true;}

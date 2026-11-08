@@ -957,6 +957,7 @@ function pressKey(code) {
   if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
   if (code === 'KeyB') { openBuild(); return; }
+  if (code === 'KeyX') { construction?.placeBattery(); return; }
   if (code === 'KeyR') { construction?.cancel(); return; }
   if (code === 'KeyE') {
     if(construction?.use()) return;
@@ -1409,7 +1410,7 @@ function missionTarget(kind){
   if(construction?.wire){const destination={'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[construction.wire];const socket=construction.sockets.find(p=>p.userData.id===destination);if(socket)return socket.position;}
   if(kind==='build-ore'){const ore=builderQuest(outpost,colony.s)?.ore;return colony.deposits.filter(d=>d.ore===ore&&d.group.parent).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;}
   if(kind==='build-parts')return world.pickups.filter(p=>p.kind==='pod'||p.kind==='parts').sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
-  if(kind==='power')return {x:47,z:-17};
+  if(kind==='power')return outpost.powerStep===4?m.pack.position:{x:47,z:-17};
   if(kind==='base')return {x:m.entrances[0].x+2.7,z:m.entrances[0].doorZ+1};
   if(kind==='charger')return outpost.chargerStep<3?m.chargerSite:m.chargingBay;
   if(kind==='shelter')return m.shelterSite;if(kind==='soil')return m.soilSite;
