@@ -193,7 +193,7 @@
     "category": "Data sources",
     "destination": "Mars",
     "short": "Laser measurements let scientists build maps of Mars heights.",
-    "body": "The Mars Orbiter Laser Altimeter (MOLA) measured Mars topography. Its gridded elevation products are archived by NASA’s Planetary Data System. They are a source for real elevation maps. This game currently uses a scaled Gusev-inspired height field with procedural surface detail; the sand grains and rocks are illustrative, not individual measured features. Adding a source link does not replace that landscape with a surveyed landing site.",
+    "body": "The terrain now samples NASA MOLA MEGDR product MEGT00N090HB.IMG: 512 × 512 native signed elevation samples around Gusev Crater, at 128 pixels per degree (about 463 metres between north-south samples). This is archived altimetry, including interpolated bins supplied by NASA, not new live observations. A 4-degree region (about 230 × 237 km) is compressed into a 640 × 640 game-metre map. Height differences are multiplied by 0.015, giving roughly 5.5 times vertical exaggeration relative to the horizontal compression. The central 70 game metres are flattened and blend into the measurements by radius 115 metres. Procedural hills have been removed; rocks and sand are decorative. Every landing scenario currently shares this Gusev training terrain. Source product dates to March 2003; downloaded 8 November 2026.",
     "source": "NASA PDS Geosciences Node — MOLA",
     "url": "https://pds-geosciences.wustl.edu/missions/mgs/mola.html"
   }

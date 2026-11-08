@@ -1,7 +1,7 @@
 // The survey chart: draws the crater from NASA's height grid as a printed map sheet (paper, ink, graticule,
 // compass, scale bar) with three layers and "uncharted" paper over land nobody has scanned yet. Pure drawing:
 // the game state (towers, trail, flags...) is drawn on top by mapstate.js.
-import { gusevGrid } from './world.js';
+import { gusevGrid, terrainMetadata } from './world.js';
 
 export const PAPER = '#e9dcc1', INK = '#4b3022';
 export const LAYERS = [['relief', 'Relief'], ['bands', 'Height'], ['surface', 'Surface']];
@@ -36,7 +36,7 @@ function layer(name) {
     if (name === 'bands') {
       const col = bc[Math.min(6, Math.floor(z * 7))], k = .84 + .3 * sh;
       r = col[0] * k; g = col[1] * k; b = col[2] * k;
-      const line = Math.floor(z * 11) !== Math.floor(at(x + 1, y) * 11) || Math.floor(z * 11) !== Math.floor(at(x, y + 1) * 11);   // a contour every 5 m
+      const line = Math.floor(z * 11) !== Math.floor(at(x + 1, y) * 11) || Math.floor(z * 11) !== Math.floor(at(x, y + 1) * 11);   // a relative elevation bands
       if (line) { r = mix(r, ink[0], .55); g = mix(g, ink[1], .55); b = mix(b, ink[2], .55); }
     } else if (name === 'surface') {
       const slope = Math.sqrt(nl * nl - 1), rk = sstep(.2, 1.1, slope) * .8, low = sstep(.35, 0, z) * .25, k = .55 + .75 * sh, gr = (grain(x, y) - .5) * 9;
@@ -147,7 +147,7 @@ export function drawChart(ctx, S, o = {}) {
   // neatline, graduated border and coordinates
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(rect.x, rect.y, m, m); ctx.lineWidth = .6; ctx.strokeRect(rect.x - 5, rect.y - 5, m + 10, m + 10);
   ctx.fillStyle = INK; ctx.font = `7.5px ${MONO}`; ctx.textAlign = 'center'; ctx.lineWidth = .8;
-  const lon = x => (LON0 + x / (MARS_M_PER_DEG * Math.cos(LAT0 * Math.PI / 180))).toFixed(4), lat = z => (LAT0 + z / MARS_M_PER_DEG).toFixed(4);
+  const lon=x=>(terrainMetadata.west+(x/g.span+.5)*(terrainMetadata.east-terrainMetadata.west)).toFixed(4),lat=z=>Math.abs(terrainMetadata.north+(z/g.span+.5)*(terrainMetadata.south-terrainMetadata.north)).toFixed(4);
   for (let w = -500; w <= 500; w += 50) {
     const [px] = toPx(w, 0), [, py] = toPx(0, w), long = w % 200 === 0;
     if (px > rect.x + 4 && px < rect.x + m - 4) for (const yy of [rect.y - 5, rect.y + m + 5]) { ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(px, yy + (yy < rect.y ? 5 : -5) * (long ? 1 : .5)); ctx.stroke(); }
@@ -167,13 +167,13 @@ export function drawChart(ctx, S, o = {}) {
   ctx.fillStyle = 'rgba(233,220,193,.82)'; ctx.fillRect(bx - 6, by - 11, 4 * seg + 36, 26);
   for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#fff6e0' : INK; ctx.fillRect(bx + i * seg, by, seg, 4); }
   ctx.strokeStyle = INK; ctx.lineWidth = .8; ctx.strokeRect(bx, by, 4 * seg, 4); ctx.fillStyle = INK; ctx.font = `7.5px ${MONO}`; ctx.textAlign = 'left';
-  ctx.fillText('0', bx - 2, by - 3); ctx.fillText('100 m', bx + 4 * seg - 8, by - 3); ctx.fillText('50', bx + 2 * seg - 5, by - 3);
+  ctx.fillText('0', bx - 2, by - 3); ctx.fillText('100 game m', bx + 4 * seg - 8, by - 3); ctx.fillText('50', bx + 2 * seg - 5, by - 3);
   o.overlay?.(ctx, P, 'over');
   // title block
   const ty = rect.y + m + 22;
   ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.font = `bold 12px ${FONT}`; ctx.fillText(o.title || 'GUSEV CRATER, MARS', rect.x, ty);
-  ctx.font = `italic 9px ${FONT}`; ctx.fillText(o.subtitle || 'Spirit landing site · surveyed by the Zhetalis crew', rect.x, ty + 14);
-  ctx.font = `8px ${MONO}`; ctx.fillText(`${(o.layerName || 'Relief')} · ${o.layer === 'bands' ? 'contour every 5 m' : o.layer === 'surface' ? 'colour from NASA Mars map' : 'sun from the north-west'}`, rect.x, ty + 27);
+  ctx.font = `italic 9px ${FONT}`; ctx.fillText(o.subtitle || 'MOLA measured relief · scaled training map', rect.x, ty + 14);
+  ctx.font = `8px ${MONO}`; ctx.fillText(`${(o.layerName || 'Relief')} · ${o.layer === 'bands' ? 'relative elevation bands' : o.layer === 'surface' ? 'illustrative surface colours' : 'sun from the north-west'}`, rect.x, ty + 27);
   ctx.textAlign = 'right'; ctx.font = `bold 10px ${FONT}`; if (o.charted != null) ctx.fillText(`${Math.round(o.charted * 100)}% charted`, rect.x + m, ty);
   ctx.font = `8px ${MONO}`; if (o.stamp) ctx.fillText(o.stamp, rect.x + m, ty + 14);
   return P;

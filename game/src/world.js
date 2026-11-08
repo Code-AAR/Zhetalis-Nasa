@@ -1,3 +1,4 @@
+import { createMeasuredTerrain } from './measured-terrain.js';
 import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
 import * as THREE from 'three';
@@ -23,33 +24,22 @@ function vnoise(x, z) {
 function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, z * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
 
 export const WORLD_SIZE = 640;
-// The land around the outpost is shaped like the real Gusev Crater, where NASA's Spirit rover landed:
-// heights come from NASA's 3D model of the Spirit landing site (assets/gusev-height.bin, 512x512, sampled from the cleaned and
-// resubdivided copy of NASA's 3D-print file). The real crater is about 160 km wide - here it is shrunk so its rim is
-// the hills you see around you, and heights are stretched so they are easy to see.
-const GUSEV = await fetch('assets/gusev-height.bin').then(r => (r.ok ? r.arrayBuffer() : null)).then(b => b && new Uint16Array(b)).catch(() => null);
-const GN = GUSEV ? Math.round(Math.sqrt(GUSEV.length)) : 256, G_CX = 0.52, G_CY = 0.4, G_SPAN = 980;   // grid size comes from the file, so a finer map just works   // crater centre in the map, and metres the map covers
-function gusev(x, z) {
-  const u = (G_CX + x / G_SPAN) * (GN - 1), v = (G_CY + z / G_SPAN) * (GN - 1);
-  const x0 = Math.max(0, Math.min(GN - 2, Math.floor(u))), y0 = Math.max(0, Math.min(GN - 2, Math.floor(v)));
-  const fx = Math.min(1, Math.max(0, u - x0)), fy = Math.min(1, Math.max(0, v - y0)), at = (i, j) => GUSEV[(y0 + j) * GN + x0 + i] / 65535;
-  return (at(0, 0) * (1 - fx) + at(1, 0) * fx) * (1 - fy) + (at(0, 1) * (1 - fx) + at(1, 1) * fx) * fy;
-}
-export const gusevGrid = () => (GUSEV ? { data: GUSEV, n: GN, cx: G_CX, cy: G_CY, span: G_SPAN } : null);
-const FLOOR = GUSEV ? gusev(0, 0) : 0;
-export function heightAt(x, z) {
-  const r = Math.hypot(x, z);
-  let h;
-  if (GUSEV) {
-    h = (gusev(x, z) - FLOOR) * 55;                                          // the crater floor, inner craters and rim
-    h += (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 4 + (fbm(x * 0.012, z * 0.012) - 0.5) * 8;   // small bumps
-  } else {
-    h = (fbm(x * 0.011, z * 0.011) - 0.5) * 34 + (fbm(x * 0.05 + 7, z * 0.05 - 3, 3) - 0.5) * 5;
-    h += Math.max(0, fbm(x * 0.005 + 20, z * 0.005, 4) - 0.52) * 220;
-  }
-  const edge = Math.max(0, r - WORLD_SIZE * 0.4) * 0.22;                       // hills ring the map so it feels endless
-  return (h + edge) * THREE.MathUtils.smoothstep(r, 70, 115);                  // flat landing pad around the outpost
-}
+// Archived measured MOLA topography, cropped without resampling by the importer.
+// The game compresses this region, exaggerates relief and flattens its base apron.
+const [terrainResponse,metaResponse]=await Promise.all([
+  fetch('assets/terrain/gusev-mola-128.bin'),fetch('assets/terrain/gusev-mola-128.json')
+]);
+if(!terrainResponse.ok||!metaResponse.ok)throw new Error('Measured Mars terrain could not load. Reload to retry.');
+export const terrainMetadata=await metaResponse.json();
+const terrainBuffer=await terrainResponse.arrayBuffer(),terrainView=new DataView(terrainBuffer);
+if(terrainBuffer.byteLength!==terrainMetadata.n**2*2)throw new Error('Incomplete MOLA terrain download');
+const measuredHeights=new Int16Array(terrainMetadata.n**2);
+for(let i=0;i<measuredHeights.length;i++)measuredHeights[i]=terrainView.getInt16(i*2,true);
+const measuredTerrain=createMeasuredTerrain(measuredHeights,terrainMetadata);
+// Chart colours use a normalized copy; physics always samples the signed metre values.
+const chartHeights=Uint16Array.from(measuredHeights,h=>Math.round((h-terrainMetadata.minMetres)/(terrainMetadata.maxMetres-terrainMetadata.minMetres)*65535));
+export const gusevGrid=()=>({data:chartHeights,n:terrainMetadata.n,cx:.5,cy:.5,span:terrainMetadata.worldSpan});
+export const heightAt=(x,z)=>measuredTerrain.height(x,z);
 
 // The Mars sky, coloured like NASA rover photos: butterscotch near the horizon, darker and browner overhead
 // (fine red dust hangs high in the thin air), a pale glow around the Sun, and a BLUE glow at sunset

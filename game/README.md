@@ -46,7 +46,7 @@ lighting-aware materials, enlarged crew-scale fitting (roughly 8.9 m module diam
 a connected interior and a working exterior airlock. Survey tasks and a map are
 integrated into the normal game; there are no model-comparison controls.
 
-NASA's Spirit/Gusev-derived terrain is retained with less exaggerated relief.
+Mars terrain now uses a native 512 × 512 crop of NASA MOLA MEGDR signed elevation samples. See `assets/terrain/gusev-mola-128.json` for provenance, geographic bounds, scale and checksum. Regenerate with `python scripts/fetch-mola-terrain.py`. The 4-degree regional crop is compressed into 640 game metres; vertical differences use a 0.015 scale, and the central base apron is flattened. No procedural hills are added. Rocks and sand remain illustrative. The Moon terrain is unchanged.
 The same height function positions terrain, rocks, astronaut and rover. Daylight
 remains dusty/tan, sunset blue near the Sun, and gravity is approximately 3.71 m/s².
 Surface positions and the future settlement are game design rather than a surveyed
