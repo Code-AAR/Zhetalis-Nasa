@@ -175,6 +175,9 @@ export class Outpost {
     this.clean = Math.max(0.3, this.clean - TUNED.dustPerSol - (this.dust > 0 ? TUNED.dustStormDust : 0));
     if (this.dust === 0 && rng() < 0.02) { this.clean = Math.min(1, this.clean + 0.25); events.push({ type: 'wind-clean' }); }
 
+    // A dust storm drops a fresh coat of bright dust over the dark ground; afterwards dust devils and wind sweep it
+    // off again over the next sols (it happens on real Mars; here it is faster, game balance). world.js shows it.
+    this.dustCover = this.dust > 0 ? Math.min(1, (this.dustCover || 0) + .4) : Math.max(0, (this.dustCover || 0) - .12);
     if (this.shelter > 0) this.shelter -= 1;
     if (this.dust > 0 && --this.dust === 0) events.push({ type: 'dust-end' });
     if (this.blackout > 0 && --this.blackout === 0) events.push({ type: 'blackout-end' });

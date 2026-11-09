@@ -201,3 +201,16 @@ Auto graphics selects full quality on computers/tablets and Lite on phones; this
 - If the file fails to load, the old made-up colour patches come back. Nothing breaks.
 - Fixed (9 Nov): a double comma in the map's landmark list left a hole, so the landmark count read "of 15". `test-resource-zones.mjs` now checks every file for this.
 - Renamed the real meteorite spot to "Allan Hills meteorites". Zagyu's survey site near camp is still "Meteorite field", so the map no longer has two places with one name.
+
+### Tracks, storm dust, Ma'adim Vallis and the map edge (9 Nov, Ewan)
+- `src/ground-marks.js`: the rover leaves tyre tracks and you leave boot prints (pooled, about 3,800 marks).
+  - Driving through salt zones (Paso Robles, Arad, Tyrone) or Silica Valley leaves bright tracks, as when Spirit's dragged wheel dug up bright soil. The first bright track in each zone gives +3 science and a fact card.
+  - Hidden patch on no map: Troy (`HIDDEN` in `resource-zones.js`). Spirit's wheels dug up sulfate soil there in 2009.
+  - A dust storm fades every mark and wipes them when it ends.
+  - Saved: `outpost.saltFound`.
+- Storm dust: `outpost.dustCover` (sim.js) rises 0.4 per storm sol and falls 0.12 per clear sol. The terrain shader (`terrain-chunks.js`, `aDark` + `uDustCover`) coats NASA's dark ground pale, and the dust devil tracks fade too.
+- Dust devils are soft round puffs now (they drew as squares), and only appear from late morning to late afternoon, never in a storm.
+- Thin water-ice clouds in the sky shader (`makeSky` in `world.js`). They glow blue-white just after sunset and hide in a dust storm.
+- Ma'adim Vallis: a `channel` landmark in `landmarks.js` follows the low line of the NASA height data, about 3 m deep with a sandy floor and ripples. A viewpoint cairn sits on its west bank at (86, 414) (`src/viewpoints.js`, data in `site-data.js` `VIEWPOINTS`, +2 science, saved in `outpost.viewpoints`).
+- Map edge: the NASA grid fade now ends at 476 m. Past 480 m the grid only repeats its edge row, which drew the streaks. Outside, the ground is a very smooth copy of the NASA level plus rolling hills, worn ridges and craters (the cratered highlands outside Gusev).
+- New test: `scripts/test-surface-features.mjs`.

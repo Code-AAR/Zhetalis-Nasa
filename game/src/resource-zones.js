@@ -33,6 +33,10 @@ export function softSoil(x, z) {
   return s;
 }
 export const zoneAt = (x, z) => ZONES.find(zn => Math.hypot(x - zn.x, z - zn.z) < zn.r);
+// Bright soil under the dust, shown by rover tracks (ground-marks.js): the salt and silica zones, plus one patch on no map.
+// When Spirit got stuck at Troy in 2009, its spinning wheels dug up layers of sulfate soil.
+export const HIDDEN = [{ id: 'troy-salt', name: 'Troy', ore: 'gypsum', x: 215, z: 262, r: 9, hidden: true }];
+export const brightZone = (x, z) => { const z0 = zoneAt(x, z); return z0 && (z0.ore === 'gypsum' || z0.ore === 'silica') ? z0 : HIDDEN.find(h => Math.hypot(x - h.x, z - h.z) < h.r) || null; };
 
 // Every mineral rock: { id, ore, x, z, zone }. ground(x, z) gives the height; blocked(x, z) is true for spots taken by
 // buildings. Same result for every player.

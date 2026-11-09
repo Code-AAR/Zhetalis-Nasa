@@ -2,32 +2,41 @@ import * as THREE from 'three';
 import { chunkPlan, CHUNK_SIZE, CHUNK_COUNT, MINIMAP_SPAN, WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { SURFACE_DETAIL, WORLD_RADIUS, WORLD_LIMIT, regolithMaps } from './surface-detail.js';
 
-export function makeTerrainChunks(heightAt,colourAt) {
+export function makeTerrainChunks(heightAt,colourAt,darkAt=()=>0) {
   const group=new THREE.Group();group.name='Streamed Mars terrain';
   const maps=regolithMaps();
   const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0,map:maps.map,bumpMap:maps.bump,bumpScale:.065});
   // Close-up grit: sample the same ground maps a second time at about 7 times finer scale, for colour and for the bumps, so
   // the ground looks rough under your boots and not only from afar. (Three.js draws the bump from one sample; we add a second.)
+  // Storm dust: aDark is how dark NASA's albedo map says the ground is (0..1). After a dust storm, uDustCover goes to 1
+  // and the dark ground is coated pale; it fades back as dust devils sweep it clean (world.js eases the value).
+  const dustCover={value:0},dustTint={value:new THREE.Color('#c29c78')};
   material.onBeforeCompile=shader=>{
+    shader.uniforms.uDustCover=dustCover;shader.uniforms.uDustTint=dustTint;
+    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float aDark; varying float vDark;')
+      .replace('#include <color_vertex>','#include <color_vertex>\nvDark = aDark;');
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float uDustCover; uniform vec3 uDustTint; varying float vDark;')
+      .replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb = mix( diffuseColor.rgb, uDustTint, clamp( vDark * uDustCover * .85, 0., 1. ) );');
     shader.fragmentShader=shader.fragmentShader
       .replace('#include <bumpmap_pars_fragment>',THREE.ShaderChunk.bumpmap_pars_fragment
         .replace(/texture2D\( bumpMap, ([^)]*?) \)\.x/g,(all,uv)=>`(texture2D( bumpMap, ${uv} ).x + .45 * texture2D( bumpMap, ( ${uv} ) * 7.3 + vec2( .27, .61 ) ).x)`))
       .replace('#include <map_fragment>',`#include <map_fragment>
       { float grit = texture2D( map, vMapUv * 7.3 + vec2( .27, .61 ) ).r; diffuseColor.rgb *= 1.0 + ( grit - .66 ) * 1.8; }`);
   };
-  material.customProgramCacheKey=()=>'terrain-grit-1';
+  material.customProgramCacheKey=()=>'terrain-grit-2';
+  group.userData.dustCover=dustCover;
   group.material=material; // shared material also supports team ground artwork
   const coarse=new Map(), loaded=new Map();let queue=[],last='';
   const segments=Math.ceil(SURFACE_DETAIL.segments/10);
   function tile(ix,iz,n) {
     const geo=new THREE.PlaneGeometry(CHUNK_SIZE,CHUNK_SIZE,n,n);geo.rotateX(-Math.PI/2);
-    const pos=geo.attributes.position,uv=geo.attributes.uv,norm=geo.attributes.normal,colour=new Float32Array(pos.count*3),c=new THREE.Color(),normal=new THREE.Vector3();
+    const pos=geo.attributes.position,uv=geo.attributes.uv,norm=geo.attributes.normal,colour=new Float32Array(pos.count*3),dark=new Float32Array(pos.count),c=new THREE.Color(),normal=new THREE.Vector3();
     const cx=-WORLD_HALF+(ix+.5)*CHUNK_SIZE,cz=-WORLD_HALF+(iz+.5)*CHUNK_SIZE;
     for(let i=0;i<pos.count;i++) {
       const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,y=heightAt(x,z);pos.setXYZ(i,x,y,z);
       uv.setXY(i,(x+WORLD_HALF)/WORLD_EXTENT,(WORLD_HALF-z)/WORLD_EXTENT);
       normal.set(heightAt(x-.25,z)-heightAt(x+.25,z),.5,heightAt(x,z-.25)-heightAt(x,z+.25)).normalize();norm.setXYZ(i,normal.x,normal.y,normal.z);
-      colourAt(x,z,y,c);colour.set([c.r,c.g,c.b],i*3);
+      colourAt(x,z,y,c);colour.set([c.r,c.g,c.b],i*3);dark[i]=darkAt(x,z);
     }
     geo.setAttribute('color',new THREE.BufferAttribute(colour,3));
     // Vertical edge skirts conceal gaps where coarse and detailed samples meet.
@@ -36,11 +45,11 @@ export function makeTerrainChunks(heightAt,colourAt) {
     for(let i=1;i<=n;i++)edge.push(i*(n+1)+n);
     for(let i=n-1;i>=0;i--)edge.push(n*(n+1)+i);
     for(let i=n-1;i>0;i--)edge.push(i*(n+1));
-    const p=Array.from(pos.array),u=Array.from(uv.array),no=Array.from(norm.array),co=Array.from(colour),indices=Array.from(geo.index.array);
+    const dk=Array.from(dark),p=Array.from(pos.array),u=Array.from(uv.array),no=Array.from(norm.array),co=Array.from(colour),indices=Array.from(geo.index.array);
     const start=pos.count;
-    for(const id of edge){p.push(pos.getX(id),pos.getY(id)-12,pos.getZ(id));u.push(uv.getX(id),uv.getY(id));no.push(norm.getX(id),norm.getY(id),norm.getZ(id));co.push(colour[id*3],colour[id*3+1],colour[id*3+2]);}
+    for(const id of edge){p.push(pos.getX(id),pos.getY(id)-12,pos.getZ(id));u.push(uv.getX(id),uv.getY(id));no.push(norm.getX(id),norm.getY(id),norm.getZ(id));co.push(colour[id*3],colour[id*3+1],colour[id*3+2]);dk.push(dark[id]);}
     for(let i=0;i<edge.length;i++){const j=(i+1)%edge.length;indices.push(edge[i],start+i,edge[j],edge[j],start+i,start+j);}
-    geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));geo.setAttribute('normal',new THREE.Float32BufferAttribute(no,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(co,3));geo.setIndex(indices);geo.computeBoundingSphere();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));geo.setAttribute('normal',new THREE.Float32BufferAttribute(no,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(co,3));geo.setAttribute('aDark',new THREE.Float32BufferAttribute(dk,1));geo.setIndex(indices);geo.computeBoundingSphere();
     const mesh=new THREE.Mesh(geo,material);mesh.receiveShadow=true;mesh.name=`Terrain ${ix},${iz} (${n})`;return mesh;
   }
   // Preserve the hill silhouette on Full; only phone Lite uses the coarse horizon.

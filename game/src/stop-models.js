@@ -418,6 +418,6 @@ export function buildDustDevilTracks(surface, cx, cz, { n = 14, spread = 70 } = 
     const pts = []; for (let i = 0; i <= 8; i++) { const t = i / 8 - .5, w = Math.sin(t * 5 + k) * 6 * hash(k, 5); pts.push([sx + Math.cos(dir) * L * t - Math.sin(dir) * w, sz + Math.sin(dir) * L * t + Math.cos(dir) * w]); }
     list.push(ribbon(pts, surface, { width: 1.6 + hash(k, 6) * 3.2, lift: .05, colour: () => dark, alpha: .28 + hash(k, 7) * .14, fadeStart: .15, fadeEnd: .15, edgeSoft: .7 }));
   }
-  const mesh = new THREE.Mesh(mergeGeometries(list, false), MARKS); mesh.name = 'dust devil tracks'; mesh.receiveShadow = true; mesh.renderOrder = 1;
+  const mesh = new THREE.Mesh(mergeGeometries(list, false), MARKS.clone()); mesh.name = 'dust devil tracks';   // own material, so storms can fade it mesh.receiveShadow = true; mesh.renderOrder = 1;
   return mesh;
 }

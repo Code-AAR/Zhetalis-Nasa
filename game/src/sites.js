@@ -76,20 +76,28 @@ class DustDevils {
     this.world = world; this.sites = sites; this.t = 0; this.told = false;
     // dust devils wander around these spots; two of them work the dust devil plain to the north, with its dark tracks
     this.anchors = [[-120, 150, 0.2], [0, -195, 2.1], [250, 40, 4.0], [-35, -220, 5.3]];
-    world.scene.add(buildDustDevilTracks(heightAt, 0, -195));
-    this.N = 110; this.devils = this.anchors.map(() => {
+    world.devilTracks = buildDustDevilTracks(heightAt, 0, -205, { n: 24, spread: 120 });   // fade under storm dust (world.js)
+    world.scene.add(world.devilTracks);
+    // soft round puffs (plain points draw as squares), so the column reads as a twisting haze of dust
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,.9)'); grad.addColorStop(.5, 'rgba(255,255,255,.35)'); grad.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+    const puff = new THREE.CanvasTexture(c);
+    this.N = 220; this.devils = this.anchors.map(() => {
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(this.N * 3), 3));
-      const p = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#c9a27c', size: 1.5, transparent: true, opacity: .3, depthWrite: false, fog: true }));
+      const p = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#c9a27c', map: puff, size: 3.2, transparent: true, opacity: .26, depthWrite: false, fog: true }));
       p.frustumCulled = false; world.scene.add(p); return p;
     });
   }
   centre(i, t) { const [ax, az, ph] = this.anchors[i]; return [ax + Math.sin(t * .02 + ph) * 80, az + Math.cos(t * .017 + ph * 1.3) * 70]; }
   tick(dt) {
     this.t += dt; const pl = this.world.player?.position;
+    // Dust devils form when the sun heats the ground: from late morning to late afternoon, and never inside a dust storm
+    const ph = this.world.phase ?? .5, sunUp = Math.min(1, Math.max(0, Math.min((ph - .36) / .05, (.72 - ph) / .05))) * (this.world.dustOn ? 0 : 1);
     this.devils.forEach((pts, i) => {
+      pts.visible = sunUp > 0; pts.material.opacity = .26 * sunUp; if (!pts.visible) return;
       const [cx, cz] = this.centre(i, this.t), base = heightAt(cx, cz), a = pts.geometry.attributes.position.array, H = 26 + i * 4;
       for (let k = 0; k < this.N; k++) {
-        const f = k / this.N, r = .35 + f * f * 3.4, ang = this.t * (2.2 - f * 1.2) + k * 2.399;
+        const f = k / this.N, r = .35 + f * f * 3.4 + Math.sin(this.t * 1.3 + f * 6 + i) * .3 * f, ang = this.t * (2.2 - f * 1.2) + k * 2.399;
         a[k * 3] = cx + Math.cos(ang) * r; a[k * 3 + 1] = base + .2 + f * H; a[k * 3 + 2] = cz + Math.sin(ang) * r;
       }
       pts.geometry.attributes.position.needsUpdate = true;

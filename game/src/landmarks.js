@@ -1,4 +1,4 @@
-import { SITES } from './site-data.js';
+import { SITES, VIEWPOINTS } from './site-data.js';
 // Real Gusev crater landmarks, ENLARGED so you can see and walk to them. In reality they are tiny at this map scale:
 // the game squeezes 240 km into 960 m, so Columbia Hills (about 3 to 4 km from Spirit's landing site) would be under
 // 15 m away and Bonneville crater (210 m wide) would be under a metre across. They keep their real direction from the
@@ -19,6 +19,11 @@ export const LANDMARKS = [
     tip: 'Tennessee Valley, on the north side of Husband Hill. Spirit looked down into it from the summit in 2005 but never drove in. Here you can walk down into it.' },
   { id: 'troy', name: 'Troy', kind: 'crater', x: 215, z: 262, r: 5, depth: .9, rim: .25,
     tip: 'Troy, beside a shallow crater about 8 m wide. In 2009 Spirit broke through its crust and got stuck in soft sand.' },
+  // The inner channel along the floor of Ma'adim Vallis, traced along the lowest line of the NASA height data. The valley
+  // itself is real MOLA ground; the channel is carved a little deeper so you can see it from the rim.
+  { id: 'maadim', name: "Ma'adim Vallis", kind: 'channel', x: 116, z: 352, r: 72, D: 3.2, W: 9,
+    path: [[40, 265], [56, 285], [70, 305], [84, 322], [94, 342], [100, 360], [120, 375], [145, 388], [162, 402], [176, 420], [192, 440]],
+    tip: "Ma'adim Vallis, a valley about 700 km long that runs into Gusev from the south. Water may once have flowed down it and filled the crater with a lake." },
   { id: 'homeplate', name: 'Home Plate', kind: 'mesa', x: 282, z: 208, r: 26, h: 4,
     tip: 'Home Plate, a flat plateau of layered rock about 90 m wide in real life. Its rim shows the layers. In the game it sits close to the hills.' },
 ];
@@ -28,6 +33,17 @@ export function plateRadius(m, a) {
   return m.r * (1 + .07 * Math.sin(2 * a + .6) + .05 * Math.sin(3 * a + 1.9) + .03 * Math.sin(7 * a + .4) + .018 * Math.sin(13 * a + 2.2) + .01 * Math.sin(23 * a + .7));
 }
 // Height across the rim, as a share of the plateau height: 1 on top, a steep drop to 0.42, then the apron down to 0.
+const CHANNEL = () => LANDMARKS.find(l => l.kind === 'channel');
+export function channelFloor(x, z) { const m = CHANNEL(); if (!m || Math.abs(x - m.x) > m.r * 1.6 || Math.abs(z - m.z) > m.r * 1.6) return 0; const u = channelDist(m, x, z) / m.W; return u < .5 ? 1 : u < 1.1 ? 1 - ease(.5, 1.1, u) : 0; }
+export function channelDist(m, x, z) {
+  let d = 1e9;
+  for (let i = 1; i < m.path.length; i++) {
+    const [ax, az] = m.path[i - 1], [bx, bz] = m.path[i], vx = bx - ax, vz = bz - az;
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    d = Math.min(d, Math.hypot(x - ax - t * vx, z - az - t * vz));
+  }
+  return d;
+}
 const ease = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const plateProfile = u => u < .88 ? 1 : u < 1 ? 1 - .58 * ease(.88, 1, u) : .42 * (1 - ease(1, 1.6, u));
 // 1 on Home Plate's top, 0 off it (world.js uses this to colour the top pale instead of striped like the hills).
@@ -38,7 +54,7 @@ export function plateWeight(x, z) {
 }
 
 // True within `r` metres of one of Spirit's stops, so the loose rocks scattered over the map keep out of the stop scenes.
-export const nearStop = (x, z, r = 12) => SITES.some(s => (x - s.x) ** 2 + (z - s.z) ** 2 < r * r);
+export const nearStop = (x, z, r = 12) => SITES.some(s => (x - s.x) ** 2 + (z - s.z) ** 2 < r * r) || VIEWPOINTS.some(v => (x - v.x) ** 2 + (z - v.z) ** 2 < r * r);
 
 // Extra height added to the measured ground. Zero everywhere except right around each landmark.
 // world.js tells us the measured ground, so flat-topped features (Home Plate) can level the land under them.
@@ -65,6 +81,13 @@ export function landmarkLift(x, z) {
         y -= m.D * along * across;
         y += .25 * Math.exp(-Math.pow((Math.abs(b) - 1.15) / .2, 2)) * along;     // low lip of spilled rock along the rim
       }
+    }
+    else if (m.kind === 'channel') {
+      // distance to the winding channel line; a flat sandy floor with sloping banks and a low terrace on each side
+      const u = channelDist(m, x, z) / m.W;
+      if (u < 2.2) y -= m.D * (u < .45 ? 1 : u < 1 ? 1 - .7 * ease(.45, 1, u) : .3 * (1 - ease(1, 2.2, u)));
+      // dark sand gathers on the floor in ripples across the old flow (transverse ridges, seen in many Mars channels)
+      if (u < .8) y += .32 * (1 - ease(.45, .8, u)) * Math.sin((x * .6 + z * .8) * .72 + Math.sin(x * .05) * 1.5);
     }
     else if (m.kind === 'mesa') {
       // a flat-topped plateau with a ragged outline: level top, a steep layered rim (stop-models.js dresses it in rock),
@@ -122,9 +145,9 @@ function craterIn(ix, iz) {
   if (hash2(ix, iz, 1) > .5) {
     const x = (ix + .2 + .6 * hash2(ix, iz, 2)) * CRATER_CELL, z = (iz + .2 + .6 * hash2(ix, iz, 3)) * CRATER_CELL;
     const R = 2.5 + 9.5 * Math.pow(hash2(ix, iz, 4), 2.4), r = Math.hypot(x, z);
-    let ok = r > 100 && r < 440;
+    let ok = (r > 100 && r < 440) || Math.max(Math.abs(x), Math.abs(z)) > 478;   // none where NASA's grid has its own craters, except past its edge
     for (const [kx, kz, kr] of KEEP_CLEAR) if (Math.hypot(x - kx, z - kz) < kr + R * 1.6) ok = false;
-    for (const m of LANDMARKS) if (Math.hypot(x - m.x, z - m.z) < m.r * (m.kind === 'hill' ? 1.5 : 1.7) + R) ok = false;
+    for (const m of LANDMARKS) if (m.kind === 'channel' ? channelDist(m, x, z) < m.W * 2.4 + R : Math.hypot(x - m.x, z - m.z) < m.r * (m.kind === 'hill' ? 1.5 : 1.7) + R) ok = false;
     for (const s of SITES) if (Math.hypot(x - s.x, z - s.z) < 14 + R * 1.6) ok = false;      // keep the stops on open ground
     if (ok) c = { x, z, R, depth: .2 * R, rim: .08 * R, fresh: hash2(ix, iz, 5) };
   }
@@ -137,7 +160,7 @@ export const craterField = { lift: 0, rim: 0, bowl: 0 };
 export function craterLift(x, z, out = craterField) {
   out.lift = 0; out.rim = 0; out.bowl = 0;
   const r = Math.hypot(x, z);
-  if (r < 85 || r > 460) return 0;
+  if (r < 85 || (r > 460 && Math.max(Math.abs(x), Math.abs(z)) < 450)) return 0;
   const cx = Math.floor(x / CRATER_CELL), cz = Math.floor(z / CRATER_CELL);
   for (let i = cx - 1; i <= cx + 1; i++) for (let j = cz - 1; j <= cz + 1; j++) {
     const c = craterIn(i, j); if (!c) continue;

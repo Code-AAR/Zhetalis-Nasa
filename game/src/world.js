@@ -1,7 +1,8 @@
-import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop } from './landmarks.js';
+import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop, channelFloor } from './landmarks.js';
 import { WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { createMeasuredTerrain } from './measured-terrain.js';
 import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
+import { GroundMarks } from './ground-marks.js';
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
 import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
@@ -70,9 +71,13 @@ function blurred(src,n,k){
 const calmHeights=blurred(measuredHeights,terrainMetadata.n,16);
 const calmTerrain=createMeasuredTerrain(calmHeights,terrainMetadata);
 const calmWeight=(x,z)=>{const t=Math.min(1,Math.max(0,(Math.hypot(x-235,z-235)-150)/130));return 1-t*t*(3-2*t);};
-// The NASA crop covers 960 m. Past its edge the ground fades into gentle invented swells, so the extra map has no streaks.
-const edgeWeight=(x,z)=>{const t=Math.min(1,Math.max(0,(Math.max(Math.abs(x),Math.abs(z))-420)/130));return t*t*(3-2*t);};
-const edgeSwell=(x,z)=>9*(fbm(x*.0065+5,z*.0065-3,3)-.5);
+// The NASA crop covers 960 m. Past its edge (Gusev's outer rim and the cratered highlands beyond) the ground is invented:
+// the regional level from a very smooth copy of the NASA grid, plus rolling hills and worn ridges. The fade ends before
+// the data does (476 m), because past 480 m the grid only repeats its edge row and would draw straight streaks.
+const farTerrain=createMeasuredTerrain(blurred(measuredHeights,terrainMetadata.n,48),terrainMetadata);
+const edgeWeight=(x,z)=>{const t=Math.min(1,Math.max(0,(Math.max(Math.abs(x),Math.abs(z))-400)/76));return t*t*(3-2*t);};
+const ridged=(x,z)=>1-Math.abs(2*fbm(x,z,3)-1);
+const edgeSwell=(x,z)=>farTerrain.height(x,z)+16*(fbm(x*.0048+5,z*.0048-3,4)-.5)+3.5*(ridged(x*.012+2,z*.012+7)-.6);
 const nasaAt=(x,z)=>{const w=calmWeight(x,z);return w<=0?measuredTerrain.height(x,z):measuredTerrain.height(x,z)*(1-w)+calmTerrain.height(x,z)*w;};
 const baseAt=(x,z)=>{const e=edgeWeight(x,z);return e<=0?nasaAt(x,z):nasaAt(x,z)*(1-e)+edgeSwell(x,z)*e;};
 bindBase(baseAt);
@@ -111,10 +116,15 @@ function makeSky(scene) {
     uniforms: {
       zenith: { value: new THREE.Color('#9c6646') }, horizon: { value: new THREE.Color('#dcb08a') },
       halo: { value: new THREE.Color('#f2eee6') }, haloPower: { value: 1 }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, haze: { value: 0 },
+      cloudTime: { value: 0 }, cloudCol: { value: new THREE.Color('#e9e4de') }, cloudAmt: { value: 1 },
     },
     vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
-      uniform vec3 zenith, horizon, halo, sunDir; uniform float haloPower, haze; varying vec3 vDir;
+      uniform vec3 zenith, horizon, halo, sunDir, cloudCol; uniform float haloPower, haze, cloudTime, cloudAmt; varying vec3 vDir;
+      float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
+      float fbm2(vec2 p) { float a = .5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + 17.1; a *= .5; } return s; }
       void main() {
         vec3 d = normalize(vDir);
         float up = clamp(d.y, 0.0, 1.0);
@@ -122,6 +132,14 @@ function makeSky(scene) {
         col = mix(col, horizon * 0.85, clamp(-d.y * 5.0, 0.0, 1.0));            // below the horizon line
         float s = max(dot(d, normalize(sunDir)), 0.0);
         col += halo * (pow(s, 10.0) * 0.45 + pow(s, 80.0) * 0.7) * haloPower;    // wide halo + bright core around the Sun
+        // Thin water-ice clouds, high up and stretched out by the wind, like the wisps NASA's rovers have filmed.
+        // They catch the light after sunset (cloudCol from setTime) and hide in a dust storm.
+        if (d.y > 0.0) {
+          vec2 q = d.xz / (d.y + 0.12) * 1.3 + vec2(cloudTime * .006, cloudTime * .0022);
+          float w = fbm2(q * vec2(1.0, 4.0) + fbm2(q * .7) * 1.6);
+          float c = smoothstep(.6, .86, w) * smoothstep(.03, .3, d.y) * cloudAmt;
+          col = mix(col, cloudCol, c * .3);
+        }
         col = mix(col, horizon, haze * 0.65);                                    // a dust storm flattens everything
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
@@ -225,12 +243,13 @@ function makeTerrain() {
     col.copy(rust).lerp(dusty,fine*(1-gd*.7)+gb*.5).lerp(darkSand,darkMix).lerp(basalt,gd*.45).multiplyScalar(1-.3*gd+.12*gb).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(pale,hollow*.45).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15+(y>6?.12:0),0,.8));
     // Crater floors fill with pale dust and sit in shade; rims and ejecta are darker. Hills show bands of darker and paler rock.
     col.lerp(pale,bowl*.5).multiplyScalar(1-.22*bowl).lerp(basalt,rimW*.35);
+    const inChannel=channelFloor(x,z);if(inChannel>0)col.lerp(darkSand,inChannel*.55).multiplyScalar(1-.12*inChannel);   // dark sand on Ma'adim's channel floor
     const onPlate=plateWeight(x,z);
     if(hillH>1.5&&onPlate<.5){const strata=.5+.5*Math.sin(hillH*1.7+fbm(x*.05,z*.05,2)*3);col.lerp(strata>.55?basalt:dusty,Math.min(.3,hillH/30)*Math.abs(strata-.5)*1.6);}
     // Home Plate's top: pale layered rock under thin dust, with darker sand caught in hollows
     if(onPlate>0)col.lerp(pale,onPlate*.55).lerp(darkSand,onPlate*THREE.MathUtils.clamp((fbm(x*.09+3,z*.09,3)-.52)*3,0,.45));
     col.offsetHSL(0,-.2,-.015);
-  });
+  },(x,z)=>{const g=groundAlbedo(x,z);return g.dark*g.w;});   // last part: how dark NASA says it is, so storm dust can cover it
 }
 
 // Boulders, flat slabs and loose pebbles like the Perseverance photo of Jezero Crater. The stones are lumpy
@@ -543,6 +562,7 @@ export class World {
     this.sev = new Rover(this.scene, (x,z)=>roverSample(x,z).height, this.colliders);
     this.sev.surfaceSample = roverSample;
     this.sevCollider = { x: this.sev.pos.x, z: this.sev.pos.z, r: 2.4, self: true };
+    this.marks = new GroundMarks(this.scene, heightAt, { onBright: z => this.onBrightSoil?.(z) });   // tyre tracks and boot prints (ground-marks.js)
     this.colliders.push(this.sevCollider);
     this.driving = false;
 
@@ -657,7 +677,7 @@ export class World {
     const hab = this.colliders.find(c => c.x === 0 && c.z === 0); if (hab) hab.r = on ? 8.2 : 7;
   }
   setLink(up) { this.outpost.beacon.material.color.set(up ? '#7dffb2' : '#ff4b3a'); this.linkUp = up; }
-  setDust(on) { this.dustOn = on; this.setTime(this.phase); }
+  setDust(on) { if (this.dustOn && !on) this.marks?.clear(); this.buried = 0; this.dustOn = on; this.setTime(this.phase); }   // a storm buries every track
 
   // phase: 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset (one sol = 24.66 Mars hours)
   setTime(phase) {
@@ -674,6 +694,10 @@ export class World {
     u.zenith.value.copy(C(this.dustOn ? '#8a5232' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#3d2c38'), THREE.MathUtils.clamp((1 - day) * 1.2, 0, 1) * 0.8).lerp(C('#020308'), THREE.MathUtils.clamp((1 - day - 0.55) / 0.45, 0, 1));
     u.horizon.value.copy(C(this.dustOn ? '#b5744c' : '#dcb08a')).lerp(C('#b07a5a'), dusk * 0.5).lerp(C('#0d0b12'), 1 - day);
     u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
+    // ice clouds: pale by day, blue-white glow while the Sun is just below the horizon (the clouds are high enough to stay lit), dark at night
+    const glowAfter = THREE.MathUtils.clamp(1 - Math.abs(elev + .1) / .14, 0, 1);
+    u.cloudCol.value.copy(C('#efe9e2')).multiplyScalar(.35 + .65 * day).lerp(C('#a9c4f0'), glowAfter * .8).multiplyScalar(Math.max(day, glowAfter * .9, .06));
+    u.cloudAmt.value = this.dustOn ? 0 : 1;
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
     u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
     this.skyLights.motes.material.opacity = (0.10 * day * day) * (this.dustOn ? 2 : 1);
@@ -710,7 +734,7 @@ export class World {
     const cycle = THREE.MathUtils.lerp(2.2, 3.8, run), before = this.gait;
     if (this.onGround) this.gait += speed * dt / cycle * Math.PI * 2;
     else this.gait += (Math.round(this.gait / Math.PI) * Math.PI - this.gait) * ease(3);   // in the air: legs drift to neutral
-    if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3 && this.onGround) this.onStep?.(run);
+    if (Math.floor(before / Math.PI) !== Math.floor(this.gait / Math.PI) && pace > 0.3 && this.onGround) { this.onStep?.(run); this.marks?.step(this.player.position, this.player.rotation.y); }
     this.swing += (pace - this.swing) * ease(6);                 // the stride grows and shrinks smoothly
     this.runMix = (this.runMix ?? 0) + (run - (this.runMix ?? 0)) * ease(4);
     this.airMix = (this.airMix ?? 0) + ((this.onGround ? 0 : 1) - (this.airMix ?? 0)) * ease(8);
@@ -800,11 +824,17 @@ export class World {
   }
 
   update(dt, controlsActive) {
-    this.time += dt; this.frameDt = dt;
+    this.time += dt; this.frameDt = dt; this.sky.material.uniforms.cloudTime.value = this.time;
     const nearHome = Math.hypot(this.sev.pos.x, this.sev.pos.z) < 32;
     this.roverSurfaceCache.clear();
     this.sev.update(dt, controlsActive ? this.keys : {}, this.driving, nearHome, this.night);
     this.sevCollider.x = this.sev.pos.x; this.sevCollider.z = this.sev.pos.z;
+    this.marks.rover(this.sev);
+    // storm dust on the dark ground (sim.js dustCover), eased so it never pops; the marks fade while a storm blows
+    const cover = this.terrain.userData.dustCover;
+    if (cover) cover.value += ((this.stormDust || 0) - cover.value) * (1 - Math.exp(-dt * .5));
+    if (this.devilTracks) this.devilTracks.material.opacity = 1 - .95 * (cover?.value || 0);
+    if (this.dustOn) this.marks.setBuried(this.buried = Math.min(1, (this.buried || 0) + dt / 25));
     if (this.driving) return this.updateDriving(dt);
     const p = this.player.position, g = this.facts.gravity.value;
     const k = this.keys, running = (k.ShiftLeft || k.ShiftRight) && !this.noRun;   // no running on an empty stomach (main.js sets noRun)

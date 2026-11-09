@@ -31,6 +31,7 @@ import { Lookouts } from './lookouts.js';
 import { Sites } from './sites.js';
 import { DetailCull } from './detail-cull.js';
 import { ZoneWatch } from './resource-zones.js';
+import { Viewpoints } from './viewpoints.js';
 import { Mist } from './mist.js';
 import { Capsule } from './capsule.js';
 import { Greenhouse } from './greenhouse.js';
@@ -168,7 +169,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on rover photos of Mars. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees, about 237 km, squeezed into the middle of a 1,216 m game map, so distances are about 250 times shorter; the outer ground is invented; height differences scaled by 0.015; base apron flattened). Spirit's five stops and the Columbia Hills are placed by hand and drawn larger, so they are much closer than in real life. Light and dark ground inside the measured area follows NASA albedo maps: the Viking Orbiter colour mosaic, scaled to Mars Global Surveyor TES albedo (USGS Astrogeology); the contrast is boosted so you can see it. • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on rover photos of Mars. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees, about 237 km, squeezed into the middle of a 1,216 m game map, so distances are about 250 times shorter; the outer ground is invented; height differences scaled by 0.015; base apron flattened). Spirit's five stops and the Columbia Hills are placed by hand and drawn larger, so they are much closer than in real life. Light and dark ground inside the measured area follows NASA albedo maps: the Viking Orbiter colour mosaic, scaled to Mars Global Surveyor TES albedo (USGS Astrogeology); the contrast is boosted so you can see it. Ma'adim Vallis follows the low line of the same NASA height data; its inner channel and sand ripples are carved a little deeper so you can see them. Its size (700 km long, up to 20 km wide, 2 km deep) is from NASA Mars Odyssey THEMIS. Storm dust, its clean-up by dust devils, and the bright soil under rover tracks follow what NASA saw at Gusev, but happen faster (game balance). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -307,6 +308,20 @@ function buildWorld() {
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
     new DetailCull(world);   // skip drawing parts too small to see from the camera
     new ZoneWatch(world, toast);   // names each mineral zone as you arrive
+    new Viewpoints(world, { seen: outpost.viewpoints || [], onReach: (v, seen) => {   // cairns on high ground (viewpoints.js)
+      outpost.viewpoints = seen; outpost.science += v.points; logFact({ id: v.id, kid: v.kid, source: v.source, url: v.url });
+      toast(`${v.name}: +${v.points} science. ${v.kid.split('. ')[0]}.`, 6000); saveGame();
+    } });
+    // Bright soil hidden under the dust: the first rover track through each salty or silica zone finds it (ground-marks.js)
+    world.marks.found = new Set(outpost.saltFound || []);
+    world.onBrightSoil = z => {
+      outpost.saltFound = [...world.marks.found]; outpost.science += 3;
+      const kid = z.hidden ? 'Hidden salt at Troy! Spirit got stuck here in 2009, and its spinning wheels dug up layers of pale sulfate soil from under the dust.'
+        : z.ore === 'silica' ? 'Your wheels scraped up white silica. In 2007 Spirit\'s broken wheel dragged up soil like this at Gertrude Weise: about 90% silica, a sign of hot springs or steam vents long ago.'
+        : 'Your wheels churned up bright salty soil from under the dust. Spirit found soil like this by accident in 2005 and 2006, when its wheels dug in at Paso Robles, Arad and Tyrone.';
+      logFact({ id: 'bright-' + z.id, kid, source: 'NASA JPL: Spirit rover mission', url: 'https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/' });
+      toast(kid.split('. ')[0] + '. +3 science. Look behind the rover.', 5000); saveGame();
+    };
     new Sites(world, { toast, modal,
       onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
       onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
@@ -1310,7 +1325,7 @@ renderer.setAnimationLoop(() => {
       interior.yaw=ghRoom.yaw;interior.pitch=ghRoom.pitch;interior.vel={...ghRoom.vel};interior.update(0,world.keys,false);
     }
     if (inside && room === ghRoom) ghRoom.draw(colony.s.base, GREENHOUSE.tank, outpost.today.total*outpost.split.life>=1);
-    if (!inside) world.update(dt, !isModalOpen());
+    if (!inside) { world.stormDust = outpost?.dustCover || 0; world.update(dt, !isModalOpen()); }
     construction?.update(inside,room,isModalOpen()||world.cinematic);
     if(!isModalOpen())updateMissionPower(dt);
     if (!paused && !outpost.over) {

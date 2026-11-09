@@ -24,3 +24,10 @@ export const SITES = [
     kid: 'In April 2009 Spirit broke through a thin crust at the edge of a shallow crater, about 8 m wide, and sank into soft sand. It never got out. Spirit\'s last message to Earth came on 22 March 2010.',
     source: 'NASA Photojournal', url: 'https://science.nasa.gov/photojournal/adjusted-local-topography-map-of-spirits-surroundings' },
 ];
+
+// Viewpoint cairns (viewpoints.js) on high ground, where a big real feature is easiest to see.
+export const VIEWPOINTS = [
+  { id: 'vp-maadim', name: "Ma'adim Vallis viewpoint", x: 86, z: 414, look: [140, 385], points: 2,
+    kid: "Look north-east, down into Ma'adim Vallis. The real valley is about 700 km long, up to 20 km wide and 2 km deep. It cuts through Gusev's rim, and scientists think water once ran down it and pooled in the crater. That is why NASA sent Spirit to Gusev.",
+    source: 'NASA Mars Odyssey THEMIS (ASU): Ma\'adim Vallis', url: 'https://themis.asu.edu/zoom-20250423a' },
+];
