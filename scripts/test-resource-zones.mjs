@@ -19,3 +19,10 @@ assert.equal(zoneAt(-235, 40)?.id, 'meteorites');
 const steep = (x, z) => x * 2;                      // a slope everywhere: zones skip rocks they cannot place
 assert.equal(placeDeposits(steep).filter(d => d.zone !== 'starter').length, 0);
 console.log(`resource zones ok (${a.length} rocks)`);
+// A stray double comma in a list leaves a hole, and code that loops over the list then crashes (the big map did).
+import { readFileSync, readdirSync } from 'node:fs';
+for (const f of readdirSync(new URL('../game/src/', import.meta.url)).filter(n => n.endsWith('.js'))) {
+  const src = readFileSync(new URL('../game/src/' + f, import.meta.url), 'utf8');
+  assert.ok(!/[}\]]\s*,\s*,/.test(src), `${f} has a hole in a list (double comma)`);
+}
+console.log('no list holes');

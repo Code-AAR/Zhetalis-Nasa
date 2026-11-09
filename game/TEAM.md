@@ -182,11 +182,11 @@ Auto graphics selects full quality on computers/tablets and Lite on phones; this
 
 ### Mineral zones and three new map spots (9 Nov, Ewan)
 - Each mineral now sits where Spirit found it: `src/resource-zones.js` (zones, starter cache near camp, soft soil). Rocks still renew daily.
-  - Hematite: West Spur (foot of the hills). Sulfate salt (save key `gypsum`): Paso Robles, Arad, Tyrone. Silica: Silica Valley by Home Plate. Carbonate (rare, +10 science): Comanche. Meteorite iron: the meteorite field on the west plain.
+  - Hematite: West Spur (foot of the hills). Sulfate salt (save key `gypsum`): Paso Robles, Arad, Tyrone. Silica: Silica Valley by Home Plate. Carbonate (rare, +10 science): Comanche. Meteorite iron: Allan Hills meteorites on the west plain.
 - Two new minerals, `silica` and `carbonate`. The extra solar panel now costs 2 hematite, 2 silica and 4 parts (silica makes the cover glass).
 - The water plant can bake 3 L of water out of 1 sulfate salt (game balance). The ice pickups are labelled game balance (Gusev is near the equator).
 - Salty soil slows the rover by up to 55% (`softSoil` in `rover.js`). Arriving in a zone shows its name once.
-- New map spots with fact cards (`src/mapstate.js`): Ma'adim Vallis (the channel through the south rim, from the NASA height data), the meteorite field, and the dust devil plain with dark tracks (`buildDustDevilTracks` in `stop-models.js`).
+- New map spots with fact cards (`src/mapstate.js`): Ma'adim Vallis (the channel through the south rim, from the NASA height data), the Allan Hills meteorites (west plain), and the dust devil plain with dark tracks (`buildDustDevilTracks` in `stop-models.js`).
 - Ore fact cards now describe Spirit's finds (`data/mars-facts.json`: gusevHematite, sulfateSalt, gusevMeteorite, silica, carbonate). The old Opportunity cards are still there.
 - Old saves: mined-rock ids from before the move are dropped, and the new minerals start at 0.
 
@@ -199,3 +199,5 @@ Auto graphics selects full quality on computers/tablets and Lite on phones; this
 - The contrast is boosted about three times. Real Gusev only spans albedo 0.22 to 0.26, which you could not see on a screen.
 - The darkest real ground is about 200 m north of camp. The dust devil plain and its tracks moved there to match.
 - If the file fails to load, the old made-up colour patches come back. Nothing breaks.
+- Fixed (9 Nov): a double comma in the map's landmark list left a hole, so the landmark count read "of 15". `test-resource-zones.mjs` now checks every file for this.
+- Renamed the real meteorite spot to "Allan Hills meteorites". Zagyu's survey site near camp is still "Meteorite field", so the map no longer has two places with one name.

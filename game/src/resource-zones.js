@@ -15,7 +15,7 @@ export const ZONES = [
   { id: 'tyrone', name: 'Tyrone', ore: 'gypsum', x: 304, z: 266, r: 12, n: 3, soft: true, tip: 'Salty soil near Home Plate. Soft ground.' },
   { id: 'silica', name: 'Silica Valley', ore: 'silica', x: 312, z: 246, r: 20, n: 5, tip: 'Pale silica, the stuff glass is made from.' },
   { id: 'comanche', name: 'Comanche', ore: 'carbonate', x: 232, z: 205, r: 8, n: 2, tip: 'Rare carbonate rock. Worth a lot of science.' },
-  { id: 'meteorites', name: 'Meteorite field', ore: 'iron', x: -235, z: 40, r: 38, n: 5, tip: 'Iron meteorites stand out on this smooth plain.' },
+  { id: 'meteorites', name: 'Allan Hills meteorites', ore: 'iron', x: -235, z: 40, r: 38, n: 5, tip: 'Iron meteorites stand out on this smooth plain.' },
 ];
 // The first rocks near camp, at the same spots as before (so early quests stay short).
 export const STARTER = [
