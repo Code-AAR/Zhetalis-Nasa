@@ -1,16 +1,19 @@
 // Life outside the walls: the tools you carry, the ores you mine with your pickaxe, trading samples with Earth,
 // and the greenhouses you build and farm. The real science behind each part is in data/mars-facts.json
-// (hematite, gypsum, meteorites, perchlorate soil, NASA's Veggie garden). Numbers marked "game" are balance.
+// (hematite, sulfate salt, silica, carbonate, meteorites, perchlorate soil, NASA's Veggie garden). Numbers marked "game" are balance.
 import * as THREE from 'three';
 import {renewDeposits} from './builder-recipes.js';
+import { placeDeposits, ID_BASE } from './resource-zones.js';
 import { heightAt } from './world.js';
 import { loadModel } from './nasamodels.js';
 
-// Three real Mars minerals that rovers have found.
+// Five real Mars minerals that Spirit found in Gusev Crater (the 'gypsum' key is sulfate salt; kept for old saves).
 export const ORES = {
-  hematite: { name: 'Hematite', color: '#8e98a8', fact: 'hematite', hits: 3, yield: 2, desc: 'An iron mineral. Its little grey "blueberries" formed in water long ago.' },
-  gypsum:   { name: 'Gypsum', color: '#f4efe2', fact: 'gypsum', hits: 2, yield: 2, desc: 'A soft white mineral with water locked inside it.' },
-  iron:     { name: 'Meteorite iron', color: '#7a6f66', fact: 'meteorite', hits: 4, yield: 1, desc: 'Iron and nickel from a meteorite - almost pure metal.' },
+  hematite: { name: 'Hematite', color: '#8e98a8', fact: 'gusevHematite', hits: 3, yield: 2, desc: 'An iron mineral. Spirit found it, with goethite, in Columbia Hills rocks that water once soaked.' },
+  gypsum:   { name: 'Sulfate salt', color: '#efe3c2', fact: 'sulfateSalt', hits: 2, yield: 2, desc: 'Bright, salty soil with water locked inside. The water plant can bake the water out.' },
+  iron:     { name: 'Meteorite iron', color: '#7a6f66', fact: 'gusevMeteorite', hits: 4, yield: 1, desc: 'Iron and nickel from a meteorite - almost pure metal.' },
+  silica:   { name: 'Silica', color: '#e6e1d6', fact: 'silica', hits: 2, yield: 2, desc: 'Almost pure silica, the stuff glass is made from. Solar panels need glass.' },
+  carbonate:{ name: 'Carbonate rock', color: '#9c6b4a', fact: 'carbonate', hits: 3, yield: 1, desc: 'Rock soaked by water that was not acid. Rare, and worth a lot of science.' },
 };
 export const TOOLS = {
   pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'Breaks ore out of rocks (NASA’s Hammer 3D model). Hold it and press Use next to a mineral rock.' },
@@ -42,7 +45,7 @@ export const priceWords = price => Object.entries(price).map(([k, n]) => `${n} $
 export function newColony() {
   return {
     belt: ['pickaxe'], held: 0, locker: ['builder', 'jug'],
-    bag: { hematite: 0, gypsum: 0, iron: 0 }, store: { hematite: 0, gypsum: 0, iron: 0 },
+    bag: { hematite: 0, gypsum: 0, iron: 0, silica: 0, carbonate: 0 }, store: { hematite: 0, gypsum: 0, iron: 0, silica: 0, carbonate: 0 },
     seeds: { lettuce: 2, wheat: 1, potato: 1 },    // Flight manifest for the base grow beds
     tank: 20, jug: 0, ice: 0,                              // litres in the base water tank and in your jug
     farmQuest: {}, greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
@@ -64,27 +67,50 @@ function glint() {
 
 function makeDeposit(ore, rng) {
   const g = new THREE.Group();
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), lam(ore === 'iron' ? '#3d3530' : ore === 'gypsum' ? '#b07a55' : '#7c4a35'));
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), lam(ore === 'iron' ? '#3d3530' : ore === 'gypsum' ? '#b9a07a' : ore === 'silica' ? '#cfc6b4' : ore === 'carbonate' ? '#8a5d42' : '#6f4a3a'));
   rock.scale.set(1.2 + rng() * 0.5, 0.55 + rng() * 0.25, 1 + rng() * 0.4); rock.position.y = 0.35; rock.rotation.y = rng() * 6; g.add(rock);
   if (ore === 'hematite') {
-    // "blueberries": small grey hematite balls sitting on and around the rock (drawn bigger than the real 1-5 mm ones)
-    const berry = new THREE.MeshStandardMaterial({ color: ORES.hematite.color, metalness: 0.55, roughness: 0.4 });
-    for (let i = 0; i < 26; i++) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.05 + rng() * 0.05, 8, 6), berry);
-      const a = rng() * Math.PI * 2, r = 0.3 + rng() * 1.3;
-      b.position.set(Math.cos(a) * r, i < 12 ? 0.62 + rng() * 0.1 : 0.04, Math.sin(a) * r); g.add(b);
+    // a water-altered hill rock: rusty, with grey, slightly shiny hematite grains on its weathered top
+    const grain = new THREE.MeshStandardMaterial({ color: ORES.hematite.color, metalness: 0.55, roughness: 0.4 });
+    for (let i = 0; i < 14; i++) {
+      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.04 + rng() * 0.05, 0), grain);
+      const a = rng() * Math.PI * 2, r = 0.2 + rng() * 0.8;
+      b.position.set(Math.cos(a) * r, 0.6 + rng() * 0.12, Math.sin(a) * r * .8); b.scale.y = .5; g.add(b);
     }
   } else if (ore === 'gypsum') {
-    // bright white veins filling cracks in the rock, like the ones Opportunity found
-    const vein = new THREE.MeshStandardMaterial({ color: '#fbf8ef', emissive: '#ffffff', emissiveIntensity: 0.12, roughness: 0.6 });
+    // sulfate salt: a low crusted mound in a patch of bright yellow-white soil, like Spirit's wheels dug up
+    rock.geometry = new THREE.IcosahedronGeometry(1, 2); rock.material = new THREE.MeshLambertMaterial({ color: '#c4ac85' });
+    rock.scale.set(1.1 + rng() * 0.3, 0.3 + rng() * 0.08, 0.9 + rng() * 0.25); rock.position.y = 0.1;
+    const patch = new THREE.CircleGeometry(1, 14), pp = patch.attributes.position;
+    for (let i = 1; i < pp.count; i++) { const k = 1.1 + rng() * 0.7; pp.setXY(i, pp.getX(i) * k, pp.getY(i) * k); }
+    const soil = new THREE.Mesh(patch, new THREE.MeshLambertMaterial({ color: '#e6d8b4', polygonOffset: true, polygonOffsetFactor: -2 }));
+    soil.rotation.x = -Math.PI / 2; soil.position.y = 0.17; g.add(soil);
+    const crust = lam('#9d7c5f');
+    for (let i = 0; i < 6; i++) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.16 + rng() * 0.14, 0.18 + rng() * 0.14, 0.04, 5), crust);
+      const a = rng() * Math.PI * 2, r = 0.6 + rng() * 0.9; c.position.set(Math.cos(a) * r, 0.2, Math.sin(a) * r); c.rotation.set(rng() * .6, rng() * 3, rng() * .6); g.add(c);
+    }
+  } else if (ore === 'silica') {
+    // pale knobbly nodules of silica-rich rock, in a clump
+    const pale = lam('#e3dccd');
+    for (let i = 0; i < 7; i++) {
+      const n = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22 + rng() * 0.2, 1), pale);
+      const a = i * 2.4, r = i ? 0.45 + rng() * 0.25 : 0; n.position.set(Math.cos(a) * r, 0.55 + rng() * 0.15, Math.sin(a) * r); n.scale.y = .75; g.add(n);
+    }
+  } else if (ore === 'carbonate') {
+    // Comanche-style rock: brownish and grainy, with thin pale fins where carbonate filled the cracks
+    const fin = lam('#d8c3a0');
     for (let i = 0; i < 5; i++) {
-      const v = new THREE.Mesh(new THREE.BoxGeometry(1.9 + rng(), 0.06, 0.08 + rng() * 0.06), vein);
-      v.position.set((rng() - 0.5) * 0.6, 0.25 + rng() * 0.4, (rng() - 0.5) * 0.9); v.rotation.set(rng() * 0.6, rng() * 3, rng() * 0.5); g.add(v);
+      const f = new THREE.Mesh(new THREE.BoxGeometry(0.9 + rng() * 0.6, 0.22 + rng() * 0.12, 0.035), fin);
+      f.position.set((rng() - 0.5) * 0.7, 0.68 + rng() * 0.08, (rng() - 0.5) * 0.7); f.rotation.set(0, rng() * 3, (rng() - .5) * .3); g.add(f);
     }
   } else {
-    // a dark iron-nickel meteorite with a shiny worn top, half buried in the sand
-    rock.material = new THREE.MeshStandardMaterial({ color: '#4a423c', metalness: 0.7, roughness: 0.38 });
-    rock.scale.set(0.9, 0.7, 0.8); rock.position.y = 0.3;
+    // a dark iron-nickel meteorite: smooth, with thumbprint dents and a shiny worn top, half buried in the sand
+    const geo = new THREE.IcosahedronGeometry(1, 2), p = geo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const dent = Math.max(0, Math.sin(v.x * 7.1 + 1) * Math.sin(v.y * 6.3) * Math.sin(v.z * 5.7 + 2)) * .16; v.multiplyScalar(1 - dent); p.setXYZ(i, v.x, v.y, v.z); }
+    geo.computeVertexNormals();
+    rock.geometry = geo; rock.material = new THREE.MeshStandardMaterial({ color: '#4a423c', metalness: 0.75, roughness: 0.34 });
+    rock.scale.set(0.95, 0.68, 0.8); rock.position.y = 0.3;
   }
   const spark = glint(); spark.position.y = 1.1; g.add(spark);
   g.userData.spark = spark;
@@ -222,15 +248,13 @@ export function makeTool(kind, forView = false) {
 export class Colony {
   constructor(world, state = newColony()) {
     this.world = world; this.s = state;
-    // mineral rocks: the same places for every player (Gusev Crater's floor is basalt, so they are scattered)
+    // mineral rocks: the same places for every player. Each kind sits where Spirit found it (resource-zones.js),
+    // with a small starter cache near camp.
     let seed = 777; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    this.tidy();
     this.deposits = [];
-    const kinds = [...Array(12).fill('hematite'), ...Array(9).fill('gypsum'), ...Array(5).fill('iron')];
-    kinds.forEach((ore, id) => {
-      let x, z, tries = 0;
-      do { const cluster=Math.floor(id/3),a=cluster*2.3999632297+(rng()-.5)*.24,d=42+(cluster%4)*24+rng()*16; x = Math.cos(a) * d+(rng()-.5)*14; z = Math.sin(a) * d+(rng()-.5)*14; tries++; }
-      while (tries < 120 && (this.deposits.some(d=>Math.hypot(d.x-x,d.z-z)<3)||heightAt(x, z) > 38 || ((x>38&&x<61&&z>-24&&z<-5)||(x>-38&&x<24&&z>15&&z<54)) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
-      if(tries>=120) return;
+    const blocked = (x, z) => (x > 38 && x < 61 && z > -24 && z < -5) || (x > -38 && x < 24 && z > 15 && z < 54) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3);
+    placeDeposits(heightAt, blocked).forEach(({ id, ore, x, z, zone }) => {
       const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
       const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
       group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);
@@ -242,15 +266,23 @@ export class Colony {
       }
       group.position.y=support-.08;
       group.updateMatrixWorld(true);
-      this.deposits.push({ id, ore, x, z, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
+      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
     });
     for(const d of this.deposits){d.startPosition=d.group.position.clone();d.startQuaternion=d.group.quaternion.clone();d.startTop=d.collider.top;}
     this.restore();
     world.extraTargets = p => this.targets(p);
   }
 
+  // Older saves lack the newer minerals, and their mined-rock ids point at rocks that moved to their zones (Nov 2026).
+  tidy() {
+    for (const k of ORE_KEYS) { this.s.bag[k] ??= 0; this.s.store[k] ??= 0; }
+    this.s.mined = (this.s.mined || []).filter(id => id >= ID_BASE);
+    for (const id of Object.keys(this.s.hits || {})) if (Number(id) < ID_BASE) delete this.s.hits[id];
+  }
+
   // Rebuild the 3D scene from the saved state (also used after loading a save).
   restore() {
+    this.tidy();
     for (const d of this.deposits) {
       const gone = this.s.mined.includes(d.id);
       const index=this.world.colliders.indexOf(d.collider);
@@ -353,8 +385,8 @@ export class Colony {
   }
   // A scientist on Earth asks for particular samples, for a bonus. A new request comes every few sols.
   newRequest(sol, rng = Math.random) {
-    const ore = ORE_KEYS[Math.floor(rng() * ORE_KEYS.length)], n = ore === 'iron' ? 1 : 2 + Math.floor(rng() * 2);
-    const who = { hematite: 'A geologist studying ancient water', gypsum: 'A team looking for signs of past life', iron: 'A meteorite expert' }[ore];
+    const ore = ORE_KEYS[Math.floor(rng() * ORE_KEYS.length)], n = ore === 'iron' || ore === 'carbonate' ? 1 : 2 + Math.floor(rng() * 2);
+    const who = { hematite: 'A geologist studying ancient water', gypsum: 'A team studying water on Mars', iron: 'A meteorite expert', silica: 'A team testing glass made on Mars', carbonate: 'A team looking for signs of past life' }[ore];
     this.s.request = { ore, n, who, until: sol + 8, reward: { science: 15 * n, seeds: { [['lettuce', 'wheat', 'potato'][Math.floor(rng() * 3)]]: 1 } } };
   }
 

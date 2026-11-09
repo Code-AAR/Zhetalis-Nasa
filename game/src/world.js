@@ -402,11 +402,11 @@ function makePickup(kind) {
   body.geometry.computeBoundingBox();
   body.castShadow = true; body.position.y = -body.geometry.boundingBox.min.y; g.add(body);
   // a soft glowing column that fades out upward (a hard 40 m line looked like a glitch in the sky)
-  const beamGeo = new THREE.CylinderGeometry(0.03, 0.26, 16, 10, 6, true), bp = beamGeo.attributes.position, ba = new Float32Array(bp.count * 4);
-  for (let i = 0; i < bp.count; i++) { const up = (bp.getY(i) + 8) / 16; ba.set([1, 1, 1, Math.pow(1 - up, 1.8)], i * 4); }
+  const beamGeo = new THREE.CylinderGeometry(0.03, 0.24, 10, 10, 6, true), bp = beamGeo.attributes.position, ba = new Float32Array(bp.count * 4);
+  for (let i = 0; i < bp.count; i++) { const up = (bp.getY(i) + 5) / 10; ba.set([1, 1, 1, Math.pow(1 - up, 2)], i * 4); }
   beamGeo.setAttribute('color', new THREE.BufferAttribute(ba, 4));
-  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: looks.beam, vertexColors: true, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-  beam.position.y = 8; g.add(beam);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: looks.beam, vertexColors: true, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  beam.position.y = 5; g.add(beam);
   g.userData.body = body;
   return g;
 }

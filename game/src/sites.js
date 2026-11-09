@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { heightAt } from './world.js';
 import { SITES } from './site-data.js';
-import { buildStop } from './stop-models.js';
+import { buildStop, buildDustDevilTracks } from './stop-models.js';
 
 const M = { pole: new THREE.MeshStandardMaterial({ color: '#cfc8b8', roughness: .6 }), flagOff: new THREE.MeshStandardMaterial({ color: '#d8742a', roughness: .8, side: THREE.DoubleSide }), flagOn: new THREE.MeshStandardMaterial({ color: '#3f9b62', roughness: .8, side: THREE.DoubleSide }) };
 const DETAIL_RANGE = 230;            // past this, only the flag, the label and Home Plate's rim are drawn
@@ -74,7 +74,9 @@ export class Sites {
 class DustDevils {
   constructor(world, sites) {
     this.world = world; this.sites = sites; this.t = 0; this.told = false;
-    this.anchors = [[-120, 150, 0.2], [60, -190, 2.1], [250, 40, 4.0]];
+    // dust devils wander around these spots; two of them work the dust devil plain to the north, with its dark tracks
+    this.anchors = [[-120, 150, 0.2], [-60, -245, 2.1], [250, 40, 4.0], [-20, -265, 5.3]];
+    world.scene.add(buildDustDevilTracks(heightAt, -60, -245));
     this.N = 110; this.devils = this.anchors.map(() => {
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(this.N * 3), 3));
       const p = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#c9a27c', size: 1.5, transparent: true, opacity: .3, depthWrite: false, fog: true }));

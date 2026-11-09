@@ -2,8 +2,9 @@
 export const RECIPES={
  greenhouse:{name:'Hydroponic greenhouse',cost:{hematite:3,iron:1,parts:2},tier:0,description:'Place a new grow house on clear, flat ground.'},
  battery:{name:'Extra battery',cost:{hematite:2,gypsum:1,iron:1,parts:3},tier:0,description:'Add storage to the commissioned power field.'},
- panel:{name:'Extra solar panel',cost:{hematite:2,iron:2,parts:4},tier:1,description:'Expand the commissioned solar array.'}
+ panel:{name:'Extra solar panel',cost:{hematite:2,silica:2,parts:4},tier:1,description:'Expand the commissioned solar array. Silica makes the cover glass.'}
 };
+const NAMES={hematite:'hematite',gypsum:'sulfate salt',iron:'meteorite iron',silica:'silica',carbonate:'carbonate rock'};
 export function builderQuest(o,c){
  const key=c.buildPlan,r=RECIPES[key];if(!r)return null;
  const base={id:'build-'+key,title:'Build: '+r.name};
@@ -16,7 +17,7 @@ export function builderQuest(o,c){
  for(const [ore,n] of Object.entries(r.cost)){
   if(ore==='parts')continue;
   const stored=c.store[ore]||0,bag=c.bag[ore]||0;
-  if(stored+bag<n)return result(`Mine ${n-stored-bag} more ${ore} (${stored+bag}/${n})`,'build-ore',ore);
+  if(stored+bag<n)return result(`Mine ${n-stored-bag} more ${NAMES[ore]||ore} (${stored+bag}/${n})`,'build-ore',ore);
  }
  if(Object.entries(r.cost).some(([k,n])=>k!=='parts'&&(c.store[k]||0)<n))return result('Unload your sample bag at the storage locker','locker');
  if(o.parts<r.cost.parts)return result(`Collect ${r.cost.parts-o.parts} more parts from supply pods or salvage`,'build-parts');

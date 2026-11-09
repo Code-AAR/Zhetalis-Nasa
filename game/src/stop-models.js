@@ -408,3 +408,16 @@ export function buildStop(s, surface) {
   add(solid, SOLID, 'rock'); add(metal, METAL, 'metal'); add(cliff, CLIFF, 'cliff'); add(marks, MARKS, 'ground marks');
   return g;
 }
+
+// Dust devil tracks: long dark scribbles on the plain where dust devils swept the bright dust off darker ground.
+// Like the streaks seen from orbit, most run north-west to south-east. One mesh for the whole plain.
+export function buildDustDevilTracks(surface, cx, cz, { n = 14, spread = 70 } = {}) {
+  const list = [], dark = arr(col('#5a4234'));
+  for (let k = 0; k < n; k++) {
+    const sx = cx + (hash(k, 1) - .5) * spread * 1.6, sz = cz + (hash(k, 2) - .5) * spread * 1.2, L = 50 + hash(k, 3) * 90, dir = Math.PI / 4 + (hash(k, 4) - .5) * .5;
+    const pts = []; for (let i = 0; i <= 8; i++) { const t = i / 8 - .5, w = Math.sin(t * 5 + k) * 6 * hash(k, 5); pts.push([sx + Math.cos(dir) * L * t - Math.sin(dir) * w, sz + Math.sin(dir) * L * t + Math.cos(dir) * w]); }
+    list.push(ribbon(pts, surface, { width: 1.6 + hash(k, 6) * 3.2, lift: .05, colour: () => dark, alpha: .28 + hash(k, 7) * .14, fadeStart: .15, fadeEnd: .15, edgeSoft: .7 }));
+  }
+  const mesh = new THREE.Mesh(mergeGeometries(list, false), MARKS); mesh.name = 'dust devil tracks'; mesh.receiveShadow = true; mesh.renderOrder = 1;
+  return mesh;
+}

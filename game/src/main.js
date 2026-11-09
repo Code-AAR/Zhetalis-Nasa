@@ -30,6 +30,7 @@ import { Minimap } from './minimap.js';
 import { Lookouts } from './lookouts.js';
 import { Sites } from './sites.js';
 import { DetailCull } from './detail-cull.js';
+import { ZoneWatch } from './resource-zones.js';
 import { Mist } from './mist.js';
 import { Capsule } from './capsule.js';
 import { Greenhouse } from './greenhouse.js';
@@ -305,6 +306,7 @@ function buildWorld() {
     setupMissionHud();syncPowerHardware();
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
     new DetailCull(world);   // skip drawing parts too small to see from the camera
+    new ZoneWatch(world, toast);   // names each mineral zone as you arrive
     new Sites(world, { toast, modal,
       onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
       onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
@@ -606,22 +608,25 @@ function soilLayerReport() {
 // The water plant: dirty ice → melt and filter → clean water → split by electrolysis → oxygen.
 const ICE_TO_WATER = 0.9;   // game: 10% of what you dig up is dust and grit the filter takes out
 const O2_PER_L = 0.89;      // real: splitting 1 L (1 kg) of water gives 0.89 kg of oxygen
+const SALT_TO_WATER = 3;    // game balance: litres baked out of one sulfate salt sample
 function openWaterPlant() {
   const s = colony.s; s.ice = s.ice || 0;
   modal({ pause: false, title: '💧 The water plant', html: `
     <p>Water is life on Mars: you drink it, plants drink it, and you can even <b>breathe</b> it - after you split it.</p>
     <div class="forecast stock">
-      <div>🧊 Dirty ice: <b>${s.ice.toFixed(0)} kg</b><small>collect ice outside</small></div>
+      <div>🧊 Dirty ice: <b>${s.ice.toFixed(0)} kg</b><small>collect ice outside (game balance: Gusev is near the equator, where ice does not last at the surface)</small></div>
       <div>💧 Clean water: <b>${s.tank.toFixed(0)} L</b><small>for greenhouses and oxygen</small></div>
       <div>🫁 Oxygen: <b>${outpost.o2.toFixed(1)} kg</b><small>the crew breathes ${outpost.o2Need.toFixed(1)} kg a sol</small></div>
     </div>
     <div class="water-steps">
       <button data-melt ${s.ice <= 0 ? 'disabled' : ''}>🔥 1. Melt and filter all the ice<small>Heat melts it, a filter removes the dust and grit. ${s.ice.toFixed(0)} kg of ice → ${(s.ice * ICE_TO_WATER).toFixed(0)} L of clean water.</small></button>
+      <button data-salt ${!(s.store.gypsum > 0) ? 'disabled' : ''}>Bake water out of 1 sulfate salt<small>The salt holds water inside its crystals. Heating 1 sample gives ${SALT_TO_WATER} L (game balance). You have ${s.store.gypsum || 0}.</small></button>
       <button data-split ${s.tank < 5 ? 'disabled' : ''}>⚡ 2. Split 5 L of water into oxygen<small>Electrolysis: 5 L of water → ${(5 * O2_PER_L).toFixed(1)} kg of oxygen (and hydrogen).</small></button>
     </div>
     ${factHTML(F.electrolysis)}${factHTML(F.waterRecovery)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box');
   box.querySelector('[data-melt]').onclick = () => { const l = s.ice * ICE_TO_WATER; s.tank += l; s.ice = 0; if(l>0)(s.farmQuest??={}).waterMade=true; saveGame(); toast(`💧 +${l.toFixed(1)} L into the base tank · now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
+  box.querySelector('[data-salt]').onclick = () => { if (!(s.store.gypsum > 0)) return; s.store.gypsum--; s.tank += SALT_TO_WATER; (s.farmQuest ??= {}).waterMade = true; saveGame(); toast(`+${SALT_TO_WATER} L of water from sulfate salt · base tank now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
   box.querySelector('[data-split]').onclick = () => { s.tank -= 5; outpost.o2 += 5 * O2_PER_L; saveGame(); toast(`🫁 +${(5 * O2_PER_L).toFixed(1)} kg oxygen · base tank now ${s.tank.toFixed(1)} L.`); openWaterPlant(); };
 }
 
@@ -641,6 +646,7 @@ function mine(dep) {
     if (r.full) return toast(`🎒 Your sample bag is full (${BAG}). Unload it at the storage locker inside the base.`);
     if (!r.broke) return toast(`⛏ ${o.name}: ${r.left} more swing${r.left === 1 ? '' : 's'}`, 900);
     toast(`🪨 +${r.got} ${o.name.toLowerCase()} in your sample bag (${colony.bagCount()}/${BAG})`);
+    if (dep.ore === 'carbonate') { outpost.science += 10; toast('Carbonate rock: +10 science. It formed in water that was not acid.', 4500); }
     if (r.firstTime) modal({ pause: false, title: `🪨 You found ${o.name.toLowerCase()}!`, html: `<p>${o.desc}</p>${factHTML(F[o.fact])}<p>Carry samples to the <b>storage locker</b> inside the base. You can build with them, or trade them with Earth for seeds and parts.</p>` });
   });
 }

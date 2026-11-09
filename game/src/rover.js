@@ -7,6 +7,7 @@
 // outpost. Inside, your suit refills from the cabin air, and the walls block some radiation.
 import { WORLD_EXTENT } from './chunk-plan.js';
 import { driftLift } from './landmarks.js';
+import { softSoil } from './resource-zones.js';
 import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
 import { moveOverSurface, ROVER_MOTION } from './rover-terrain.js';
@@ -94,7 +95,9 @@ export class Rover {
       steer = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
     }
     // soft sand in the wind-blown drifts drags the wheels: up to 30 percent slower on the crest of a drift
-    const drag = 1 - .3 * Math.min(1, driftLift(this.pos.x, this.pos.z) / .42);
+    // and the bright salty soil (Paso Robles, Arad, Tyrone) is softer still: up to 55 percent slower (game balance)
+    this.softSoil = softSoil(this.pos.x, this.pos.z);
+    const drag = (1 - .3 * Math.min(1, driftLift(this.pos.x, this.pos.z) / .42)) * (1 - .55 * this.softSoil);
     const max = (this.battery > 0 ? MAX : 1.2) * drag;       // flat battery: crawl home on the last of it
     if (throttle > 0) this.speed = Math.min(max, this.speed + (this.speed < 0 ? BRAKE : ACCEL) * dt);
     else if (throttle < 0) this.speed = Math.max(-REVERSE, this.speed - (this.speed > 0 ? BRAKE : ACCEL) * dt);

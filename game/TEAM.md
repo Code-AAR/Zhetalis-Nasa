@@ -179,3 +179,13 @@ Auto graphics selects full quality on computers/tablets and Lite on phones; this
 - Each stop is merged into a few meshes. Past 230 m only the flag, sign and Home Plate's rim are drawn.
 - `src/detail-cull.js` skips drawing any mesh smaller than about 3 px on screen. It switches render layers and never touches `.visible`. It cut draw calls by 35 to 47% away from the base.
 - No emoji on screen: `keepScreenEmojiFree()` in `src/ui.js` strips them from all page text. Arrows like ↗ and ▶ stay.
+
+### Mineral zones and three new map spots (9 Nov, Ewan)
+- Each mineral now sits where Spirit found it: `src/resource-zones.js` (zones, starter cache near camp, soft soil). Rocks still renew daily.
+  - Hematite: West Spur (foot of the hills). Sulfate salt (save key `gypsum`): Paso Robles, Arad, Tyrone. Silica: Silica Valley by Home Plate. Carbonate (rare, +10 science): Comanche. Meteorite iron: the meteorite field on the west plain.
+- Two new minerals, `silica` and `carbonate`. The extra solar panel now costs 2 hematite, 2 silica and 4 parts (silica makes the cover glass).
+- The water plant can bake 3 L of water out of 1 sulfate salt (game balance). The ice pickups are labelled game balance (Gusev is near the equator).
+- Salty soil slows the rover by up to 55% (`softSoil` in `rover.js`). Arriving in a zone shows its name once.
+- New map spots with fact cards (`src/mapstate.js`): Ma'adim Vallis (the channel through the south rim, from the NASA height data), the meteorite field, and the dust devil plain with dark tracks (`buildDustDevilTracks` in `stop-models.js`).
+- Ore fact cards now describe Spirit's finds (`data/mars-facts.json`: gusevHematite, sulfateSalt, gusevMeteorite, silica, carbonate). The old Opportunity cards are still there.
+- Old saves: mined-rock ids from before the move are dropped, and the new minerals start at 0.

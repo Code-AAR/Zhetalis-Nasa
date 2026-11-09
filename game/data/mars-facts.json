@@ -392,6 +392,36 @@
       "source": "Research paper on regolith shielding, JGR Planets (AGU), 2019",
       "url": "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019JE006246",
       "short": "Shielding depth matters. Engineers test how much is enough."
+    },
+    "gusevHematite": {
+      "kid": "In 2004 Spirit reached the Columbia Hills and tested a rock called Clovis. It held goethite, an iron mineral that only forms with water. Rocks in the hills also held hematite. Iron like this could one day help build on Mars.",
+      "source": "NASA JPL Photojournal (PIA07104)",
+      "url": "https://photojournal.jpl.nasa.gov/catalog/PIA07104",
+      "short": "Spirit found water-made iron minerals in the hills."
+    },
+    "sulfateSalt": {
+      "kid": "In 2005 Spirit's wheels dug up bright soil on Husband Hill, named Paso Robles. It was the saltiest soil found on Mars so far, mostly an iron sulfate salt with water locked inside. Spirit found more at Arad and Tyrone. This soil is soft, so rover wheels slip in it.",
+      "source": "NASA: Bright soil near McCool, salty deja vu",
+      "url": "https://www.nasa.gov/image-article/bright-soil-near-mccool-salty-deja-vu/",
+      "short": "Salty soil in Gusev holds water inside it."
+    },
+    "gusevMeteorite": {
+      "kid": "In 2006 Spirit spotted two smooth, shiny rocks and named them Allan Hills and Zhong Shan. They looked like iron meteorites: iron and nickel that fell from space. Meteorites are easiest to spot on smooth, flat ground.",
+      "source": "NASA JPL Photojournal (PIA08577)",
+      "url": "https://photojournal.jpl.nasa.gov/catalog/PIA08577",
+      "short": "Spirit spotted two likely iron meteorites."
+    },
+    "silica": {
+      "kid": "Next to Home Plate, Spirit's dragging wheel dug up soil that was about 90 percent silica. Silica is what glass is made from. On Earth, soil like this forms at hot springs and steam vents.",
+      "source": "NASA JPL",
+      "url": "https://www.jpl.nasa.gov/news/mars-rover-spirit-unearths-surprise-evidence-of-wetter-past/",
+      "short": "Silica makes glass, and hints at hot water."
+    },
+    "carbonate": {
+      "kid": "Spirit studied a rock outcrop called Comanche in 2005. Years later, scientists worked out that it held 16 to 34 percent carbonate. Carbonate forms in water that is not acid, which is kinder to life.",
+      "source": "Arizona State University",
+      "url": "https://news.asu.edu/content/asu-instrument-helps-identify-rare-rock-mars",
+      "short": "Comanche's carbonate points to gentle, neutral water."
     }
   },
   "tuned": {
