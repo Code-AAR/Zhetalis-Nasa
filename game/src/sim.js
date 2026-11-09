@@ -10,6 +10,9 @@ export const DIFFICULTY = {
 // Where you land changes the game. Each site is a real place on Mars; the numbers (solar, ice, dose...) are
 // game balance that follow the real trade-off described in `why` - they are not measurements.
 export const SITES = {
+  gusev:  { name: 'Gusev Crater', short: 'Gusev', icon: '', solar: 1.05, ice: 0.6, dose: 1, science: 1.3, heater: 1, dust: 1.05, parts: 0,
+    blurb: 'Where Spirit landed in 2004. The ground in this game is built from NASA height data of this crater.',
+    why: "Gusev may once have held a lake. Spirit found signs of hot water in the hills nearby. Ice is deep near the equator." },
   plains: { name: 'Arcadia Planitia', short: 'Plains', icon: '🟫', solar: 1, ice: 1, dose: 1, science: 1, heater: 1, dust: 1, parts: 0,
     blurb: 'Flat ground with ice just under the dust. A good place to start.',
     why: "Orbiters found water ice just under the surface of these northern plains, and the flat ground is easy to build on." },

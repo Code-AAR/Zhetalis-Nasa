@@ -5,6 +5,15 @@ export const $ = s => document.querySelector(s);
 // dropped here to keep the screen looking like a game rather than a chat.
 export const plain = t => String(t).replace(/^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D]|\s)+/u, '');
 export const noEmoji = t => String(t).replace(/(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u200D])+\s?/gu, '').trim();   // for HUD lines
+// Team rule: no emoji anywhere on the game screen. Lots of older text still has them, so one watcher strips them
+// from every bit of page text as it appears (arrows like the ones on menu buttons are kept). The 3D view is untouched.
+const EMOJI = /(?:\p{Emoji_Presentation}|[\u{1F300}-\u{1FAFF}]|\p{Extended_Pictographic}\uFE0F|[\u26CF\u2692\u2699\u26A0\u2622\u2696\u26F0\u2604\u26CF\u2694\u26F1\u2620])[\uFE0F\u200D]*\s?/gu;
+export const stripEmoji = t => t.replace(EMOJI, '');
+export function keepScreenEmojiFree(root = document.body) {
+  const fix = n => { if (n.nodeType === 3) { const v = n.nodeValue, w = stripEmoji(v); if (w !== v) n.nodeValue = w; } else if (n.nodeType === 1 && !/^(SCRIPT|STYLE|CANVAS)$/.test(n.nodeName)) { const tw = document.createTreeWalker(n, NodeFilter.SHOW_TEXT); let t; while ((t = tw.nextNode())) fix(t); } };
+  fix(root);
+  new MutationObserver(list => { for (const m of list) { if (m.type === 'characterData') fix(m.target); else for (const n of m.addedNodes) fix(n); } }).observe(root, { childList: true, subtree: true, characterData: true });
+}
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function factHTML(f, log = true, open = false) {

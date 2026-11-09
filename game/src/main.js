@@ -29,6 +29,7 @@ import { MapState } from './mapstate.js';
 import { Minimap } from './minimap.js';
 import { Lookouts } from './lookouts.js';
 import { Sites } from './sites.js';
+import { DetailCull } from './detail-cull.js';
 import { Mist } from './mist.js';
 import { Capsule } from './capsule.js';
 import { Greenhouse } from './greenhouse.js';
@@ -39,7 +40,7 @@ import { playLanding, playStorm, placeLander } from './cutscenes.js';
 import { devConsole } from './devconsole.js';
 import { resetGame, earn, openPatches, patchCount, PATCHES, setPatchContext, setSoundGate, setDuckHook } from './patches.js';
 import { loadRoverPhotos, loadEarthToday, loadMarsMap, loadMarsToday, dateWords } from './nasaimages.js';
-import { noEmoji, $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
+import { noEmoji, keepScreenEmojiFree, $, modal, toast, meter, alerts, factHTML, sourcesHTML, isModalOpen, isPaused, say, logFact, onLog, logbook } from './ui.js';
 import { pickQuestions, runQuiz, badgeFor } from './quiz.js';
 import { loadModel } from './nasamodels.js';
 import { artReady, artUrl, hasArt, artHTML, speakerHTML, artCredit, storyPanels, anyArt } from './art.js';
@@ -76,7 +77,8 @@ function openLogbook() {
 let weather = { mode: 'archived', flares: [], sources: [] };
 const weatherReady = loadSpaceWeather().then(w => { weather = w; showSun(); });
 
-const state = { phase: 'title', difficulty: 'normal', speed: 1, site: 'plains', age: 'older' };
+const state = { phase: 'title', difficulty: 'normal', speed: 1, site: 'gusev', age: 'older' };
+keepScreenEmojiFree();   // no emoji on the game screen (team rule)
 $('#map-btn').onclick = () => { modal({title:'Surface operations map',html:fieldMapHTML(world)+farmQuestHTML(colony?.s)}); mountFieldMap(world); };
 let colony, marsNow = null, monitorTipShown = false, toolbarKey = '', visorKey = '';
 let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
@@ -98,6 +100,7 @@ for (const [key, d] of Object.entries(DIFFICULTY)) {
     $('#mission-summary').textContent = d.blurb;
   };
   diffBox.appendChild(b);
+  if (key === state.difficulty) $('#mission-summary').textContent = d.blurb;   // the line under the cards matches the chosen mission from the start
 }
 
 // Player age remains a title-screen preference; landing is chosen on approach.
@@ -133,7 +136,7 @@ $('#howto').onclick = () => modal({ title: 'How to play', html: `
   <p>At an airlock, aim at the green handle and ${keyWord('press E','tap Use')}. With your pickaxe equipped, aim at a sparkling ore deposit and ${keyWord('click to strike','tap Use to strike')}.</p>
   <p>Inside the outpost, walk to the <b>power console</b> to split your power between:</p>
   <p>🫁 <b>Life support</b> - makes oxygen and powers the grow lights.<br>📡 <b>Talk to Earth</b> - sends your science home and brings supply pods.<br>🔬 <b>Science</b> - when Earth receives enough, its engineers radio you new <b>upgrade designs</b>.<br>🛡 <b>Shielding</b> - protects you from radiation, especially during solar storms.</p>
-  <p>📍 <b>Where you land matters.</b> The ice plains are the easy start. The pole has lots of ice but weak sunlight and cold nights. Jezero Crater is best for science but has little ice. A lava tube blocks radiation but is hard to build in.</p>
+  <p>📍 <b>Where you land matters.</b> Gusev Crater is where Spirit landed, and the ground in this game is built from it. The ice plains are the easy start. The pole has lots of ice but weak sunlight and cold nights. Jezero Crater is best for science but has little ice. A lava tube blocks radiation but is hard to build in.</p>
   <p>🧊 Collect ice outside, then use the <b>water plant</b> inside: melt and filter the ice into clean water, and split water into oxygen. Pile <b>layers of Mars soil</b> on the outpost at the workbench - you decide how thick is thick enough.</p>
   <p><b>Rations</b> (the packs at the bottom) go down as you walk, run and jump. Your helmet stays on outside, so you can only eat inside the outpost or the rover: ${keyWord('hold <b>F</b>', 'hold <b>Eat</b>')}. Greenhouse food keeps you going longer than freeze-dried packs. With three packs or fewer you can't run, and with none you slow down and breathe harder.</p>
   <p>Outside, the <b>ring next to you</b> is your suit air. Running uses it faster. Head back in before it turns red.</p>
@@ -164,7 +167,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees compressed into the middle of a 1,216 m game map; the outer ground is invented; height differences scaled by 0.015; base apron flattened). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on rover photos of Mars. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees, about 237 km, squeezed into the middle of a 1,216 m game map, so distances are about 250 times shorter; the outer ground is invented; height differences scaled by 0.015; base apron flattened). Spirit's five stops and the Columbia Hills are placed by hand and drawn larger, so they are much closer than in real life. • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -301,6 +304,7 @@ function buildWorld() {
     construction = new Construction(world,interior,{state:()=>outpost,colony:()=>colony,save:saveGame,sync:syncPowerHardware,advance:advancePower,guide:zhetela});
     setupMissionHud();syncPowerHardware();
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
+    new DetailCull(world);   // skip drawing parts too small to see from the camera
     new Sites(world, { toast, modal,
       onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
       onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
@@ -338,7 +342,8 @@ async function arrive() {
   const ready = await waitForBase(world.ready);
   if (!ready) return;
   setSound({ scene: 'arrival' });
-  const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>playLanding(world)});
+  let landingFilm = null;
+  const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>{landingFilm = playLanding(world);}});
   if (!selectedSite) { location.reload(); return; }
   state.site = selectedSite;
   outpost.site = selectedSite;
@@ -348,14 +353,14 @@ async function arrive() {
   setSound({ scene: 'mars' });
   await weatherReady;
   state.phase = 'mars';
+  await landingFilm?.catch?.(() => {});        // let the landing film finish before the welcome box opens
   $('#hud').classList.remove('hidden');
   phoneTips();
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
-    <p>Collect the landed power kits and rations from the habitat locker. Follow the arrow to assemble and deploy your equipment.</p>
-    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}. Your lander supplies startup power.</p>
-    <p>Landing scenario: <b>${outpost.s.name}</b>. ${outpost.s.why} All scenarios use the same scaled MOLA Gusev terrain. It is measured regional relief with a flattened training base, not a survey of the selected landing region.</p>
-    <p>Collect ice and process it at the water plant in the greenhouse service room.</p><p>Use the map to find survey towers. ${keyWord('Hold F','Hold Eat')} indoors or in the rover to eat; greenhouse meals keep you full longer.</p>`,
+    <p><b>First job: get the power on.</b> Take the power kits from the habitat locker, then follow the arrow.</p>
+    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}.</p>
+    <p>You landed at <b>${outpost.s.name}</b>. ${outpost.s.why}${outpost.site === 'gusev' ? '' : ' The ground you walk on is Gusev Crater, used for training.'}</p>`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
 

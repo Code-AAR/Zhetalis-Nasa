@@ -20,8 +20,25 @@ export const LANDMARKS = [
   { id: 'troy', name: 'Troy', kind: 'crater', x: 215, z: 262, r: 5, depth: .9, rim: .25,
     tip: 'Troy, beside a shallow crater about 8 m wide. In 2009 Spirit broke through its crust and got stuck in soft sand.' },
   { id: 'homeplate', name: 'Home Plate', kind: 'mesa', x: 282, z: 208, r: 26, h: 4,
-    tip: 'Home Plate, a flat plateau of layered rock about 80 m wide in real life. In the game it sits close to the hills.' },
+    tip: 'Home Plate, a flat plateau of layered rock about 90 m wide in real life. Its rim shows the layers. In the game it sits close to the hills.' },
 ];
+
+// Home Plate's outline: roughly round, slightly oval, with bays and spurs where the rim has worn back.
+export function plateRadius(m, a) {
+  return m.r * (1 + .07 * Math.sin(2 * a + .6) + .05 * Math.sin(3 * a + 1.9) + .03 * Math.sin(7 * a + .4) + .018 * Math.sin(13 * a + 2.2) + .01 * Math.sin(23 * a + .7));
+}
+// Height across the rim, as a share of the plateau height: 1 on top, a steep drop to 0.42, then the apron down to 0.
+const ease = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const plateProfile = u => u < .88 ? 1 : u < 1 ? 1 - .58 * ease(.88, 1, u) : .42 * (1 - ease(1, 1.6, u));
+// 1 on Home Plate's top, 0 off it (world.js uses this to colour the top pale instead of striped like the hills).
+export function plateWeight(x, z) {
+  const m = LANDMARKS.find(l => l.kind === 'mesa'); if (!m) return 0;
+  const dx = x - m.x, dz = z - m.z, u = Math.hypot(dx, dz) / plateRadius(m, Math.atan2(dz, dx));
+  return 1 - ease(.82, .92, u);
+}
+
+// True within `r` metres of one of Spirit's stops, so the loose rocks scattered over the map keep out of the stop scenes.
+export const nearStop = (x, z, r = 12) => SITES.some(s => (x - s.x) ** 2 + (z - s.z) ** 2 < r * r);
 
 // Extra height added to the measured ground. Zero everywhere except right around each landmark.
 // world.js tells us the measured ground, so flat-topped features (Home Plate) can level the land under them.
@@ -50,8 +67,10 @@ export function landmarkLift(x, z) {
       }
     }
     else if (m.kind === 'mesa') {
-      // a flat-topped plateau: level ground at the centre's height plus h, with a wide, gentle skirt back down to the land
-      const u = Math.sqrt(d2) / m.r, t = Math.min(1, Math.max(0, (u - .78) / .8)), w = 1 - t * t * (3 - 2 * t);
+      // a flat-topped plateau with a ragged outline: level top, a steep layered rim (stop-models.js dresses it in rock),
+      // then a gentle apron of sand and fallen blocks back down to the land
+      const u = Math.sqrt(d2) / plateRadius(m, Math.atan2(dz, dx)), w = plateProfile(u);
+      if (w <= 0) continue;
       const top = baseHeight ? baseHeight(m.x, m.z) + m.h : m.h;
       y += (top - (baseHeight ? baseHeight(x, z) : 0)) * w;
     }

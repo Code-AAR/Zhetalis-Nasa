@@ -168,3 +168,14 @@ node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when D
 
 ### Full quality, phone Lite and lunar quests (8 Nov)
 Auto graphics selects full quality on computers/tablets and Lite on phones; this is independent of the screen-layout preview. A phone can choose Full quality. See src/device-profile.js and scripts/test-device-profile.mjs. Full NASA Moon geometry/texture is unchanged; phone Lite is a separate asset, never an automatic desktop downgrade. Moon quest logic is in moon/src/quests.js, with grouped log, active map target and auto-collapsing objective. Movement is walk2/sprint4 m/s, jump2.9 m/s launch with lunar gravity. Treat these speeds as game tuning.
+
+
+### Spirit's stops and the bigger map (9 Nov, Ewan)
+- The map is 1,216 m (19 chunks of 64 m). The NASA MOLA crop fills the middle 960 m; past about 420 m the ground fades to invented swells.
+- Five stops from Spirit's trip: `src/site-data.js` (facts, sources, positions) and `src/stop-models.js` (the 3D scenes). `src/sites.js` places them, adds the flag and sign, and handles E.
+- Look at any stop on its own in `stop-viewer.html` (open `http://localhost:8000/game/stop-viewer.html?stop=homeplate`).
+- Home Plate's ragged outline and cliff are in `src/landmarks.js` (`plateRadius`, `plateProfile`). The layered rim is one mesh that follows the ground all the way round.
+- The silica stop is Gertrude Weise (Tyrone was a sulfate soil nearby). Old saves that say `tyrone` load as `gertrude`.
+- Each stop is merged into a few meshes. Past 230 m only the flag, sign and Home Plate's rim are drawn.
+- `src/detail-cull.js` skips drawing any mesh smaller than about 3 px on screen. It switches render layers and never touches `.visible`. It cut draw calls by 35 to 47% away from the base.
+- No emoji on screen: `keepScreenEmojiFree()` in `src/ui.js` strips them from all page text. Arrows like ↗ and ▶ stay.

@@ -1,4 +1,4 @@
-import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase } from './landmarks.js';
+import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop } from './landmarks.js';
 import { WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { createMeasuredTerrain } from './measured-terrain.js';
 import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
@@ -202,7 +202,10 @@ function makeTerrain() {
     col.copy(rust).lerp(dusty,fine).lerp(darkSand,THREE.MathUtils.clamp((patch-.5)*2.2,0,.7)).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(pale,hollow*.45).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15+(y>6?.12:0),0,.8));
     // Crater floors fill with pale dust and sit in shade; rims and ejecta are darker. Hills show bands of darker and paler rock.
     col.lerp(pale,bowl*.5).multiplyScalar(1-.22*bowl).lerp(basalt,rimW*.35);
-    if(hillH>1.5){const strata=.5+.5*Math.sin(hillH*1.7+fbm(x*.05,z*.05,2)*3);col.lerp(strata>.55?basalt:dusty,Math.min(.3,hillH/30)*Math.abs(strata-.5)*1.6);}
+    const onPlate=plateWeight(x,z);
+    if(hillH>1.5&&onPlate<.5){const strata=.5+.5*Math.sin(hillH*1.7+fbm(x*.05,z*.05,2)*3);col.lerp(strata>.55?basalt:dusty,Math.min(.3,hillH/30)*Math.abs(strata-.5)*1.6);}
+    // Home Plate's top: pale layered rock under thin dust, with darker sand caught in hollows
+    if(onPlate>0)col.lerp(pale,onPlate*.55).lerp(darkSand,onPlate*THREE.MathUtils.clamp((fbm(x*.09+3,z*.09,3)-.52)*3,0,.45));
     col.offsetHSL(0,-.2,-.015);
   });
 }
@@ -253,11 +256,11 @@ function makeRocks(rng) {
   for (let i = 0; i < count; i++) {
     let x, z, tries = 0;
     do { x = (rng() - 0.5) * WORLD_SIZE * 0.82; z = (rng() - 0.5) * WORLD_SIZE * 0.82; tries++; }
-    while (Math.hypot(x, z) < 24 || (tries < 60 && rng() > rockWeight(x, z, fbm(x * .018 + 3, z * .018 - 7, 3))));
+    while (Math.hypot(x, z) < 24 || nearStop(x, z) || (tries < 60 && rng() > rockWeight(x, z, fbm(x * .018 + 3, z * .018 - 7, 3))));
     // Many small stones, few big ones (a power law, like real boulder counts); the biggest are rare.
     const slab = rng() < 0.4, size = Math.min(slab ? 4.6 : 3.2, (slab ? .9 : .32) * Math.pow(1 - rng() * .985, -.55));
     const stretch = .6 + rng() * 1.1;   // some stones long and thin, some round
-    s.set(size * (0.7 + rng() * .5) * stretch, slab ? size * (0.12 + rng() * .14) : size * (0.45 + rng() * 0.8), size * (0.7 + rng() * .5) / Math.sqrt(stretch));
+    s.set(size * (0.7 + rng() * .5) * stretch, slab ? size * (0.22 + rng() * .16) : size * (0.45 + rng() * 0.8), size * (0.7 + rng() * .5) / Math.sqrt(stretch));
     p.set(x, heightAt(x, z) + s.y * 0.35, z);
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
     // Follow the local slope, then embed the whole lower cap rather than
@@ -398,8 +401,12 @@ function makePickup(kind) {
   const body = new THREE.Mesh(looks.geo, new THREE.MeshLambertMaterial({ color: looks.color, emissive: looks.color, emissiveIntensity: 0.35, flatShading: true }));
   body.geometry.computeBoundingBox();
   body.castShadow = true; body.position.y = -body.geometry.boundingBox.min.y; g.add(body);
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 40, 6, 1, true), new THREE.MeshBasicMaterial({ color: looks.beam, transparent: true, opacity: 0.35, depthWrite: false }));
-  beam.position.y = 20; g.add(beam);
+  // a soft glowing column that fades out upward (a hard 40 m line looked like a glitch in the sky)
+  const beamGeo = new THREE.CylinderGeometry(0.03, 0.26, 16, 10, 6, true), bp = beamGeo.attributes.position, ba = new Float32Array(bp.count * 4);
+  for (let i = 0; i < bp.count; i++) { const up = (bp.getY(i) + 8) / 16; ba.set([1, 1, 1, Math.pow(1 - up, 1.8)], i * 4); }
+  beamGeo.setAttribute('color', new THREE.BufferAttribute(ba, 4));
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: looks.beam, vertexColors: true, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  beam.position.y = 8; g.add(beam);
   g.userData.body = body;
   return g;
 }

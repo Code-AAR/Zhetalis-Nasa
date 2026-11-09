@@ -23,7 +23,7 @@ export const LANDMARKS = [
   { id: 'lm-rim', name: 'West rim', x: -337, z: -98, r: 60, fact: { kid: 'Hills like this are why Spirit set off for the Columbia Hills, about 3 km from where it landed. The drive to the top of Husband Hill took 591 days.', source: 'NBC News / NASA', url: 'https://www.nbcnews.com/id/wbna9161814' } },
   { id: 'lm-lahontan', name: 'Lahontan crater', x: 380, z: 150, r: 40, fact: { kid: 'Lahontan crater is about 55 m across and 9 m deep. Spirit drove along its rim for two sols after leaving Missoula.', source: 'Timeline of Spirit', url: WIKI } },
   { id: 'lm-tennessee', name: 'Tennessee Valley', x: 225, z: 122, r: 50, fact: { kid: 'Tennessee Valley lies on the north side of Husband Hill. Spirit looked down into its drifts and outcrops from the summit in 2005. It never drove in.', source: 'NASA Photojournal', url: 'https://science.nasa.gov/photojournal/postcard-above-tennessee-valley/' } },
-  { id: 'lm-mesa', name: 'Home Plate', x: 282, z: 208, r: 60, fact: { kid: 'Spirit\'s most famous rock layers were on Home Plate, a plateau about 80 m wide. Silica-rich rock nearby points to hot water or steam once flowing here.', source: 'NASA JPL', url: 'https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/' } },
+  { id: 'lm-mesa', name: 'Home Plate', x: 282, z: 208, r: 60, fact: { kid: 'Spirit\'s most famous rock layers were on Home Plate, a plateau about 90 m wide. Silica-rich rock nearby points to hot water or steam once flowing here.', source: 'NASA JPL', url: 'https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/' } },
 ];
 export const chartedLandmarks = circles => LANDMARKS.filter(l => circles.some(c => Math.hypot(c.x - l.x, c.z - l.z) < c.r + l.r * .5));
 

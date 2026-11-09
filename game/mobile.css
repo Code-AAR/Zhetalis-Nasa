@@ -70,10 +70,10 @@ body #toast.show{pointer-events:auto;transition:opacity .15s ease}
 .landing-art canvas{width:100%;height:100%;display:block}
 .landing-marker{position:absolute;transform:translate(-50%,-50%);padding:6px 9px;min-height:44px;max-width:155px;font-size:12px;background:#1b252fee;border:1px solid #dfae70;z-index:2}
 .landing-marker[aria-pressed=true],.landing-regions button[aria-pressed=true]{background:#674027;border-color:#ffdb9f}
-.landing-regions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.landing-regions{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
 .landing-flow button{min-height:44px;touch-action:manipulation}
 .landing-regions button{font-size:13px;padding:8px}
-.landing-actions{position:sticky;bottom:0;background:#0b1017;display:flex;gap:8px;padding:12px 0;z-index:5}
+.landing-actions{position:sticky;bottom:0;background:#0b1017;display:flex;gap:8px;padding:12px 0;z-index:5;box-shadow:0 30px 0 0 #0b1017}
 .landing-actions button{flex:1}
 .landing-flow details{font-size:13px;color:#c0c8d0;margin-bottom:16px}
 .scan-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#080c12}
