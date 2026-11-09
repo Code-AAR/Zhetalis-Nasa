@@ -5,6 +5,8 @@
 //
 // Game rules (made up for balance): driving uses the rover's battery, which recharges when parked near the
 // outpost. Inside, your suit refills from the cabin air, and the walls block some radiation.
+import { WORLD_EXTENT } from './chunk-plan.js';
+import { driftLift } from './landmarks.js';
 import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
 import { moveOverSurface, ROVER_MOTION } from './rover-terrain.js';
@@ -91,7 +93,9 @@ export class Rover {
       throttle = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       steer = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
     }
-    const max = this.battery > 0 ? MAX : 1.2;                // flat battery: crawl home on the last of it
+    // soft sand in the wind-blown drifts drags the wheels: up to 30 percent slower on the crest of a drift
+    const drag = 1 - .3 * Math.min(1, driftLift(this.pos.x, this.pos.z) / .42);
+    const max = (this.battery > 0 ? MAX : 1.2) * drag;       // flat battery: crawl home on the last of it
     if (throttle > 0) this.speed = Math.min(max, this.speed + (this.speed < 0 ? BRAKE : ACCEL) * dt);
     else if (throttle < 0) this.speed = Math.max(-REVERSE, this.speed - (this.speed > 0 ? BRAKE : ACCEL) * dt);
     else this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), 3 * dt);   // rolls to a stop
@@ -112,7 +116,7 @@ export class Rover {
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }
     }
-    const lim = 640 * 0.42, rr = Math.hypot(this.pos.x, this.pos.z);
+    const lim = WORLD_EXTENT * 0.42, rr = Math.hypot(this.pos.x, this.pos.z);
     if (rr > lim) { this.pos.x *= lim / rr; this.pos.z *= lim / rr; this.speed *= 0.5; }
     // battery
     if (driving && Math.abs(this.speed) > 0.2) this.battery = Math.max(0, this.battery - DRAIN * dt * (0.4 + 0.6 * Math.abs(this.speed) / MAX));

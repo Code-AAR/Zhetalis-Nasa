@@ -23,9 +23,9 @@
   "maxMetres": 1456,
   "sha256": "d538dd6eca6551ecd575b0d6997b9d6b9e58a6c85d9508ef651fab0317f958ba",
   "sourceStripSha256": "00e147581ccf7730e2a7b89b4846e68e76e627886db54296040025d5a0bed3f1",
-  "worldSpan": 640,
+  "worldSpan": 960,
   "verticalScale": 0.015,
   "flatBaseRadius": 70,
   "flatBaseBlendEnd": 115,
-  "notes": "Native gridded altimetry, including interpolated bins in the NASA source. Map orientation: north is negative game Z, east positive X. 4 degrees of latitude/longitude compressed into a 640 m game square; height differences multiplied by 0.015. The central base is flattened with a smooth transition. Rocks, sand and buildings are illustrative."
+  "notes": "Native gridded altimetry, including interpolated bins in the NASA source. Map orientation: north is negative game Z, east positive X. 4 degrees of latitude/longitude compressed into a 960 m game square; height differences multiplied by 0.015. The central base is flattened with a smooth transition. Rocks, sand and buildings are illustrative."
 }

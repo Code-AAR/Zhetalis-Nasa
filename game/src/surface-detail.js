@@ -46,7 +46,7 @@ export function regolithMaps() {
     }
   }
   const map = new THREE.CanvasTexture(colour), bump = new THREE.CanvasTexture(relief);
-  for(const t of [map,bump]) {t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(48,48);t.anisotropy=8;}
+  for(const t of [map,bump]) {t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(72,72);t.anisotropy=8;}
   map.colorSpace=THREE.SRGBColorSpace;
   return maps={map,bump};
 }

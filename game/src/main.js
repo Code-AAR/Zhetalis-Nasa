@@ -10,6 +10,9 @@ import { heightAt } from './world.js';
 import { marsObjective, missionLog } from './mars-objectives.js';
 import { openResearch, tickResearch } from './surface-research.js';
 import { effectiveQuality } from './device-profile.js';
+import { createAdaptiveRes } from './adaptive-res.js';
+import { Pebbles, pebblesEnabled } from './pebbles.js';
+import { LandmarkTips } from './landmarks.js';
 import {initSettings,openSettings} from './settings.js';
 import { GRAPHICS_MODE, WORLD_RADIUS, WORLD_LIMIT } from './surface-detail.js';
 import * as THREE from 'three';
@@ -25,6 +28,7 @@ import { fieldMapHTML, mountFieldMap } from './fieldmap.js';
 import { MapState } from './mapstate.js';
 import { Minimap } from './minimap.js';
 import { Lookouts } from './lookouts.js';
+import { Sites } from './sites.js';
 import { Mist } from './mist.js';
 import { Capsule } from './capsule.js';
 import { Greenhouse } from './greenhouse.js';
@@ -54,6 +58,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.shadowMap.enabled = effectiveQuality(GRAPHICS_MODE) !== 'low';
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const targetRatio = () => Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE) === 'low' ? 1 : effectiveQuality(GRAPHICS_MODE) === 'high' ? devicePixelRatio : 1.5);
+renderer.shadowMap.autoUpdate = false; let shadowFrame = 0;
+const adaptiveRes = createAdaptiveRes(renderer, targetRatio, { enabled: () => !location.search.includes('fixedres') });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
@@ -157,7 +164,7 @@ function showData() {
     <h4>Mars, spaceflight and astronaut health</h4>
     ${Object.values(F).map(f => `<p class="source">• ${f.kid} - <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a></p>`).join('')}
     <h4>3D models (NASA's own, from <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>)</h4>
-    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees compressed into a 640 m game map; height differences scaled by 0.015; base apron flattened). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
+    <p class="source">• SLS Block 1 rocket - NASA's 3D-printing model, split into its real stages and coloured from NASA's Artemis II launch photos. • Mobile Launcher. • Perseverance rover (NASA/JPL-Caltech). • Ingenuity helicopter. • Mars Reconnaissance Orbiter. • Pistol Grip Tool (the power drill astronauts use on spacewalks) and Wrench, on the outpost workbench. Terrain colours based on Perseverance's photos of Jezero Crater. • The crew rover: NASA's Space Exploration Vehicle (MMSEV) model; it drives faster in the game than the real one. • Launch pad: NASA's Vehicle Assembly Building model (not at its real distance). • Mars Odyssey relay orbiter (NASA 3D Resources). • NASA logos on models are replaced with the Zhetalis logo. • Planets in the sky (launch and Mars nights) are where they really are today, from <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">NASA JPL's approximate planet positions</a>; the stars are a made-up pattern. • Your astronaut: NASA's Astronaut model (logo removed, cut into jointed parts so it can walk). • The hills and craters around the outpost: sampled from NASA MOLA MEGDR measured topography around Gusev Crater (4 degrees compressed into the middle of a 1,216 m game map; the outer ground is invented; height differences scaled by 0.015; base apron flattened). • Mars globe map: NASA 3D Resources (and NASA Mars Trek when online). • Spinning Earth: NASA Blue Marble imagery (map from the three.js examples), turned to match today's EPIC photo. The launch pad's towers are simple shapes based on NASA photos.</p>
     <p class="source">• Launch photo: <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a> (Artemis II, 1 April 2026).</p>
     ${anyArt() ? `<h4>Illustrations</h4><p class="source">• ${artCredit() || 'Illustrations made by team Zhetalis.'} Every illustration is labelled "Illustration" - only pictures labelled REAL or LIVE are real NASA photos.</p>` : ''}
     <h4>Game balance (not real measurements)</h4>
@@ -294,6 +301,9 @@ function buildWorld() {
     construction = new Construction(world,interior,{state:()=>outpost,colony:()=>colony,save:saveGame,sync:syncPowerHardware,advance:advancePower,guide:zhetela});
     setupMissionHud();syncPowerHardware();
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
+    new Sites(world, { toast, modal,
+      onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
+      onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
     // the crater map: charted ground, trail, flags, survey finds, Ingenuity scout flights, Gusev landmarks
     const ms = new MapState(world, {
       toast, modal,
@@ -310,6 +320,8 @@ function buildWorld() {
         modal({ title: `Region complete: ${sp.name}`, html: `<p>You scanned the tower and found both survey spots here. Nothing is left hidden in this region.</p><p class="pos">+8 science.${first ? ' You earned the <b>Region keeper</b> patch.' : ''}</p><p class="fact">Mapmakers call this a survey: walk the ground, mark what you see, and leave no gaps in the sheet.</p>`, pause: false });
       },
     });
+    if (pebblesEnabled()) world.pebbles = new Pebbles(world);
+    new LandmarkTips(world, m => toast(`Landmark: ${m.tip}`, 9000));
     new Minimap(world, $('#hud'), { onOpen: () => $('#map-btn').click() });
     ms.sync(true);
     return world.settlement;
@@ -874,6 +886,7 @@ function collect(n) {
   if(n.type==='mission-work')return performMissionWork(n.task);
   if(n.type==='power-site') return zhetela('Aim at a highlighted placement slot or cable socket and press E / Use.');
   if (n.type === 'lookout') return world.lookouts?.use(n.i);
+  if (n.type === 'site') return world.sites?.use(n.id);
   if (n.type === 'find') return world.mapState?.collect(n.id);
   if (n.type === 'scout') return world.mapState?.openScout();
   if(n.type.startsWith('survey-')) {
@@ -1086,7 +1099,7 @@ soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: 
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 let viewportFrame;
-function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.min(devicePixelRatio,effectiveQuality(GRAPHICS_MODE)==='low'?1:effectiveQuality(GRAPHICS_MODE)==='high'?devicePixelRatio:1.5));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=effectiveQuality(GRAPHICS_MODE)!=='low';world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
+function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.max(.5,targetRatio()*adaptiveRes.scale));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=effectiveQuality(GRAPHICS_MODE)!=='low';world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
 addEventListener('resize',resizeGame);window.visualViewport?.addEventListener('resize',resizeGame);
 
 // ---------------- HUD ----------------
@@ -1168,7 +1181,7 @@ function drawHUD() {
       near = world.nearest();
       const names = { 'survey-meteorite':'inspect the meteorite field', 'survey-relay':'check the relay station', 'survey-ice':'perform a subsurface survey', door: 'go inside the outpost', rover: 'salvage the old rover', heli: 'look at the Ingenuity helicopter', ice: 'collect ice', metal: 'collect metal parts', pod: 'open the supply pod', panels: `clean the dusty solar panels (${Math.round(o.clean * 100)}% clean)` };
       names['mission-work']=near?.task?.title;
-      names['power-site']=powerSteps[o.powerStep]; names.lookout = 'scan the land from the lookout tower'; names.find = 'collect the survey find'; names.scout = 'send Ingenuity on a scout flight'; names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names.ghdoor = 'go into the greenhouse'; names['sev-exit'] = 'climb out';
+      if (near?.type === 'site') names.site = near.label; names['power-site']=powerSteps[o.powerStep]; names.lookout = 'scan the land from the lookout tower'; names.find = 'collect the survey find'; names.scout = 'send Ingenuity on a scout flight'; names.sev = 'get in the rover and drive'; names.ship = 'climb the ladder into your lander'; names.ghdoor = 'go into the greenhouse'; names['sev-exit'] = 'climb out';
       if (near?.type === 'ore') hint = `${useWord} to mine ${ORES[near.deposit.ore].name.toLowerCase()}${colony.tool === 'pickaxe' ? '' : ' with your pickaxe'}${colony.bagCount() >= BAG ? ' (bag full!)' : ''}`;
       else if (near?.type === 'greenhouse') hint = `${useWord} to tend the greenhouse${near.house.gh.ready ? ' - ready to harvest!' : ''}`;
       else if (world.driving) hint = `🚙 Battery ${Math.round(world.sev.battery * 100)}% · ${keyWord('W/S drive, A/D steer', 'left thumb drives')} · ${useWord} to climb out${body.canEat && body.rations < 14 ? keyWord(' · hold F to eat', ' · hold Eat to eat') : ''}`;
@@ -1254,6 +1267,9 @@ function showStory() {
 }
 $('#loading').classList.add('hidden');
 renderer.setAnimationLoop(() => {
+  adaptiveRes.tick();
+  // Shadows refresh every frame normally. Only when the game is already struggling (resolution lowered) do they refresh every second frame.
+  renderer.shadowMap.needsUpdate = adaptiveRes.scale >= 1 || (++shadowFrame & 1) === 0 || !renderer.shadowMap.enabled;
   const dt = Math.min(clock.getDelta(), 0.05);
   if (state.phase === 'launch') {
     const { left, lifted, title, caption, km, karman } = launch.update(dt);

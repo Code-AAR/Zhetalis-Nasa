@@ -1,3 +1,4 @@
+import { WORLD_EXTENT } from './chunk-plan.js';
 // What the player has charted on the crater map: which ground is revealed (and by which instrument), the trail
 // they walked and drove, their flags, hidden survey finds, Ingenuity scout flights and the real Gusev landmarks.
 // The game's own state lives here; drawing the sheet itself is chart.js.
@@ -14,11 +15,15 @@ const WIKI = 'https://en.wikipedia.org/wiki/Timeline_of_Spirit';
 export const LANDMARKS = [
   { id: 'lm-plain', name: 'Landing plain', x: 40, z: -60, r: 60, fact: { kid: 'Spirit landed on a flat, rock-strewn plain inside Gusev Crater on 4 January 2004. The team named the spot Columbia Memorial Station, after the seven astronauts lost on Space Shuttle Columbia.', source: 'Timeline of Spirit', url: WIKI } },
   { id: 'lm-old', name: 'Old crater', x: -146, z: -14, r: 45, fact: { kid: 'Gusev is a crater about 160 km wide that may once have held a lake. That is why NASA sent Spirit here: to look for signs of past water.', source: 'Timeline of Spirit', url: WIKI } },
-  { id: 'lm-nw', name: 'North-west crater', x: -318, z: -330, r: 60, fact: { kid: 'Spirit\'s first big target was a crater about 200 m across, nicknamed Bonneville. It took 66 sols to reach, but there was nothing worth driving into, so Spirit rolled along the rim instead.', source: 'Timeline of Spirit', url: WIKI } },
-  { id: 'lm-east', name: 'East crater', x: 370, z: 0, r: 50, fact: { kid: 'Missoula crater, which Spirit reached on sol 105, is about 90 m across and 18 m deep. A crater is a natural window: it shows what lies under the dust.', source: 'Timeline of Spirit', url: WIKI } },
+  { id: 'lm-nw', name: 'Bonneville crater', x: 144, z: 21, r: 50, fact: { kid: 'Spirit\'s first big target was a crater about 200 m across, nicknamed Bonneville. It took 66 sols to reach, but there was nothing worth driving into, so Spirit rolled along the rim instead.', source: 'Timeline of Spirit', url: WIKI } },
+  { id: 'lm-east', name: 'Missoula crater', x: 268, z: -30, r: 50, fact: { kid: 'Missoula crater, which Spirit reached on sol 105, is about 90 m across and 18 m deep. A crater is a natural window: it shows what lies under the dust.', source: 'Timeline of Spirit', url: WIKI } },
   { id: 'lm-boulders', name: 'Boulder field', x: -22, z: 182, r: 40, fact: { kid: 'At the landing site, gravel and cobbles cover only about 5% of the ground and big boulders are few. So a field of boulders like this one is a rare and exciting find.', source: 'Geology of the Columbia Memorial Station (AGU, 2004)', url: 'https://ui.adsabs.harvard.edu/abs/2004AGUSM.U43A..03G/abstract' } },
+  { id: 'lm-husband', name: 'Husband Hill', x: 180, z: 168, r: 70, fact: { kid: 'Husband Hill is the tallest of the Columbia Hills. Spirit climbed it in 2005 and saw layered rock and wide views across Gusev. In the game it is smaller and closer than in real life.', source: 'Timeline of Spirit', url: WIKI } },
+  { id: 'lm-mccool', name: 'McCool Hill', x: 120, z: 248, r: 56, fact: { kid: 'McCool Hill is one of the Columbia Hills. It is named after William McCool, a pilot lost on Space Shuttle Columbia. In the game it is smaller and closer than in real life.', source: 'NASA', url: WIKI } },
   { id: 'lm-rim', name: 'West rim', x: -337, z: -98, r: 60, fact: { kid: 'Hills like this are why Spirit set off for the Columbia Hills, about 3 km from where it landed. The drive to the top of Husband Hill took 591 days.', source: 'NBC News / NASA', url: 'https://www.nbcnews.com/id/wbna9161814' } },
-  { id: 'lm-mesa', name: 'Southern mesa', x: 17, z: 325, r: 70, fact: { kid: 'Spirit\'s most famous rock layers were on Home Plate, a plateau about 80 m wide. Silica-rich rock nearby points to hot water or steam once flowing here.', source: 'NASA JPL', url: 'https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/' } },
+  { id: 'lm-lahontan', name: 'Lahontan crater', x: 380, z: 150, r: 40, fact: { kid: 'Lahontan crater is about 55 m across and 9 m deep. Spirit drove along its rim for two sols after leaving Missoula.', source: 'Timeline of Spirit', url: WIKI } },
+  { id: 'lm-tennessee', name: 'Tennessee Valley', x: 225, z: 122, r: 50, fact: { kid: 'Tennessee Valley lies on the north side of Husband Hill. Spirit looked down into its drifts and outcrops from the summit in 2005. It never drove in.', source: 'NASA Photojournal', url: 'https://science.nasa.gov/photojournal/postcard-above-tennessee-valley/' } },
+  { id: 'lm-mesa', name: 'Home Plate', x: 282, z: 208, r: 60, fact: { kid: 'Spirit\'s most famous rock layers were on Home Plate, a plateau about 80 m wide. Silica-rich rock nearby points to hot water or steam once flowing here.', source: 'NASA JPL', url: 'https://science.nasa.gov/mission/mars-exploration-rovers-spirit-and-opportunity/' } },
 ];
 export const chartedLandmarks = circles => LANDMARKS.filter(l => circles.some(c => Math.hypot(c.x - l.x, c.z - l.z) < c.r + l.r * .5));
 
@@ -29,7 +34,7 @@ const FIND_KINDS = [
 ];
 const FLAG_COLOURS = ['#e8742c', '#2f9fc2', '#4ca15d', '#d1498a', '#d9b43a', '#8466c9', '#b53a1e', '#4b3022'];
 const DIRS = [['north', 0, -1], ['east', 1, 0], ['south', 0, 1], ['west', -1, 0]];
-const MAX_FLAGS = 8, WALK_R = 268;
+const MAX_FLAGS = 8, WALK_R = WORLD_EXTENT * 0.42;
 
 // every circle of charted ground, from every instrument
 export function revealCircles(world, extra = []) {
@@ -182,7 +187,7 @@ export class MapState {
 
   // ---------- saving ----------
   save() {
-    return { layer: this.layer, trail: this.trail, flags: this.flags.map(f => [f.x, f.z, f.n, f.c]), driven: this.driven, scout: this.scout, found: [...this.found], lm: [...this.seenLm], reg: [...(this.world.mist?.done || [])] };
+    return { layer: this.layer, trail: this.trail, flags: this.flags.map(f => [f.x, f.z, f.n, f.c]), driven: this.driven, scout: this.scout, found: [...this.found], lm: [...this.seenLm], reg: [...(this.world.mist?.done || [])], sites: this.world.sites?.save() };
   }
   load(d) {
     if (!d) return;
@@ -190,6 +195,7 @@ export class MapState {
     this.found = new Set(d.found || []); this.seenLm = new Set(d.lm || []); if (this.world.mist) this.world.mist.done = new Set(d.reg || []);
     for (const f of [...this.flags]) this.removeFlag(f);
     for (const [x, z, n, c] of d.flags || []) { const f = { x, z, n, c }; this.flags.push(f); this.addFlagMesh(f); }
+    this.world.sites?.load(d.sites);
     this.refreshFinds();
   }
 
@@ -238,6 +244,14 @@ export class MapState {
     if (!mini && o.labels !== false) for (const l of LANDMARKS) if (lmOn.has(l.id)) {
       const [x, y] = toPx(l.x, l.z); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.arc(x, y, Math.max(10, l.r * mpp * .6), 0, 7); ctx.stroke(); ctx.setLineDash([]);
       text(l.name.toUpperCase(), x, y, { size: 8, bold: true, col: '#6a3a22', dx: -4, dy: 3 });
+    }
+    // real Gusev stops (shown on charted ground, or once visited)
+    for (const s of w.sites?.list || []) {
+      const seen = w.sites.visited.has(s.id); if (!seen && !circles.some(c => Math.hypot(c.x - s.x, c.z - s.z) < c.r)) continue;
+      const [x, y] = toPx(s.x, s.z), r = mini ? 2.6 : 4;
+      ctx.beginPath(); ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y - r); ctx.lineTo(x + r, y + r); ctx.lineTo(x - r, y + r); ctx.closePath();
+      ctx.fillStyle = seen ? '#3f9b62' : '#f5e6c4'; ctx.fill(); ctx.strokeStyle = seen ? INK : '#7b3d12'; ctx.lineWidth = 1.3; ctx.stroke();
+      if (!mini) text(s.name, x, y, { size: 8, col: seen ? '#2f6b45' : '#7b3d12', dx: 7, dy: 3 });
     }
     // survey sites
     for (const [k, [sx, sz]] of Object.entries(loc)) {

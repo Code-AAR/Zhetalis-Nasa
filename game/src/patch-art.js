@@ -35,6 +35,9 @@ export const PATCHES = [
   { id: 'scholar', name: 'Field notes', hint: 'Collect 15 fact cards in your logbook', colour: '#5f6b2f', g: 'book', shape: 'shield', tier: 'rare' },
   { id: 'lookout', name: 'High ground', hint: 'Scan the land from all four lookout towers', colour: '#3b6f95', g: 'tower', shape: 'arrow', tier: 'rare' },
   { id: 'region', name: 'Region keeper', hint: 'Fully explore a region: scan its tower and find both survey spots', colour: '#8a6a1f', g: 'star', shape: 'circle', tier: 'rare' },
+  { id: 'geologist', name: 'Field geologist', hint: 'Visit 6 of the real Gusev stops (rocks, craters and hills)', colour: '#a8683a', g: 'boot', shape: 'hex', tier: 'rare' },
+  { id: 'footsteps', name: 'In Spirit\'s footsteps', hint: 'Visit every real Gusev stop on the map', colour: '#7b4a8f', g: 'wheel', shape: 'shield', tier: 'key' },
+  { id: 'devil', name: 'Devil spotter', hint: 'Spot a dust devil wandering across the plain', colour: '#b58a4a', g: 'wipe', shape: 'circle', tier: 'common' },
   { id: 'gold', name: 'Top of the class', hint: 'Get every question right in the end-of-mission quiz', colour: '#2a3a78', g: 'star', shape: 'shield', tier: 'key' },
   { id: 'complete', name: 'Mission complete', hint: 'Finish a whole mission', colour: '#b0303a', g: 'flag', shape: 'shield', tier: 'key' },
 ];

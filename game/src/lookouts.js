@@ -2,7 +2,8 @@
 // the chart then shows the real Gusev terrain beyond the area you can walk on, and reveals the survey finds
 // hidden nearby. Land nobody has scanned stays blank paper.
 import * as THREE from 'three';
-import { heightAt } from './world.js';
+import { LANDMARKS } from './landmarks.js';
+import { heightAt, groundHeight } from './world.js';
 import { MAT, tube, solarPanel, makeCellMat, dishAssembly } from './models.js';
 import { revealCircles, REVEAL } from './mapstate.js';
 import { revealModal } from './reveal.js';
@@ -13,7 +14,7 @@ const NAMES = ['North ridge', 'East rim', 'South ridge', 'West rim'];
 
 // Pick the highest, gentlest ground in each direction, 130-250 m from the outpost (the walkable area ends at about 269 m).
 export function findLookouts(avoid = []) {
-  return [-90, 0, 90, 180].map((centre, i) => {
+  return [-90, 22, 90, 180].map((centre, i) => {
     let best = null;
     for (let r = 130; r <= 252; r += 6) for (let a = centre - 35; a <= centre + 35; a += 7) {
       const x = Math.cos(a * Math.PI / 180) * r, z = Math.sin(a * Math.PI / 180) * r, y = heightAt(x, z);
@@ -22,7 +23,8 @@ export function findLookouts(avoid = []) {
       if (!best || y > best.y) best = { x, z, y };
     }
     best ||= { x: Math.cos(centre * Math.PI / 180) * 180, z: Math.sin(centre * Math.PI / 180) * 180, y: 0 };
-    return { ...best, name: NAMES[i] };
+    const onHill = LANDMARKS.find(m => m.kind === 'hill' && Math.hypot(best.x - m.x, best.z - m.z) < m.r * .7);
+    return { ...best, name: onHill ? onHill.name : NAMES[i] };
   });
 }
 
@@ -37,7 +39,7 @@ export class Lookouts {
       // A survey mast in the style of a deep-space station: a braced lattice on concrete footings, a ladder and railed
       // platform, a steerable dish on a yoke, a solar panel on its own frame and an equipment cabinet.
       const t = new THREE.Group(), H = 10, w0 = 1.5, w1 = .62, cs = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
-      const gh = cs.map(([dx, dz]) => heightAt(sp.x + dx * w0, sp.z + dz * w0)), base = Math.max(...gh);
+      const gh = cs.map(([dx, dz]) => groundHeight(sp.x + dx * w0, sp.z + dz * w0)), base = Math.max(...gh);
       const wAt = y => w0 + (w1 - w0) * y / H, corners = y => cs.map(([dx, dz]) => [dx * wAt(y), y, dz * wAt(y)]);
       const levels = [0, 2.5, 5, 7.5, H];
       cs.forEach(([dx, dz], c) => {                       // concrete footing reaches down to the ground at each corner

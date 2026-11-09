@@ -147,7 +147,7 @@ export function drawChart(ctx, S, o = {}) {
   // neatline, graduated border and coordinates
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(rect.x, rect.y, m, m); ctx.lineWidth = .6; ctx.strokeRect(rect.x - 5, rect.y - 5, m + 10, m + 10);
   ctx.fillStyle = INK; ctx.font = `7.5px ${MONO}`; ctx.textAlign = 'center'; ctx.lineWidth = .8;
-  const lon=x=>(terrainMetadata.west+(x/g.span+.5)*(terrainMetadata.east-terrainMetadata.west)).toFixed(4),lat=z=>Math.abs(terrainMetadata.north+(z/g.span+.5)*(terrainMetadata.south-terrainMetadata.north)).toFixed(4);
+  const lon=x=>(terrainMetadata.west+(x/terrainMetadata.worldSpan+.5)*(terrainMetadata.east-terrainMetadata.west)).toFixed(4),lat=z=>Math.abs(terrainMetadata.north+(z/terrainMetadata.worldSpan+.5)*(terrainMetadata.south-terrainMetadata.north)).toFixed(4);
   for (let w = -500; w <= 500; w += 50) {
     const [px] = toPx(w, 0), [, py] = toPx(0, w), long = w % 200 === 0;
     if (px > rect.x + 4 && px < rect.x + m - 4) for (const yy of [rect.y - 5, rect.y + m + 5]) { ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(px, yy + (yy < rect.y ? 5 : -5) * (long ? 1 : .5)); ctx.stroke(); }

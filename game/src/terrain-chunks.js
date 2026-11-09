@@ -1,21 +1,31 @@
 import * as THREE from 'three';
-import { chunkPlan, CHUNK_SIZE, MINIMAP_SPAN } from './chunk-plan.js';
+import { chunkPlan, CHUNK_SIZE, CHUNK_COUNT, MINIMAP_SPAN, WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { SURFACE_DETAIL, WORLD_RADIUS, WORLD_LIMIT, regolithMaps } from './surface-detail.js';
 
 export function makeTerrainChunks(heightAt,colourAt) {
   const group=new THREE.Group();group.name='Streamed Mars terrain';
   const maps=regolithMaps();
   const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0,map:maps.map,bumpMap:maps.bump,bumpScale:.065});
+  // Close-up grit: sample the same ground maps a second time at about 7 times finer scale, for colour and for the bumps, so
+  // the ground looks rough under your boots and not only from afar. (Three.js draws the bump from one sample; we add a second.)
+  material.onBeforeCompile=shader=>{
+    shader.fragmentShader=shader.fragmentShader
+      .replace('#include <bumpmap_pars_fragment>',THREE.ShaderChunk.bumpmap_pars_fragment
+        .replace(/texture2D\( bumpMap, ([^)]*?) \)\.x/g,(all,uv)=>`(texture2D( bumpMap, ${uv} ).x + .45 * texture2D( bumpMap, ( ${uv} ) * 7.3 + vec2( .27, .61 ) ).x)`))
+      .replace('#include <map_fragment>',`#include <map_fragment>
+      { float grit = texture2D( map, vMapUv * 7.3 + vec2( .27, .61 ) ).r; diffuseColor.rgb *= 1.0 + ( grit - .66 ) * 1.8; }`);
+  };
+  material.customProgramCacheKey=()=>'terrain-grit-1';
   group.material=material; // shared material also supports team ground artwork
   const coarse=new Map(), loaded=new Map();let queue=[],last='';
   const segments=Math.ceil(SURFACE_DETAIL.segments/10);
   function tile(ix,iz,n) {
     const geo=new THREE.PlaneGeometry(CHUNK_SIZE,CHUNK_SIZE,n,n);geo.rotateX(-Math.PI/2);
     const pos=geo.attributes.position,uv=geo.attributes.uv,norm=geo.attributes.normal,colour=new Float32Array(pos.count*3),c=new THREE.Color(),normal=new THREE.Vector3();
-    const cx=-320+(ix+.5)*CHUNK_SIZE,cz=-320+(iz+.5)*CHUNK_SIZE;
+    const cx=-WORLD_HALF+(ix+.5)*CHUNK_SIZE,cz=-WORLD_HALF+(iz+.5)*CHUNK_SIZE;
     for(let i=0;i<pos.count;i++) {
       const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,y=heightAt(x,z);pos.setXYZ(i,x,y,z);
-      uv.setXY(i,(x+320)/640,(320-z)/640);
+      uv.setXY(i,(x+WORLD_HALF)/WORLD_EXTENT,(WORLD_HALF-z)/WORLD_EXTENT);
       normal.set(heightAt(x-.25,z)-heightAt(x+.25,z),.5,heightAt(x,z-.25)-heightAt(x,z+.25)).normalize();norm.setXYZ(i,normal.x,normal.y,normal.z);
       colourAt(x,z,y,c);colour.set([c.r,c.g,c.b],i*3);
     }
@@ -35,8 +45,8 @@ export function makeTerrainChunks(heightAt,colourAt) {
   }
   // Preserve the hill silhouette on Full; only phone Lite uses the coarse horizon.
   const horizonSegments=SURFACE_DETAIL.texture>=1024?24:4;
-  for(let z=0;z<10;z++)for(let x=0;x<10;x++){const mesh=tile(x,z,horizonSegments);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
-  group.userData.hasDetail=(x,z)=>loaded.has(`${Math.floor((x+320)/CHUNK_SIZE)},${Math.floor((z+320)/CHUNK_SIZE)}`);
+  for(let z=0;z<CHUNK_COUNT;z++)for(let x=0;x<CHUNK_COUNT;x++){const mesh=tile(x,z,horizonSegments);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
+  group.userData.hasDetail=(x,z)=>loaded.has(`${Math.floor((x+WORLD_HALF)/CHUNK_SIZE)},${Math.floor((z+WORLD_HALF)/CHUNK_SIZE)}`);
   group.userData.revision=0;
   group.userData.stats={loaded:0,queued:0,limit:WORLD_LIMIT==='map'?36:(WORLD_RADIUS*2+1)**2,segments};
   group.userData.update=(focus)=>{

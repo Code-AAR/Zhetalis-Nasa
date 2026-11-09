@@ -1,3 +1,5 @@
+import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase } from './landmarks.js';
+import { WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { createMeasuredTerrain } from './measured-terrain.js';
 import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
@@ -23,7 +25,7 @@ function vnoise(x, z) {
 }
 function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, z * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
 
-export const WORLD_SIZE = 640;
+export const WORLD_SIZE = WORLD_EXTENT;
 // Archived measured MOLA topography, cropped without resampling by the importer.
 // The game compresses this region, exaggerates relief and flattens its base apron.
 const [terrainResponse,metaResponse]=await Promise.all([
@@ -36,10 +38,50 @@ if(terrainBuffer.byteLength!==terrainMetadata.n**2*2)throw new Error('Incomplete
 const measuredHeights=new Int16Array(terrainMetadata.n**2);
 for(let i=0;i<measuredHeights.length;i++)measuredHeights[i]=terrainView.getInt16(i*2,true);
 const measuredTerrain=createMeasuredTerrain(measuredHeights,terrainMetadata);
+// The measured NASA grid is very bumpy in the south-east, which is where Home Plate and the hills sit. Blur it there so the
+// ground reads as the broad, quiet inner basin Spirit crossed, and blend back to the raw data further out.
+function blurred(src,n,k){
+  const a=Float32Array.from(src),b=new Float32Array(src.length),w=2*k+1;
+  for(let pass=0;pass<2;pass++){
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++){let s=0;for(let d=-k;d<=k;d++)s+=a[y*n+Math.min(n-1,Math.max(0,x+d))];b[y*n+x]=s/w;}
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++){let s=0;for(let d=-k;d<=k;d++)s+=b[Math.min(n-1,Math.max(0,y+d))*n+x];a[y*n+x]=s/w;}
+  }
+  return a;
+}
+const calmHeights=blurred(measuredHeights,terrainMetadata.n,16);
+const calmTerrain=createMeasuredTerrain(calmHeights,terrainMetadata);
+const calmWeight=(x,z)=>{const t=Math.min(1,Math.max(0,(Math.hypot(x-235,z-235)-150)/130));return 1-t*t*(3-2*t);};
+// The NASA crop covers 960 m. Past its edge the ground fades into gentle invented swells, so the extra map has no streaks.
+const edgeWeight=(x,z)=>{const t=Math.min(1,Math.max(0,(Math.max(Math.abs(x),Math.abs(z))-420)/130));return t*t*(3-2*t);};
+const edgeSwell=(x,z)=>9*(fbm(x*.0065+5,z*.0065-3,3)-.5);
+const nasaAt=(x,z)=>{const w=calmWeight(x,z);return w<=0?measuredTerrain.height(x,z):measuredTerrain.height(x,z)*(1-w)+calmTerrain.height(x,z)*w;};
+const baseAt=(x,z)=>{const e=edgeWeight(x,z);return e<=0?nasaAt(x,z):nasaAt(x,z)*(1-e)+edgeSwell(x,z)*e;};
+bindBase(baseAt);
 // Chart colours use a normalized copy; physics always samples the signed metre values.
-const chartHeights=Uint16Array.from(measuredHeights,h=>Math.round((h-terrainMetadata.minMetres)/(terrainMetadata.maxMetres-terrainMetadata.minMetres)*65535));
-export const gusevGrid=()=>({data:chartHeights,n:terrainMetadata.n,cx:.5,cy:.5,span:terrainMetadata.worldSpan});
-export const heightAt=(x,z)=>measuredTerrain.height(x,z);
+// The map shows the landmark hills and crater too: add their game height, converted back to raw metres, before scaling.
+const chartHeights=Uint16Array.from(measuredHeights,(_,i)=>{
+  const n=terrainMetadata.n,span=WORLD_EXTENT,x=((i%n+.5)/n-.5)*span,z=((Math.floor(i/n)+.5)/n-.5)*span;
+  const cw=calmWeight(x,z),h0=measuredTerrain.elevation(x,z),h1=calmTerrain.elevation(x,z),e=edgeWeight(x,z);
+  const nasa=h0*(1-cw)+h1*cw,h=nasa*(1-e)+(measuredTerrain.origin+edgeSwell(x,z)/terrainMetadata.verticalScale)*e;
+  const raw=h+(landmarkLift(x,z)+craterLift(x,z))/terrainMetadata.verticalScale;
+  return Math.max(0,Math.min(65535,Math.round((raw-terrainMetadata.minMetres)/(terrainMetadata.maxMetres-terrainMetadata.minMetres)*65535)));
+});
+export const gusevGrid=()=>({data:chartHeights,n:terrainMetadata.n,cx:.5,cy:.5,span:WORLD_EXTENT});
+export const heightAt=(x,z)=>baseAt(x,z)+landmarkLift(x,z)+driftLift(x,z)+craterLift(x,z);   // measured NASA MOLA ground plus the enlarged landmarks (landmarks.js)
+// The far ground is drawn from a coarser grid (24 cells per 64 m tile) than the near ground, so the surface you see
+// can sit up to about half a metre above the exact height. For anything that stands on the ground (rocks, masts)
+// use this: it is the highest of the exact height and both ways the coarse mesh can be cut, so nothing floats.
+const COARSE = 64 / 24;
+export function groundHeight(x, z) {
+  const exact = heightAt(x, z);
+  if (Math.abs(x) >= WORLD_HALF || Math.abs(z) >= WORLD_HALF) return exact;
+  const gx = (x + WORLD_HALF) / COARSE, gz = (z + WORLD_HALF) / COARSE, i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j;
+  const at = (a, b) => heightAt(-WORLD_HALF + a * COARSE, -WORLD_HALF + b * COARSE);
+  const h00 = at(i, j), h10 = at(i + 1, j), h01 = at(i, j + 1), h11 = at(i + 1, j + 1);
+  const A = fx >= fz ? h00 + (h10 - h00) * fx + (h11 - h10) * fz : h00 + (h11 - h01) * fx + (h01 - h00) * fz;
+  const B = fx + fz <= 1 ? h00 + (h10 - h00) * fx + (h01 - h00) * fz : h11 + (h01 - h11) * (1 - fx) + (h10 - h11) * (1 - fz);
+  return Math.max(exact, A, B);
+}
 
 // The Mars sky, coloured like NASA rover photos: butterscotch near the horizon, darker and browner overhead
 // (fine red dust hangs high in the thin air), a pale glow around the Sun, and a BLUE glow at sunset
@@ -151,10 +193,17 @@ function gravelTexture() {
 }
 
 function makeTerrain() {
-  const rust=new THREE.Color('#9e7054'),dusty=new THREE.Color('#bc9470'),basalt=new THREE.Color('#55504a'),pale=new THREE.Color('#cab292');
+  const rust=new THREE.Color('#9e7054'),dusty=new THREE.Color('#bc9470'),basalt=new THREE.Color('#55504a'),darkSand=new THREE.Color('#6b5444'),pale=new THREE.Color('#cab292');
   return makeTerrainChunks(heightAt,(x,z,y,col)=>{
     const slope=Math.abs(heightAt(x+1.5,z)-y)+Math.abs(heightAt(x,z+1.5)-y);
-    col.copy(rust).lerp(dusty,fbm(x*.08,z*.08,3)).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15,0,.75)).offsetHSL(0,-.2,-.015);
+    // Broad patches (dark basalt sand against pale dust), rocky hill flanks, pale dust drifted into the dips.
+    const patch=fbm(x*.011+9,z*.011-4,3),fine=fbm(x*.08,z*.08,3),hollow=THREE.MathUtils.clamp((heightAt(x+6,z)+heightAt(x-6,z)+heightAt(x,z+6)+heightAt(x,z-6))/4-y,0,.6)/.6;
+    craterLift(x,z);const bowl=craterField.bowl,rimW=craterField.rim,hillH=landmarkLift(x,z);
+    col.copy(rust).lerp(dusty,fine).lerp(darkSand,THREE.MathUtils.clamp((patch-.5)*2.2,0,.7)).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(pale,hollow*.45).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15+(y>6?.12:0),0,.8));
+    // Crater floors fill with pale dust and sit in shade; rims and ejecta are darker. Hills show bands of darker and paler rock.
+    col.lerp(pale,bowl*.5).multiplyScalar(1-.22*bowl).lerp(basalt,rimW*.35);
+    if(hillH>1.5){const strata=.5+.5*Math.sin(hillH*1.7+fbm(x*.05,z*.05,2)*3);col.lerp(strata>.55?basalt:dusty,Math.min(.3,hillH/30)*Math.abs(strata-.5)*1.6);}
+    col.offsetHSL(0,-.2,-.015);
   });
 }
 
@@ -181,7 +230,7 @@ export function rockGeometry(seed, { detail = 3, squash = 1, rough = .3 } = {}) 
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
 }
 function makeRocks(rng) {
-  const count = 520;
+  const count = 900;
   const geo = SURFACE_DETAIL.texture >= 1024
     ? rockGeometry(73, {detail: 5, rough: .35})
     : new THREE.DodecahedronGeometry(1, 0);
@@ -198,13 +247,17 @@ function makeRocks(rng) {
   mat.vertexColors=!!geo.attributes.color;mat.flatShading=!geo.attributes.color;
   const rocks = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
-  const tints = ['#786454', '#98795f', '#55514b', '#ad8a6d'].map(c => new THREE.Color(c));
+  const tints = ['#65544a', '#7f6450', '#403d39', '#8f7158', '#2f2d2b', '#4b4540'].map(c => new THREE.Color(c));
   const colliders = [], lowRocks = [];
   const vertices = geo.attributes.position, vertex = new THREE.Vector3();
   for (let i = 0; i < count; i++) {
-    let x, z; do { x = (rng() - 0.5) * WORLD_SIZE * 0.7; z = (rng() - 0.5) * WORLD_SIZE * 0.7; } while (Math.hypot(x, z) < 24);
-    const slab = rng() < 0.55, size = slab ? 1.5 + rng() * 4 : 0.4 + rng() * 2.2;
-    s.set(size * (0.8 + rng()), slab ? size * 0.18 : size * (0.6 + rng() * 0.5), size * (0.8 + rng()));
+    let x, z, tries = 0;
+    do { x = (rng() - 0.5) * WORLD_SIZE * 0.82; z = (rng() - 0.5) * WORLD_SIZE * 0.82; tries++; }
+    while (Math.hypot(x, z) < 24 || (tries < 60 && rng() > rockWeight(x, z, fbm(x * .018 + 3, z * .018 - 7, 3))));
+    // Many small stones, few big ones (a power law, like real boulder counts); the biggest are rare.
+    const slab = rng() < 0.4, size = Math.min(slab ? 4.6 : 3.2, (slab ? .9 : .32) * Math.pow(1 - rng() * .985, -.55));
+    const stretch = .6 + rng() * 1.1;   // some stones long and thin, some round
+    s.set(size * (0.7 + rng() * .5) * stretch, slab ? size * (0.12 + rng() * .14) : size * (0.45 + rng() * 0.8), size * (0.7 + rng() * .5) / Math.sqrt(stretch));
     p.set(x, heightAt(x, z) + s.y * 0.35, z);
     q.setFromEuler(e.set((rng() - 0.5) * 0.3, rng() * Math.PI, (rng() - 0.5) * 0.3));
     // Follow the local slope, then embed the whole lower cap rather than
@@ -213,13 +266,14 @@ function makeRocks(rng) {
     q.premultiply(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),normal));
     let support=Infinity;
     for(let j=0;j<vertices.count;j++){
-      if(vertices.getY(j)>-.25)continue;
+      if(vertices.getY(j)>-.12)continue;
       vertex.fromBufferAttribute(vertices,j).multiply(s).applyQuaternion(q);
-      support=Math.min(support,heightAt(x+vertex.x,z+vertex.z)-vertex.y);
+      support=Math.min(support,groundHeight(x+vertex.x,z+vertex.z)-vertex.y);
     }
     p.y=support-Math.max(.08,Math.min(.25,s.y*.15));
     rocks.setMatrixAt(i, m.compose(p, q, s));
-    rocks.setColorAt(i, tints[Math.floor(rng() * tints.length)]);
+    const dark = rng() < .22;   // dark vesicular basalt
+    rocks.setColorAt(i, tints[dark ? 2 + Math.floor(rng() * 2) * 2 : Math.floor(rng() * tints.length)].clone().multiplyScalar(dark ? .8 : .8 + rng() * .4));
     let top = -Infinity, radiusSq = 0;
     for (let j = 0; j < vertices.count; j++) {
       vertex.fromBufferAttribute(vertices, j).multiply(s).applyQuaternion(q);
@@ -383,7 +437,7 @@ export class World {
     this.facts = facts;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1800);
-    this.scene.fog = new THREE.Fog('#d9a27a', 70, 460);
+    this.scene.fog = new THREE.Fog('#d9a27a', 45, 520);
     this.sky = makeSky(this.scene);
     this.skyLights = makeSkyLights(this.scene);
     this.hemi = new THREE.HemisphereLight('#ffe2c4', '#6b3a22', 1.15); this.scene.add(this.hemi);
@@ -597,7 +651,7 @@ export class World {
     this.nightness = 1 - day;
     const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
-    this.scene.fog.near = this.dustOn ? 18 : 70; this.scene.fog.far = this.dustOn ? 140 : 460 - 180 * (1 - day);
+    this.scene.fog.near = this.dustOn ? 18 : 45; this.scene.fog.far = this.dustOn ? 140 : 520 - 200 * (1 - day);
     this.skyLights.stars.setOpacity((1 - day) * (this.dustOn ? 0.2 : 1));
     this.skyLights.planets.userData.setOpacity((1 - day) * (this.dustOn ? 0.15 : 0.9));
     this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset

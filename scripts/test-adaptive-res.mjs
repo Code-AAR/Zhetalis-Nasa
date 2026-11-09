@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+let now = 0; globalThis.performance = { now: () => now }; globalThis.document = { hidden: false };
+const { createAdaptiveRes } = await import('../game/src/adaptive-res.js');
+const ratios = []; const r = { setPixelRatio: v => ratios.push(v) };
+const a = createAdaptiveRes(r, () => 2);
+const run = (ms, frames) => { for (let i = 0; i < frames; i++) { now += ms; a.tick(); } };
+run(16.7, 120); assert.equal(a.scale, 1, 'a smooth game keeps full resolution');
+run(40, 200); assert.ok(a.scale < 1 && a.scale >= 0.6, 'a slow game lowers resolution, never below the floor');
+run(40, 600); assert.ok(Math.abs(a.scale - 0.6) < 1e-9, 'floor holds'); const low = a.scale;
+run(10, 1500); assert.ok(a.scale > low, 'resolution climbs back when frames are fast');
+const n = ratios.length; run(500, 50); assert.equal(ratios.length, n, 'long hitches are ignored');
+assert.ok(ratios.every(v => v >= 0.5), 'pixel ratio never drops below 0.5');
+console.log('adaptive resolution tests passed');
