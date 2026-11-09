@@ -189,3 +189,13 @@ Auto graphics selects full quality on computers/tablets and Lite on phones; this
 - New map spots with fact cards (`src/mapstate.js`): Ma'adim Vallis (the channel through the south rim, from the NASA height data), the meteorite field, and the dust devil plain with dark tracks (`buildDustDevilTracks` in `stop-models.js`).
 - Ore fact cards now describe Spirit's finds (`data/mars-facts.json`: gusevHematite, sulfateSalt, gusevMeteorite, silica, carbonate). The old Opportunity cards are still there.
 - Old saves: mined-rock ids from before the move are dropped, and the new minerals start at 0.
+
+### Real light and dark ground (9 Nov, Ewan)
+- Inside the measured area, the ground colour follows NASA albedo maps (how much sunlight the ground reflects).
+  - Sources: Viking Orbiter colour mosaic (925 m) for the pattern, scaled to Mars Global Surveyor TES albedo for the real values. Both from USGS Astrogeology.
+  - Baked file: `assets/terrain/gusev-albedo-256.bin` (256 x 256 bytes, north row first) plus `.json` (sources, range, scale).
+  - Rebake: `python3 -I scripts/bake-gusev-albedo.py <Viking ClrMosaic tif> <TES albedo tif>`. The tifs are too big for GitHub, so keep them local.
+- `groundAlbedo(x, z)` in `src/world.js` gives dark, bright and a weight. It fades out past the measured area, same as the heights.
+- The contrast is boosted about three times. Real Gusev only spans albedo 0.22 to 0.26, which you could not see on a screen.
+- The darkest real ground is about 200 m north of camp. The dust devil plain and its tracks moved there to match.
+- If the file fails to load, the old made-up colour patches come back. Nothing breaks.

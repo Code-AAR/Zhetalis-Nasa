@@ -75,8 +75,8 @@ class DustDevils {
   constructor(world, sites) {
     this.world = world; this.sites = sites; this.t = 0; this.told = false;
     // dust devils wander around these spots; two of them work the dust devil plain to the north, with its dark tracks
-    this.anchors = [[-120, 150, 0.2], [-60, -245, 2.1], [250, 40, 4.0], [-20, -265, 5.3]];
-    world.scene.add(buildDustDevilTracks(heightAt, -60, -245));
+    this.anchors = [[-120, 150, 0.2], [0, -195, 2.1], [250, 40, 4.0], [-35, -220, 5.3]];
+    world.scene.add(buildDustDevilTracks(heightAt, 0, -195));
     this.N = 110; this.devils = this.anchors.map(() => {
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(this.N * 3), 3));
       const p = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#c9a27c', size: 1.5, transparent: true, opacity: .3, depthWrite: false, fog: true }));

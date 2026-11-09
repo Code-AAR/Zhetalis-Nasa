@@ -38,6 +38,25 @@ if(terrainBuffer.byteLength!==terrainMetadata.n**2*2)throw new Error('Incomplete
 const measuredHeights=new Int16Array(terrainMetadata.n**2);
 for(let i=0;i<measuredHeights.length;i++)measuredHeights[i]=terrainView.getInt16(i*2,true);
 const measuredTerrain=createMeasuredTerrain(measuredHeights,terrainMetadata);
+// Real ground brightness (albedo) over the same crop: Viking orbiter detail scaled to TES albedo (scripts/bake-gusev-albedo.py).
+// Darker = dust swept away, showing dark basalt sand; brighter = more red dust. Optional: the game still runs without it.
+const albedoMap=await Promise.all([fetch('assets/terrain/gusev-albedo-256.bin'),fetch('assets/terrain/gusev-albedo-256.json')])
+  .then(async([b,j])=>b.ok&&j.ok?{q:new Uint8Array(await b.arrayBuffer()),meta:await j.json()}:null).catch(()=>null);
+export const albedoMetadata=albedoMap?.meta||null;
+const albedoMean=albedoMap?(albedoMap.meta.mean-albedoMap.meta.min)/(albedoMap.meta.max-albedoMap.meta.min):0;
+// 0..1 sample of the stored albedo, or -1 outside the crop / when missing
+function albedoSample(x,z){
+  if(!albedoMap)return -1;const n=albedoMap.meta.n,span=albedoMap.meta.worldSpan;
+  const u=(x/span+.5)*n-.5,v=(z/span+.5)*n-.5;if(u<0||v<0||u>n-1||v>n-1)return -1;
+  const x0=Math.floor(u),z0=Math.floor(v),x1=Math.min(n-1,x0+1),z1=Math.min(n-1,z0+1),fx=u-x0,fz=v-z0,q=albedoMap.q;
+  return((q[z0*n+x0]*(1-fx)+q[z0*n+x1]*fx)*(1-fz)+(q[z1*n+x0]*(1-fx)+q[z1*n+x1]*fx)*fz)/255;
+}
+// How much darker (dark > 0) or brighter (bright > 0) than average the real ground is here, faded out over the invented edge
+export function groundAlbedo(x,z){
+  const a=albedoSample(x,z);if(a<0)return{dark:0,bright:0,w:0};
+  const w=1-edgeWeight(x,z);
+  return{dark:Math.max(0,(albedoMean-a)/albedoMean),bright:Math.max(0,(a-albedoMean)/(1-albedoMean)),w};
+}
 // The measured NASA grid is very bumpy in the south-east, which is where Home Plate and the hills sit. Blur it there so the
 // ground reads as the broad, quiet inner basin Spirit crossed, and blend back to the raw data further out.
 function blurred(src,n,k){
@@ -199,7 +218,11 @@ function makeTerrain() {
     // Broad patches (dark basalt sand against pale dust), rocky hill flanks, pale dust drifted into the dips.
     const patch=fbm(x*.011+9,z*.011-4,3),fine=fbm(x*.08,z*.08,3),hollow=THREE.MathUtils.clamp((heightAt(x+6,z)+heightAt(x-6,z)+heightAt(x,z+6)+heightAt(x,z-6))/4-y,0,.6)/.6;
     craterLift(x,z);const bowl=craterField.bowl,rimW=craterField.rim,hillH=landmarkLift(x,z);
-    col.copy(rust).lerp(dusty,fine).lerp(darkSand,THREE.MathUtils.clamp((patch-.5)*2.2,0,.7)).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(pale,hollow*.45).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15+(y>6?.12:0),0,.8));
+    // dark and pale patches: from NASA's albedo map inside the measured crop, invented noise on the outer ground
+    const ga=groundAlbedo(x,z),made=THREE.MathUtils.clamp((patch-.5)*2.2,0,.7);
+    // (contrast boosted about three times so the real pattern reads on screen; real Gusev dark ground is about 12% darker)
+    const gd=ga.dark*ga.w,gb=ga.bright*ga.w,darkMix=THREE.MathUtils.lerp(made,THREE.MathUtils.clamp(ga.dark*(.8+.3*fine),0,.95),ga.w);
+    col.copy(rust).lerp(dusty,fine*(1-gd*.7)+gb*.5).lerp(darkSand,darkMix).lerp(basalt,gd*.45).multiplyScalar(1-.3*gd+.12*gb).lerp(pale,THREE.MathUtils.clamp((y-25)/60,0,.6)).lerp(pale,hollow*.45).lerp(basalt,THREE.MathUtils.clamp(slope/4-.15+(y>6?.12:0),0,.8));
     // Crater floors fill with pale dust and sit in shade; rims and ejecta are darker. Hills show bands of darker and paler rock.
     col.lerp(pale,bowl*.5).multiplyScalar(1-.22*bowl).lerp(basalt,rimW*.35);
     const onPlate=plateWeight(x,z);

@@ -83,6 +83,7 @@ model had a NASA logo printed on it, the game paints our team badge over it.
 - Solar storms are stronger than real ones so shielding matters within one game.
 - Upgrade costs, panel output and rover speed are game balance, and are listed as that in the game.
 - The ground is Gusev Crater, Spirit's landing site, from NASA MOLA height data squeezed into a 1.2 km map. Other landing regions change your resources, not the ground.
+- The light and dark patches on the ground come from NASA albedo maps of Gusev (Viking colour mosaic, scaled to TES albedo). The contrast is boosted so you can see it.
 - Spirit's five stops (heat shield, Hillary, Home Plate, Gertrude Weise, Troy) are real places, but much closer together than in real life and drawn a little larger.
 
 ## For classrooms
