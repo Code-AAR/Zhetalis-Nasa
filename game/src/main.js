@@ -5,7 +5,8 @@ import {recordLesson,tutorialLessons,questHelp} from './player-tutorial.js';
 import {RECIPES,builderQuest} from './builder-recipes.js';
 import { Construction } from './construction.js';
 import { firstMissionReport } from './construction-state.js';
-import { zhetela, zhetelaPortraitHTML } from './zhetela.js';
+import { zhetela, finishZhetelaStep, zhetelaPortraitHTML } from './zhetela.js';
+const suitGuideStep = Symbol('EVA suit checks');
 let construction;
 import { waitForBase } from './base-loading.js';
 import {chargeRover} from './rover-charging.js';
@@ -432,11 +433,31 @@ function startAirlock(direction,complete){
   airlockFinish=complete;airlockRoom=new AirlockRoom(direction);inside=true;room=airlockRoom;
   for(const key of Object.keys(world.keys))world.keys[key]=false;
   document.exitPointerLock?.();
-  toast(direction==='out'?'Inner hatch sealed. Recovering air before opening outside.':'Outer hatch sealed. Restoring cabin pressure before opening inside.',5000);
+  updateAirlockGuide();
+}
+function updateAirlockGuide(){
+  const chamber = airlockRoom;
+  const {cycle, returning} = chamber;
+  const phase = cycle.ready ? 'ready' : returning ? 'returning' : 'cycling';
+  if (phase === chamber.guidePhase) return;
+  chamber.guidePhase = phase;
+  const use = keyWord('Press E', 'Tap Use');
+  const hatch = cycle.direction === 'out' ? 'outer hatch' : 'inner hatch';
+  const message = cycle.ready
+    ? `Pressure matched. ${use} to open the ${hatch}${returning ? ' and return to where you started' : ''}.`
+    : returning
+      ? 'Both hatches are sealed while pressure returns to the level on your entry side. Wait for the display to say PRESSURE MATCHED.'
+      : `Both hatches are sealed. ${cycle.direction === 'out' ? 'The chamber is lowering its pressure to match Mars.' : 'The chamber is restoring cabin pressure.'} Wait for PRESSURE MATCHED on the display, then ${use.toLowerCase()} to open the ${hatch}.`;
+  zhetela(message, false, {
+    step: chamber,
+    action: returning ? undefined : { label: 'Cancel and return', run: cancelAirlock },
+  });
 }
 function useAirlock(){
   if(!airlockRoom.cycle.ready)return modal({title:'Airlock cycling',pause:false,html:'<p>Both hatches are sealed. Wait for pressure to match, or return to the entry side.</p>',choices:[{label:'Keep cycling',primary:true},{label:'Cancel and return safely',onPick:cancelAirlock}]});
-  const done=airlockFinish;airlockRoom.dispose();room=interior;airlockRoom=null;airlockFinish=null;done();saveGame();
+  const done=airlockFinish;
+  finishZhetelaStep(airlockRoom);
+  airlockRoom.dispose();room=interior;airlockRoom=null;airlockFinish=null;done();saveGame();
 }
 function cancelAirlock(){
   if(!airlockRoom)return;
@@ -444,14 +465,21 @@ function cancelAirlock(){
   if(airlockRoom.returning)return;
   const back=new AirlockCycle(cycle.direction==='out'?'in':'out');back.startPressure=cycle.pressure;
   airlockRoom.cycle=back;airlockRoom.returning=true;airlockFinish=airlockReturn;
-  toast('Returning safely: pressure is matching the entry side. Press E / Use when ready.');
+  updateAirlockGuide();
 }
 function suitRack(){
-  const set=(equipped,checked)=>{eva={equipped,checked};interior.rackedSuit.visible=!equipped;saveGame();toast(equipped?'Suit on. Checks complete; now go to the airlock.':'Suit stored. Cabin clothes inside; wear the suit again before EVA.');};
+  const set=(equipped,checked)=>{
+    eva={equipped,checked};interior.rackedSuit.visible=!equipped;saveGame();
+    if (canExitHabitat(eva)) finishZhetelaStep(suitGuideStep);
+    toast(equipped?'Suit on. Checks complete; now go to the airlock.':'Suit stored. Cabin clothes inside; wear the suit again before EVA.');
+  };
   modal({title:'EVA suit rack',html:`<p>${eva.equipped?'You are wearing your EVA suit.':'Your suit is stored on the rack.'}</p><p>Before going outside: wear the suit, check oxygen, seals and communications, and complete the required oxygen-prebreathe protocol.</p><p class="source">Preparation is shortened for this game. Real procedures depend on the cabin and suit pressures. <a href="https://www.nasa.gov/reference/11-0-spacesuits-vol-2/" target="_blank" rel="noopener">NASA: spacesuit operations</a></p>`,choices:[...(eva.equipped?[{label:'Store suit on rack',onPick:()=>set(false,false)}]:[]),{label:'Wear suit and complete EVA checks',primary:true,onPick:()=>set(true,true)},{label:'Back'}]});
 }
 function requestOutside(){
-  if(!canExitHabitat(eva))return toast('Wear your suit and complete EVA checks at the suit rack in Airlock & power, then return here.',6000);
+  if (!canExitHabitat(eva)) {
+    zhetela('Before going outside, find the suit rack on the left wall of Airlock & Power, the first habitat module. Choose “Wear suit and complete EVA checks,” then come back to this hatch.', false, {step: suitGuideStep});
+    return;
+  }
   const source=room;startAirlock('out',()=>{room=source;goOutside();});
 }
 function goOutside() {
@@ -1353,6 +1381,7 @@ renderer.setAnimationLoop(() => {
     if(interior.rackedSuit)interior.rackedSuit.visible=!eva.equipped;
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
     if (inside) room.update(dt, world.keys, !isModalOpen());
+    if (airlockRoom && room === airlockRoom) updateAirlockGuide();
     if (inside && room===interior && interior.pos.z < -4.65){
       if(!colony.s.farmQuest.visited)farmProgress('visited');
       room=ghRoom;
