@@ -811,14 +811,13 @@ export class World {
       const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.45;
       if (d < min && d > 0.0001) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
     }
-    const lim = WORLD_SIZE * 0.42, r = Math.hypot(pos.x, pos.z);
-    if (r > lim) { pos.x *= lim / r; pos.z *= lim / r; }
+    const lim=WORLD_HALF-8;pos.x=THREE.MathUtils.clamp(pos.x,-lim,lim);pos.z=THREE.MathUtils.clamp(pos.z,-lim,lim);
   }
 
-  enterRover() { this.driving = true; this.firstPerson = false; this.move.set(0, 0, 0); this.yaw = this.sev.yaw; this.pitch = 0.35; }
+  enterRover() { this.driving = true; this.firstPerson = true; this.roverCameraYaw=this.sev.yaw;this.lookPitch=0; this.move.set(0, 0, 0); this.yaw = this.sev.yaw; this.pitch = 0.35; }
   exitRover() {
     const e = this.sev.exitPoint();
-    this.driving = false; this.sev.speed = 0;
+    this.driving = false; this.sev.speed = 0;this.sev.setCockpit(false);
     this.player.position.set(e.x, heightAt(e.x, e.z), e.z); this.player.rotation.y = this.sev.yaw + Math.PI;
     this.yaw = this.sev.yaw + Math.PI; this.pitch = 0.25;
   }
@@ -911,11 +910,15 @@ export class World {
     this.player.visible = false; this.viewSlot.visible = false;
     p.copy(r.pos);
     this.move.set(0, 0, 0); this.swing = 0;
+    r.setCockpit(this.firstPerson);
+    if(this.firstPerson)this.yaw+=r.yaw-(this.roverCameraYaw??r.yaw);
+    this.roverCameraYaw=r.yaw;
     if (this.firstPerson) {
-      const f = 1.4, eye = new THREE.Vector3(r.pos.x + Math.sin(r.yaw) * f, r.pos.y + 2.3, r.pos.z + Math.cos(r.yaw) * f);
+      r.body.updateWorldMatrix(true,false);
+      const eye=r.body.localToWorld(new THREE.Vector3(0,2.3,1.35));
       this.camera.position.copy(eye);
       const yaw = this.yaw; // mouse-controlled cockpit view
-      this.camera.lookAt(eye.x + Math.sin(yaw), eye.y - 0.12 + Math.sin(this.lookPitch), eye.z + Math.cos(yaw));
+      this.camera.lookAt(eye.x + Math.sin(yaw)*Math.cos(this.lookPitch), eye.y + Math.sin(this.lookPitch), eye.z + Math.cos(yaw)*Math.cos(this.lookPitch));
     } else {
       // Camera yaw belongs to the mouse, including while driving.
       const dist = 12, eye = new THREE.Vector3(r.pos.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), r.pos.y + 3 + Math.sin(this.pitch) * dist, r.pos.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));

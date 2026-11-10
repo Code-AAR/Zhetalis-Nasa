@@ -1,3 +1,6 @@
+import {AirlockRoom} from './airlock-room.js';
+import {AirlockCycle,canExitHabitat} from './airlock-state.js';
+let eva={equipped:true,checked:true},airlockRoom=null,airlockFinish=null,airlockReturn=null;
 import {recordLesson,tutorialLessons,questHelp} from './player-tutorial.js';
 import {RECIPES,builderQuest} from './builder-recipes.js';
 import { Construction } from './construction.js';
@@ -181,14 +184,14 @@ function showData() {
 // After a refresh, the title screen offers "Resume" to carry on from the same sol.
 const SAVE_KEY = 'zhetalis-unity-mars-save-v1';
 function saveGame() {
-  if (window.__resetting) return;
+  if (window.__resetting || (airlockRoom && room===airlockRoom)) return;
   if (state.phase !== 'mars' || !outpost || outpost.over || !world) return;
   const o = {};
   for (const [k, v] of Object.entries(outpost)) if (!['d', 'facts', 'today'].includes(k)) o[k] = v;
   const s = world.sev, p = world.driving ? s.exitPoint() : world.player.position;
   const data = {
     v: 1, when: Date.now(), difficulty: state.difficulty, speed: state.speed, outpost: o,
-    entry: world.activeEntrance?.index??0, solSeconds: TUNED.solSeconds, solClock, suit, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()], body: body?.save(),
+    entry: world.activeEntrance?.index??0, solSeconds: TUNED.solSeconds, solClock, suit, eva, inside, ship: inside && room === capsule, gh: inside && room === ghRoom, pending, tutorialStep, sunsetShown, logbook: [...logbook.keys()], body: body?.save(),
     world: { player: [p.x, p.z], yaw: world.yaw, rover: world.rover.salvaged, heli: !!world.heli.seen, sevShown: !!world.sevShown,
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
     colony: colony?.s, surveys: [...(world.settlement?.surveys || [])], lookouts: [...(world.lookouts?.got || [])], map: world.mapState?.save(),
@@ -227,6 +230,7 @@ async function resume(d) {
   world.activeEntrance=world.settlement.entrances[d.entry??0];
   Object.assign(outpost, { powerStep: 6, rations: 0, baseConnected:true, chargerStep:0, roverCharged:false,soilStep:0,chargeReserve:0 }, d.outpost); outpost.d={...DIFFICULTY[d.difficulty]};outpost.today = outpost.forecast();
   ({ solClock, suit, pending, tutorialStep, sunsetShown } = d);
+  eva={equipped:true,checked:true,...d.eva};if(!d.inside)eva={equipped:true,checked:true};
   solClock = (solClock / (d.solSeconds || 37) % 1) * TUNED.solSeconds;
   if (d.body) Object.assign(body, d.body);
   d.logbook.forEach(id => F[id] && logFact(F[id]));
@@ -387,7 +391,7 @@ function goInside(entrance=world?.activeEntrance||world?.settlement?.entrances[0
   inside = true; room = interior; interior.enter();
   if(entrance)interior.pos.set(entrance.index*10.2,0,1.25);
   document.exitPointerLock?.();
-  toast(`🏠 Inside the outpost: you are shielded and your suit refills. Walk to the stations and ${keyWord('press E', 'tap Use')}.`, 4500);
+  toast(`Cabin pressure restored. Store your suit at the rack in Airlock & power. Wear it and complete checks before your next EVA.`, 6000);
 }
 // Your lander: climb the ladder into its crew cabin (capsule.js)
 function goInShip() {
@@ -420,6 +424,36 @@ function goInGreenhouse(from) {
     toast(`🌱 The greenhouse! Its 4 grow beds feed the crew. ${keyWord('Press E', 'Tap Use')} at the end of a bed to plant seeds, fill it from the water pipe and harvest food.`, 7000);
   }
 }
+function startAirlock(direction,complete){
+  logFact({id:'eva-airlock',kid:'Wear and check your suit before sealing the inner hatch. Lower airlock pressure before going out; close the outer hatch and restore cabin pressure before coming in. Timings and pressures here are training examples, not an operating procedure.',source:'NASA spacesuit operations',url:'https://www.nasa.gov/reference/11-0-spacesuits-vol-2/'});
+  if(airlockRoom&&room===airlockRoom)return;
+  const oldInside=inside,oldRoom=room;saveGame();
+  airlockReturn=()=>{inside=oldInside;room=oldRoom;};
+  airlockFinish=complete;airlockRoom=new AirlockRoom(direction);inside=true;room=airlockRoom;
+  for(const key of Object.keys(world.keys))world.keys[key]=false;
+  document.exitPointerLock?.();
+  toast(direction==='out'?'Inner hatch sealed. Recovering air before opening outside.':'Outer hatch sealed. Restoring cabin pressure before opening inside.',5000);
+}
+function useAirlock(){
+  if(!airlockRoom.cycle.ready)return modal({title:'Airlock cycling',pause:false,html:'<p>Both hatches are sealed. Wait for pressure to match, or return to the entry side.</p>',choices:[{label:'Keep cycling',primary:true},{label:'Cancel and return safely',onPick:cancelAirlock}]});
+  const done=airlockFinish;airlockRoom.dispose();room=interior;airlockRoom=null;airlockFinish=null;done();saveGame();
+}
+function cancelAirlock(){
+  if(!airlockRoom)return;
+  const cycle=airlockRoom.cycle;
+  if(airlockRoom.returning)return;
+  const back=new AirlockCycle(cycle.direction==='out'?'in':'out');back.startPressure=cycle.pressure;
+  airlockRoom.cycle=back;airlockRoom.returning=true;airlockFinish=airlockReturn;
+  toast('Returning safely: pressure is matching the entry side. Press E / Use when ready.');
+}
+function suitRack(){
+  const set=(equipped,checked)=>{eva={equipped,checked};interior.rackedSuit.visible=!equipped;saveGame();toast(equipped?'Suit on. Checks complete; now go to the airlock.':'Suit stored. Cabin clothes inside; wear the suit again before EVA.');};
+  modal({title:'EVA suit rack',html:`<p>${eva.equipped?'You are wearing your EVA suit.':'Your suit is stored on the rack.'}</p><p>Before going outside: wear the suit, check oxygen, seals and communications, and complete the required oxygen-prebreathe protocol.</p><p class="source">Preparation is shortened for this game. Real procedures depend on the cabin and suit pressures. <a href="https://www.nasa.gov/reference/11-0-spacesuits-vol-2/" target="_blank" rel="noopener">NASA: spacesuit operations</a></p>`,choices:[...(eva.equipped?[{label:'Store suit on rack',onPick:()=>set(false,false)}]:[]),{label:'Wear suit and complete EVA checks',primary:true,onPick:()=>set(true,true)},{label:'Back'}]});
+}
+function requestOutside(){
+  if(!canExitHabitat(eva))return toast('Wear your suit and complete EVA checks at the suit rack in Airlock & power, then return here.',6000);
+  const source=room;startAirlock('out',()=>{room=source;goOutside();});
+}
 function goOutside() {
   inside = false;
   if (room === ghRoom) {   // out through the greenhouse airlock
@@ -442,14 +476,16 @@ function goOutside() {
 }
 
 function stationAction(s) {
-  if (s.type === 'exit' || s.type === 'ship-exit') return goOutside();
+  if(s.type==='airlock-control')return useAirlock();
+  if(s.type==='suit-rack')return suitRack();
+  if (s.type === 'exit' || s.type === 'ship-exit') return requestOutside();
   if (s.type === 'ship-seat') return modal({ pause: false, title: '💺 The crew seats', html: `<p>Your lander has seats for <b>4 astronauts</b>, like NASA's Orion capsule. For launch and landing they lie on their backs with their knees up - that way the strong push of the rockets presses them into the seat instead of draining blood from their heads.</p>${factHTML(F.artemis2)}<p class="source">Orion, the capsule NASA astronauts fly in today, has only about as much living space as a small camper van - for a whole crew!</p>` });
   if (s.type === 'ship-panel') return modal({ pause: false, title: '🖥 The glass cockpit', html: `<p>Like NASA's Orion capsule, your lander is flown with <b>three big screens</b> instead of hundreds of dials and switches. The crew can swap what each screen shows - flight path, power, air and the heat shield.</p>${factHTML(F.orion)}<p>Orion's <b>heat shield</b> is on its bottom. Coming home it gets hotter than the surface of a lava flow, and it slowly burns away to carry the heat off.</p>` });
   if (s.type === 'console') return openPower();
   if (s.type === 'workbench') return openWorkbench();
   if (s.type === 'greenhouse') return toast('Walk forward through the pressure tube.');
 
-  if (s.type === 'gh-out') return goOutside();
+  if (s.type === 'gh-out') return requestOutside();
   if (s.type === 'gh-bed') return openGreenhouse(colony.baseBeds[s.bed]);
   if (s.type === 'gh-tap') {
     if (!colony.has('jug')) return toast('💧 This tap fills the water jug for greenhouses you build outside. The jug is in the storage locker in the outpost.', 5000);
@@ -923,9 +959,9 @@ function collect(n) {
     modal({title:titles[key],html:`<p>${notes[key]}</p><p>${first?'Survey complete: +8 science stored for transmission to Earth.':'This survey has already been logged.'}</p>`,choices:[{label:'Continue',primary:true}]});return;
   }
 
-  if (n.type === 'door') return goInside(n.entrance);
-  if (n.type === 'ship') return goInShip();
-  if (n.type === 'ghdoor') return goInGreenhouse('out');
+  if (n.type === 'door') return startAirlock('in',()=>goInside(n.entrance));
+  if (n.type === 'ship') return startAirlock('in',()=>goInShip());
+  if (n.type === 'ghdoor') return startAirlock('in',()=>goInGreenhouse('out'));
   if (n.type === 'ore') { mine(n.deposit); return; }
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
   if (n.type === 'sev') {
@@ -995,6 +1031,7 @@ function endMission() {
 function pressKey(code) {
   if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
+  if(airlockRoom&&room===airlockRoom){if(code==='KeyE')useAirlock();if(code==='KeyR')cancelAirlock();return;}
   if (code === 'KeyB') { openBuild(); return; }
   if (code === 'KeyX') { construction?.placeBattery(); return; }
   if (code === 'KeyR') { construction?.cancel(); return; }
@@ -1125,7 +1162,7 @@ soundLabel(); addEventListener('touchstart', soundLabel, { passive: true, once: 
 $('#view-btn').onclick = () => { if (world && !inside) world.firstPerson = !world.firstPerson; };
 $('#speed-btn').onclick = () => { state.speed = state.speed === 1 ? 3 : 1; $('#speed-btn').textContent = 'Speed ×' + state.speed; };
 let viewportFrame;
-function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.max(.5,targetRatio()*adaptiveRes.scale));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=effectiveQuality(GRAPHICS_MODE)!=='low';world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();});}
+function resizeGame(){cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{renderer.setPixelRatio(Math.max(.5,targetRatio()*adaptiveRes.scale));renderer.setSize(innerWidth,innerHeight,false);renderer.shadowMap.enabled=effectiveQuality(GRAPHICS_MODE)!=='low';world?.resize();launch?.resize();interior?.resize();capsule?.resize();ghRoom?.resize();airlockRoom?.resize();});}
 addEventListener('resize',resizeGame);window.visualViewport?.addEventListener('resize',resizeGame);
 
 // ---------------- HUD ----------------
@@ -1253,7 +1290,7 @@ devConsole({
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get eva(){return eva;},get airlock(){return airlockRoom;}, get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
 let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
 setPatchContext(() => ({ sol: outpost?.sol }));
 setSoundGate(() => !isMuted());
@@ -1312,7 +1349,8 @@ renderer.setAnimationLoop(() => {
     return;
   }
   if (state.phase === 'mars' && world) {
-    const paused = isPaused() || !!world.cinematic;
+    const paused = isPaused() || !!world.cinematic || (airlockRoom && room===airlockRoom);
+    if(interior.rackedSuit)interior.rackedSuit.visible=!eva.equipped;
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
     if (inside) room.update(dt, world.keys, !isModalOpen());
     if (inside && room===interior && interior.pos.z < -4.65){
@@ -1327,7 +1365,7 @@ renderer.setAnimationLoop(() => {
     if (inside && room === ghRoom) ghRoom.draw(colony.s.base, GREENHOUSE.tank, outpost.today.total*outpost.split.life>=1);
     if (!inside) { world.stormDust = outpost?.dustCover || 0; world.update(dt, !isModalOpen()); }
     construction?.update(inside,room,isModalOpen()||world.cinematic);
-    if(!isModalOpen())updateMissionPower(dt);
+    if(!isModalOpen()&&room!==airlockRoom)updateMissionPower(dt);
     if (!paused && !outpost.over) {
       const step = dt * state.speed;
       solClock += step;
@@ -1399,7 +1437,8 @@ renderer.setAnimationLoop(() => {
     if(hudElapsed>=.1){drawHUD();hudElapsed=0;}
     world.minimap?.draw(!inside && !isModalOpen() && !$('#hud').classList.contains('menu-open'), dt);
     world.settlement?.updateGreenhouse(colony.s.base, outpost.today.total*outpost.split.life>=1);
-    if(inside&&(room===ghRoom||room===capsule))renderInteriorView(renderer,world,room,room===ghRoom?'greenhouse':'capsule',dt);
+    if(airlockRoom&&room===airlockRoom)renderer.render(airlockRoom.scene,airlockRoom.camera);
+    else if(inside&&(room===ghRoom||room===capsule))renderInteriorView(renderer,world,room,room===ghRoom?'greenhouse':'capsule',dt);
     else if (inside) {
       const cam=interior.sharedCamera??=interior.camera.clone();
       cam.copy(interior.camera);cam.position.add(interior.scene.position);cam.updateMatrixWorld();

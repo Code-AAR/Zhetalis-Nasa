@@ -1,6 +1,7 @@
 // Reuse the existing working stations inside six linked pressure modules.
 import * as THREE from 'three';
 import { Interior } from './interior.js';
+import {loadNasaAstronaut} from './suit.js';
 
 const SPACING=10.2,RADIUS=4;
 export class CrewInterior extends Interior {
@@ -54,6 +55,16 @@ export class CrewInterior extends Interior {
         this.obstacles.push(new THREE.Box3().setFromObject(object));
       }
     }
+    const rack=new THREE.Group();rack.position.set(-2.7,0,0);rack.rotation.y=Math.PI/2;this.scene.add(rack);
+    const metal=new THREE.MeshStandardMaterial({color:'#4d6269',roughness:.6});
+    for(const x of[-.7,.7]){const post=new THREE.Mesh(new THREE.BoxGeometry(.07,2.5,.1),metal);post.position.set(x,1.25,0);rack.add(post);}
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(1.5,.07,.1),metal);rail.position.y=2.5;rack.add(rail);
+    const tag=document.createElement('canvas');tag.width=512;tag.height=96;const ink=tag.getContext('2d');ink.fillStyle='#20343b';ink.fillRect(0,0,512,96);ink.fillStyle='#b7f2d3';ink.font='bold 36px sans-serif';ink.textAlign='center';ink.fillText('EVA SUIT RACK',256,60);
+    const tagTexture=new THREE.CanvasTexture(tag);tagTexture.colorSpace=THREE.SRGBColorSpace;const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.31),new THREE.MeshBasicMaterial({map:tagTexture}));sign.position.set(0,2.7,.1);rack.add(sign);
+    this.rackedSuit=new THREE.Group();rack.add(this.rackedSuit);
+    loadNasaAstronaut().then(a=>{if(a){a.arms[0].rotation.z=1.36;a.arms[1].rotation.z=-1.36;this.rackedSuit.add(a.root);}});
+    this.stations.push({type:'suit-rack',label:'store / wear EVA suit',x:-2.7,z:0});
+    rack.updateWorldMatrix(true,true);this.obstacles??=[];this.obstacles.push(new THREE.Box3().setFromObject(rack));
     this.enter();
   }
   enter(){this.pos.set(0,0,1.25);this.yaw=Math.PI;this.pitch=0;this.vel={x:0,z:0};}

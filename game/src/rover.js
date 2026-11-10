@@ -5,6 +5,7 @@
 //
 // Game rules (made up for balance): driving uses the rover's battery, which recharges when parked near the
 // outpost. Inside, your suit refills from the cabin air, and the walls block some radiation.
+import { roverCockpit } from './rover-cockpit.js';
 import { WORLD_EXTENT } from './chunk-plan.js';
 import { driftLift } from './landmarks.js';
 import { softSoil } from './resource-zones.js';
@@ -29,6 +30,7 @@ export class Rover {
     this.lights.position.set(0, 1.6, 2.6); this.lights.target.position.set(0, 0, 14);
     this.body.add(this.lights, this.lights.target);
     this.dust = makeDust(scene);
+    this.cockpit=roverCockpit();this.body.add(this.cockpit);this.cockpitActive=false;
     this.load();
     this.place(0);
   }
@@ -60,7 +62,7 @@ export class Rover {
     geos.forEach((geo, mi) => {
       for (const [part, pg] of Object.entries(splitGeometry(geo, pick))) {
         const mesh = new THREE.Mesh(pg, mats[mi][0]); mesh.castShadow = true; mesh.receiveShadow = true;
-        if (part === 'body') { this.body.add(mesh); continue; }
+        if (part === 'body') { mesh.userData.exteriorHull=true;mesh.visible=!this.cockpitActive;this.body.add(mesh); continue; }
         const row = +part[1], side = part[2];
         let w = this.wheels.find(w => w.row === row && w.side === side);
         if (!w) {
@@ -77,6 +79,11 @@ export class Rover {
     this.length = box.max.z - box.min.z; this.width = box.max.x - box.min.x;
     this.rearZ = box.min.z - mid.z;
     this.ready = true;
+  }
+
+  setCockpit(active){
+    this.cockpitActive=active;this.cockpit.visible=active;
+    for(const m of this.body.children)if(m.userData.exteriorHull)m.visible=!active;
   }
 
   // Where the driver climbs out: behind the rover, at the suitports.
@@ -119,8 +126,9 @@ export class Rover {
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }
     }
-    const lim = WORLD_EXTENT * 0.42, rr = Math.hypot(this.pos.x, this.pos.z);
-    if (rr > lim) { this.pos.x *= lim / rr; this.pos.z *= lim / rr; this.speed *= 0.5; }
+    const lim=WORLD_EXTENT/2-8;
+    const bx=this.pos.x,bz=this.pos.z;this.pos.x=THREE.MathUtils.clamp(bx,-lim,lim);this.pos.z=THREE.MathUtils.clamp(bz,-lim,lim);
+    if(this.pos.x!==bx||this.pos.z!==bz)this.speed=0;
     // battery
     if (driving && Math.abs(this.speed) > 0.2) this.battery = Math.max(0, this.battery - DRAIN * dt * (0.4 + 0.6 * Math.abs(this.speed) / MAX));
     // Roof solar charges slowly in sunlight; the commissioned bay adds faster charging.
