@@ -1,3 +1,4 @@
+import {updateCrouch} from '../../src/crouch.js';
 // The astronaut on foot. Reuses the shared Mars game's skinned NASA astronaut (src/suit.js, read-only) and
 // recolours its boot dust from Mars red to lunar grey. Movement uses real lunar gravity (1.62 m/s^2): jumps
 // float, running becomes a bouncy lope, and walking fast downhill makes you skip off the ground.
@@ -70,9 +71,10 @@ export class Astronaut {
 
   // input: { x, z } in camera space (-1..1), run, jump. camYaw = camera heading.
   update(dt, input, camYaw, colliders, dust, prints, onStep) {
+    updateCrouch(this,dt,input.crouch);
     this.t += dt;
     const want = new THREE.Vector3(input.x, 0, input.z); const mag = Math.min(1, want.length());
-    if (mag > 0.05) want.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw).multiplyScalar(mag * (input.run ? LOPE : WALK));
+    if (mag > 0.05) want.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), camYaw).multiplyScalar(mag * (input.crouch ? WALK*.5 : input.run ? LOPE : WALK));
     else want.set(0, 0, 0);
     // low gravity = less grip: speed changes slowly, and hardly at all in the air
     const grip = this.grounded ? ACCEL : 0.25;
@@ -90,7 +92,7 @@ export class Astronaut {
     }
     this.hitEdge = clampToWorld(this.pos, 3);
     const ground = heightAt(this.pos.x, this.pos.z);
-    if (this.grounded && input.jump) { this.vy = JUMP; this.grounded = false; this.jumped = true; }
+    if (this.grounded && input.jump && !input.crouch) { this.vy = JUMP; this.grounded = false; this.jumped = true; }
     if (this.grounded) {
       if (this.pos.y - ground > 0.25) { this.grounded = false; this.vy = 0; }   // ground fell away: skip into the air
       else { this.pos.y = ground; this.vy = 0; }
@@ -119,12 +121,12 @@ export class Astronaut {
     this.group.position.copy(this.pos); this.group.rotation.y = this.yaw;
     const pace = Math.min(1, speed / WALK), lope = Math.max(0, Math.min(1, (speed - WALK) / (LOPE - WALK)));
     if (this.rig) {
-      const o = poseAstronaut(this.rig, { phase: this.phase, pace, run: lope, air: this.air, t: this.t, vy: this.vy, swing: this.swing });
+      const o = poseAstronaut(this.rig, { phase: this.phase, pace, run: lope, air: this.air, t: this.t, vy: this.vy, swing: this.swing, crouch:this.crouch });
       this.rig.root.position.y = o.bob * (1 + lope * 1.5); this.rig.root.position.x = o.sway;
     }
     this.speed = speed;
   }
-  head() { return this.pos.clone().add(new THREE.Vector3(0, 1.6, 0)); }
+  head() { return this.pos.clone().add(new THREE.Vector3(0, 1.6-(this.crouch||0)*.45, 0)); }
 }
 
 function makeFallback() {

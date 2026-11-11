@@ -36,7 +36,8 @@ export function readKeys() {
   const r = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
   const stick = touch.active ? touch : null;
   input.x = stick ? stick.x : r; input.z = stick ? stick.y : -f;   // z: -1 = forward
-  input.run = k('ShiftLeft') || k('ShiftRight') || (stick && Math.hypot(stick.x, stick.y) > 0.92);
+  input.crouch=k('ControlLeft')||k('ControlRight');
+  input.run = !input.crouch && (k('ShiftLeft') || k('ShiftRight') || (stick && Math.hypot(stick.x, stick.y) > 0.92));
   input.keys = { left: k('ArrowLeft') || k('KeyA'), right: k('ArrowRight') || k('KeyD'), up: k('ArrowUp') || k('KeyW'), down: k('ArrowDown') || k('KeyS') };
   if (stick) input.keys = { left: stick.x < -0.3, right: stick.x > 0.3, up: stick.y < -0.3, down: stick.y > 0.3 };
   return input;
@@ -83,7 +84,7 @@ function initTouch(canvas) {
 
 export const CONTROLS_HTML = `<h4>Moon controls</h4><dl class="controls-list">
 <dt>Move / look</dt><dd>WASD or arrows / drag the mouse (click to lock the mouse)</dd>
-<dt>Sprint</dt><dd>Hold Shift - 4 m/s (walking: 2 m/s); tuned game speeds</dd>
+<dt>Crouch</dt><dd>Hold Ctrl; release to stand</dd><dt>Sprint</dt><dd>Hold Shift - 4 m/s (walking: 2 m/s); tuned game speeds</dd>
 <dt>Jump</dt><dd>Space - you fall at 1.62 m/s², so jumps float</dd>
 <dt>Use / hold to work</dt><dd>E (hold for drilling, masts, samples)</dd>
 <dt>Rover in / out</dt><dd>R near the back of the rover</dd>

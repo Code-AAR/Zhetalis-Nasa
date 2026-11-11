@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Inside the base greenhouse: a glass dome 14 m across, joined to the outpost by its tunnel.
 // Four hydroponic grow beds (plants grow in water with nutrients, no soil - Mars soil has toxic perchlorate)
 // under pink-purple LED bars, like NASA's Veggie garden on the ISS. Each bed is a farm plot from colony.js:
@@ -128,10 +129,11 @@ export class Greenhouse {
   }
 
   update(dt, keys, active) {
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     dt=Math.min(dt,.05); // A stalled frame must not tunnel through furniture.
     let wx = 0, wz = 0;
     if (active) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? 4 : 2.6;
+      const speed = footSpeed(keys,2.6,4);
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
@@ -157,7 +159,7 @@ export class Greenhouse {
     const tx=this.pos.x+4.4,tz=this.pos.z+4.4,td=Math.hypot(tx,tz),clearance=.58+.32;
     if(td<clearance){const nx=td>1e-6?tx/td:Math.SQRT1_2,nz=td>1e-6?tz/td:Math.SQRT1_2;this.pos.x=-4.4+nx*clearance;this.pos.z=-4.4+nz*clearance;this.vel.x=0;this.vel.z=0;}
     const bob = (Math.cos(this.step * 2) - 1) * 0.012 * Math.min(1, sp / 2.6);
-    const eye = new THREE.Vector3(this.pos.x, 1.65 + bob, this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.65 - crouchDrop + bob, this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }

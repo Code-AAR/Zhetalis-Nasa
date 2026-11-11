@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Inside your lander: the crew cabin behind the door at the top of the ladder.
 // Its cockpit, seats and windows are laid out like NASA's Orion capsule (4 seats, 3 big screens).
 // Same shape of class as interior.js (scene, camera, stations, enter, update, nearest), so main.js can switch rooms.
@@ -150,9 +151,10 @@ export class Capsule {
   enter() { this.pos = new THREE.Vector3(0, 0, 0.25); this.yaw = Math.PI; this.pitch = 0.05; this.vel = { x: 0, z: 0 }; this.step = 0; }
 
   update(dt, keys, active) {
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     let wx = 0, wz = 0;
     if (active) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? 2.4 : 1.6;   // slow: it's a small cabin
+      const speed = footSpeed(keys,1.6,2.4);   // slow: it's a small cabin
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
@@ -170,7 +172,7 @@ export class Capsule {
     const b = this.seatBox;                            // don't walk through the seats
     if (this.pos.z < b.z1 && this.pos.x > b.x0 && this.pos.x < b.x1) this.pos.z = b.z1;
     const bob = (Math.cos(this.step * 2) - 1) * 0.01 * Math.min(1, sp / 1.6);
-    const eye = new THREE.Vector3(this.pos.x, 1.6 + bob, this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.6 - crouchDrop + bob, this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }

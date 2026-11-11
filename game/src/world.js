@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch} from './crouch.js';
 import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop, channelFloor, namedCraterField, KEEP_CLEAR, LANDMARKS } from './landmarks.js';
 import { WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
 import { createMeasuredTerrain, createTerrainDetail, elevationColour } from './measured-terrain.js';
@@ -779,7 +780,7 @@ export class World {
     this.squash *= Math.exp(-dt * 8);
     let bob = 0, sway = 0;
     if (this.suit) {
-      ({ bob, sway } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time, vy: this.vel.y, swing: this.toolSwing }));
+      ({ bob, sway } = poseAstronaut(this.suit, { phase: this.gait, pace: this.swing, run: this.runMix, air: this.airMix, t: this.time, vy: this.vel.y, swing: this.toolSwing, crouch:this.crouch }));
     } else {   // simple shapes: legs and arms swing, no knees; in the air the legs tuck and reach
       const s = Math.sin(this.gait), rise = THREE.MathUtils.clamp(this.vel.y / 3.2, -1, 1), air = this.airMix;
       u.legs[0].rotation.x = s * this.swing * 0.5 * (1 - air) - air * (0.5 - 0.3 * Math.max(0, -rise));
@@ -871,17 +872,17 @@ export class World {
     if (cover) cover.value += ((this.stormDust || 0) - cover.value) * (1 - Math.exp(-dt * .5));
     if (this.devilTracks) this.devilTracks.material.opacity = 1 - .95 * (cover?.value || 0);
     if (this.dustOn) this.marks.setBuried(this.buried = Math.min(1, (this.buried || 0) + dt / 25));
-    if (this.driving) return this.updateDriving(dt);
+    if (this.driving) {updateCrouch(this,dt,false);return this.updateDriving(dt);}
     const p = this.player.position, g = this.facts.gravity.value;
-    const k = this.keys, running = (k.ShiftLeft || k.ShiftRight) && !this.noRun;   // no running on an empty stomach (main.js sets noRun)
+    const k = this.keys, crouchDrop=updateCrouch(this,dt,controlsActive&&crouchHeld(k)), running = !this.crouching && (k.ShiftLeft || k.ShiftRight) && !this.noRun;   // no running on an empty stomach (main.js sets noRun)
     const want = this.wantMove??=new THREE.Vector3();want.set(0,0,0);
     if (controlsActive) {
       const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
       const s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
       want.set(Math.sin(this.yaw) * f + Math.cos(this.yaw) * -s, 0, Math.cos(this.yaw) * f - Math.sin(this.yaw) * -s);
-      if (want.lengthSq() > 0) want.normalize().multiplyScalar((running ? RUN : WALK) * (this.speedMul ?? 1));
+      if (want.lengthSq() > 0) want.normalize().multiplyScalar((this.crouching ? WALK*.5 : running ? RUN : WALK) * (this.speedMul ?? 1));
       if (this.toolSwing >= 0) want.multiplyScalar(0.15);                          // you plant your feet to swing
-      if (k.Space && this.onGround && this.toolSwing < 0) { this.vel.y = 4.2; this.onGround = false; this.onJump?.(); }   // same push as on Earth...
+      if (k.Space && !this.crouching && this.onGround && this.toolSwing < 0) { this.vel.y = 4.2; this.onGround = false; this.onJump?.(); }   // same push as on Earth...
     }
     this.updateSwing(dt);
     // Speed up and slow down smoothly (less grip in the air, and a bulky suit, so a little slide)
@@ -911,7 +912,7 @@ export class World {
       // first person: eyes inside the helmet, body hidden so it doesn't block the view
       this.player.visible = false; this.viewSlot.visible = true;
       const hb = this.headBob || { x: 0, y: 0 };
-      const eyeFP = new THREE.Vector3(p.x + Math.cos(this.yaw) * hb.x, p.y + 1.7 + hb.y, p.z - Math.sin(this.yaw) * hb.x);
+      const eyeFP = new THREE.Vector3(p.x + Math.cos(this.yaw) * hb.x, p.y + 1.7 - crouchDrop + hb.y, p.z - Math.sin(this.yaw) * hb.x);
       this.camera.position.copy(eyeFP);
       this.camera.lookAt(eyeFP.x + Math.sin(this.yaw) * Math.cos(this.lookPitch), eyeFP.y + Math.sin(this.lookPitch), eyeFP.z + Math.cos(this.yaw) * Math.cos(this.lookPitch));
       this.placeSky(p);
@@ -923,16 +924,16 @@ export class World {
     // third-person camera
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
     // Retract along the viewing ray; never push the camera sideways across the player.
-    const anchor=new THREE.Vector3(p.x,p.y+1.6,p.z),boom=eye.clone().sub(anchor),length=boom.length();
+    const anchor=new THREE.Vector3(p.x,p.y+1.6-crouchDrop,p.z),boom=eye.clone().sub(anchor),length=boom.length();
     this.cameraRay??=new THREE.Raycaster();this.cameraRay.set(anchor,boom.normalize());this.cameraRay.far=length;
     const objects=[this.rocks,...this.colliders.filter(c=>c.object?.visible).map(c=>c.object)];
     const hit=this.cameraRay.intersectObjects(objects,true)[0];
     if(hit)eye.copy(anchor).addScaledVector(boom,Math.max(.65,hit.distance-.25));
     eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
     this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
-    this.cameraTarget??=new THREE.Vector3(p.x,p.y+1.6,p.z);
-    if(this.cameraTarget.distanceToSquared(p)>400)this.cameraTarget.set(p.x,p.y+1.6,p.z);
-    this.cameraAim??=new THREE.Vector3();this.cameraAim.set(p.x,p.y+1.6,p.z);
+    this.cameraTarget??=new THREE.Vector3(p.x,p.y+1.6-crouchDrop,p.z);
+    if(this.cameraTarget.distanceToSquared(p)>400)this.cameraTarget.set(p.x,p.y+1.6-crouchDrop,p.z);
+    this.cameraAim??=new THREE.Vector3();this.cameraAim.set(p.x,p.y+1.6-crouchDrop,p.z);
     this.cameraTarget.lerp(this.cameraAim,1-Math.exp(-dt*14));
     this.camera.lookAt(this.cameraTarget);
     this.placeSky(p);

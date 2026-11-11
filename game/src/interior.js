@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Inside the outpost: a round room you walk around in first person.
 // Each station does one job, so kids can see where each part of the trade-off "lives".
 import * as THREE from 'three';
@@ -254,10 +255,11 @@ export class Interior {
   }
 
   update(dt, keys, active) {
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     this.vel ??= { x: 0, z: 0 }; this.step ??= 0;
     let wx = 0, wz = 0;
     if (active) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? 4 : 2.6;
+      const speed = footSpeed(keys,2.6,4);
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
@@ -277,7 +279,7 @@ export class Interior {
       const tx = this.pos.x - this.table.x, tz = this.pos.z - this.table.z, tr = Math.hypot(tx, tz);   // walk around the table
       if (tr < 1.3 && tr > 0.001) { this.pos.x = this.table.x + tx / tr * 1.3; this.pos.z = this.table.z + tz / tr * 1.3; }
     }
-    const eye = new THREE.Vector3(this.pos.x, 1.65 + (this.bob || 0), this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.65 - crouchDrop + (this.bob || 0), this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }

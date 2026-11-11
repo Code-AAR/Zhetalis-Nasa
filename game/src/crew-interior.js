@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Reuse the existing working stations inside six linked pressure modules.
 import * as THREE from 'three';
 import { Interior } from './interior.js';
@@ -95,13 +96,14 @@ export class CrewInterior extends Interior {
     if(this.obstacles?.some(b=>x>b.min.x-.18 && x<b.max.x+.18 && z>b.min.z-.18 && z<b.max.z+.18))return false;
     return (Math.abs(x-SPACING*2)<1.12 && z>=-5 && z<0)|| (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean);}
   update(dt,keys,active){
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     this.vel??={x:0,z:0};let x=0,z=0;
-    if(active){const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);x=Math.sin(this.yaw)*f-Math.cos(this.yaw)*s;z=Math.cos(this.yaw)*f+Math.sin(this.yaw)*s;const len=Math.hypot(x,z);if(len){const speed=keys.ShiftLeft||keys.ShiftRight?3.5:2.6;x=x/len*speed;z=z/len*speed;}}
+    if(active){const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);x=Math.sin(this.yaw)*f-Math.cos(this.yaw)*s;z=Math.cos(this.yaw)*f+Math.sin(this.yaw)*s;const len=Math.hypot(x,z);if(len){const speed=footSpeed(keys,2.6,3.5);x=x/len*speed;z=z/len*speed;}}
     const k=1-Math.exp(-dt*10);this.vel.x+=(x-this.vel.x)*k;this.vel.z+=(z-this.vel.z)*k;
     const nx=this.pos.x+this.vel.x*dt,nz=this.pos.z+this.vel.z*dt;
     if(this.walkable(nx,nz)){this.pos.x=nx;this.pos.z=nz;}else{if(this.walkable(nx,this.pos.z))this.pos.x=nx;if(this.walkable(this.pos.x,nz))this.pos.z=nz;}
     this.step=(this.step||0)+Math.hypot(this.vel.x,this.vel.z)*dt;if(this.step>.8){this.step=0;this.onStep?.();}
-    this.camera.position.set(this.pos.x,1.65,this.pos.z);this.camera.lookAt(this.pos.x+Math.sin(this.yaw)*Math.cos(this.pitch),1.65+Math.sin(this.pitch),this.pos.z+Math.cos(this.yaw)*Math.cos(this.pitch));
+    this.camera.position.set(this.pos.x,1.65-crouchDrop,this.pos.z);this.camera.lookAt(this.pos.x+Math.sin(this.yaw)*Math.cos(this.pitch),1.65-crouchDrop+Math.sin(this.pitch),this.pos.z+Math.cos(this.yaw)*Math.cos(this.pitch));
   }
   nearest(){let best;for(const s of this.stations){const dx=s.x-this.pos.x,dz=s.z-this.pos.z,d=Math.hypot(dx,dz);const facing=d>.01?(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/d:1;const score=d-(s.priority||0);if(d<(['workbench','locker'].includes(s.type)?2.5:2)&&facing>-.1&&(!best||score<best.score))best={...s,d,score};}return best||null;}
 }

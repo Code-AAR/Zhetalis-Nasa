@@ -151,7 +151,7 @@ function addPatch(root, spine) {
 // one foot ahead. The arms lift out for balance. Mars gravity is 38% of Earth's, so each jump lasts long
 // enough to see all of this.
 // Mining: `swing` runs 0..1 through one pickaxe swing (lift over the head, strike down, recover).
-export function poseAstronaut(a, { phase, pace, run, air, t, vy = 0, swing = -1 }) {
+export function poseAstronaut(a, { phase, pace, run, air, t, vy = 0, swing = -1, crouch = 0 }) {
   const s = Math.sin(phase), c = Math.cos(phase);
   const ground = 1 - air;
   const hipAmp = (0.48 * pace + 0.15 * run) * ground, kneeAmp = (0.75 * pace + 0.3 * run) * ground, armAmp = (0.3 * pace + 0.18 * run) * ground;
@@ -188,8 +188,11 @@ export function poseAstronaut(a, { phase, pace, run, air, t, vy = 0, swing = -1 
     a.elbows[0].rotation.y = 0.35 + 0.4 * Math.max(0, lift); a.elbows[1].rotation.y = -(0.35 + 0.4 * Math.max(0, lift));
     a.torso.rotation.x = 0.05 - 0.12 * Math.max(0, lift) + 0.25 * Math.max(0, -lift) / 0.35;   // bend into the strike
   }
+  for(const hip of a.hips)hip.rotation.x-=crouch*.8;
+  for(const knee of a.knees)knee.rotation.x+=crouch*1.45;
+  a.torso.rotation.x+=crouch*.2;
   return {
-    bob: ((Math.cos(phase * 2) + 1) / 2) * (0.03 * pace + 0.07 * run) * ground - 0.025 * pace * ground,
+    bob: -crouch*.25 + ((Math.cos(phase * 2) + 1) / 2) * (0.03 * pace + 0.07 * run) * ground - 0.025 * pace * ground,
     sway: s * 0.02 * pace * ground + idle * 0.012,
   };
 }

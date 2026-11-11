@@ -1,3 +1,4 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 import * as THREE from 'three';
 import {pressureHatch} from './pressure-hatch.js';
 import {AirlockCycle} from './airlock-state.js';
@@ -19,7 +20,8 @@ export class AirlockRoom {
   }
   this.update(0,{},false);
  }
- update(dt,keys,active){this.cycle.tick(dt);this.camera.position.set(0,1.65,0);this.camera.lookAt(Math.sin(this.yaw)*Math.cos(this.pitch),1.65+Math.sin(this.pitch),Math.cos(this.yaw)*Math.cos(this.pitch));
+ update(dt,keys,active){
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));this.cycle.tick(dt);this.camera.position.set(0,1.65-crouchDrop,0);this.camera.lookAt(Math.sin(this.yaw)*Math.cos(this.pitch),1.65-crouchDrop+Math.sin(this.pitch),Math.cos(this.yaw)*Math.cos(this.pitch));
   const status=this.cycle.elapsed<2?'SEAL CHECK':this.cycle.ready?'PRESSURE MATCHED':this.cycle.direction==='out'?'DEPRESSURIZING':'REPRESSURIZING';
   const stamp=`${status}:${this.cycle.pressure.toFixed(1)}:${Math.floor(this.cycle.elapsed*10)}`;
   if(stamp===this.lastDisplay)return;this.lastDisplay=stamp;

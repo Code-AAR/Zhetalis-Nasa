@@ -148,7 +148,7 @@ $('#howto').onclick = () => modal({ title: 'How to play', html: `
   ${isTouch() ? `<p><b>Move</b>: put your left thumb on the screen and slide it - push all the way to <b>run</b>. <b>Look around</b>: drag with your right thumb. <b>Jump</b>: the Jump button - Mars gravity is weak, so you float!</p>
   <p><b>View</b> switches between first-person (through your helmet) and third-person view.</p>
   <p><b>Use</b> (it lights up when something is close): collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`
-  : `<p><b>Move</b> with WASD or the arrow keys. <b>Look around</b>: click the game, then move the mouse (Esc frees the mouse). <b>Run</b>: Shift. <b>Jump</b>: Space - Mars gravity is weak, so you float!</p>
+  : `<p><b>Move</b> with WASD or the arrow keys. <b>Look around</b>: click the game, then move the mouse (Esc frees the mouse). <b>Run</b>: Shift. <b>Crouch</b>: hold Ctrl. <b>Jump</b>: Space - Mars gravity is weak, so you float!</p>
   <p><b>V</b> switches between first-person (through your helmet) and third-person view.</p>
   <p><b>E</b> uses things: collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`}
   <p>At an airlock, aim at the green handle and ${keyWord('press E','tap Use')}. With your pickaxe equipped, aim at a sparkling ore deposit and ${keyWord('click to strike','tap Use to strike')}.</p>
@@ -1114,7 +1114,8 @@ function pressKey(code) {
   if (code === 'KeyM') muteButton();
   if (code === 'KeyV' && !inside) { world.firstPerson = !world.firstPerson; toast(world.firstPerson ? `👁 First-person view (${keyWord('V', 'tap View')} to switch back)` : '🎥 Third-person view'); }
 }
-addEventListener('keydown', e => { if (world) world.keys[e.code] = true; if(!e.repeat)pressKey(e.code); });
+addEventListener('blur',()=>{if(world)for(const key of Object.keys(world.keys))world.keys[key]=false;});
+addEventListener('keydown', e => { if(e.target.closest?.('input,textarea,select,[contenteditable=true]'))return; if(e.ctrlKey&&document.pointerLockElement)e.preventDefault(); if (world) world.keys[e.code] = true; if(!e.repeat)pressKey(e.code); });
 addEventListener('keyup', e => { if (world) world.keys[e.code] = false; });
 // Mouse look needs pointer lock (desktop only). Phones have no pointer lock - they use the touch drag below.
 let lastPointer = 'mouse';
@@ -1418,7 +1419,7 @@ renderer.setAnimationLoop(() => {
   if (state.phase === 'mars' && world) {
     const paused = isPaused() || !!world.cinematic || (airlockRoom && room===airlockRoom);
     if(interior.rackedSuit)interior.rackedSuit.visible=!eva.equipped;
-    setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight), habPod: inside && room === interior ? Math.round(interior.pos.x / 10.2) : -1, habTread: !!interior?.habTreadmill }); tickSound(dt);
+    setSound({ inside, suit, dust: !!outpost.dust, running: !!(!world.keys.ControlLeft && !world.keys.ControlRight && (world.keys.ShiftLeft || world.keys.ShiftRight)), habPod: inside && room === interior ? Math.round(interior.pos.x / 10.2) : -1, habTread: !!interior?.habTreadmill }); tickSound(dt);
     if (inside && room === interior) interior.setHabClock?.(solClock / TUNED.solSeconds, outpost.sol, outpost.crew);   // hab lights follow the sol; cabins follow crew size
     if (inside) room.update(dt, world.keys, !isModalOpen());
     if (airlockRoom && room === airlockRoom) updateAirlockGuide();
@@ -1447,7 +1448,7 @@ renderer.setAnimationLoop(() => {
         if (outpost.storm) outpost.dose += outpost.storm.strength * TUNED.stormDose / outpost.storm.total * perSol * f.protection * 0.6;
       } else if (!inside) {
         // Outside, the suit uses air (faster in the freezing night) and the outpost's shielding isn't protecting you.
-        const runningNow = (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun && world.move.lengthSq() > 4;
+        const runningNow = (!world.keys.ControlLeft && !world.keys.ControlRight && (world.keys.ShiftLeft || world.keys.ShiftRight)) && !world.noRun && world.move.lengthSq() > 4;
         suit -= dt / suitAirSeconds();   // breathing harder (game balance)
         const f = outpost.today, perSol = step / TUNED.solSeconds;
         outpost.dose += F.surfaceDose.value * f.protection * perSol;   // the part the shield would have blocked
@@ -1459,7 +1460,7 @@ renderer.setAnimationLoop(() => {
       } else suit = Math.min(1, suit + step * 0.25);
       // your own hunger (survival.js)
       const moving = !inside && !world.driving && world.move.lengthSq() > 0.5;
-      const ev = body.update(step, { inside, driving: world.driving, moving, running: moving && (world.keys.ShiftLeft || world.keys.ShiftRight) && !world.noRun, eatHeld: !!world.keys.KeyF, foodStock: outpost.food, fresh: (colony.s.freshMeals || 0) >= .5 });
+      const ev = body.update(step, { inside, driving: world.driving, moving, running: moving && (!world.keys.ControlLeft && !world.keys.ControlRight && (world.keys.ShiftLeft || world.keys.ShiftRight)) && !world.noRun, eatHeld: !!world.keys.KeyF, foodStock: outpost.food, fresh: (colony.s.freshMeals || 0) >= .5 });
       world.noRun = !body.canRun; world.speedMul = body.starving ? 0.7 : body.rations<=6 ? .85 : 1;
       if (body.eatT > 0 && Math.floor(clock.elapsedTime * 5) !== lastCrunch) { lastCrunch = Math.floor(clock.elapsedTime * 5); crunch(); }
       if (ev === 'ate' || ev === 'ate-fresh') {
