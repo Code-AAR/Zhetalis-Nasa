@@ -710,15 +710,15 @@ function soilLayerReport() {
   const n = outpost.upgrades.regolith, cuts = TUNED.regolithCuts;
   const rows = [1, 2, 3].map(i => `<div class="${i <= n ? 'pos' : ''}">${i <= n ? '✅' : '⬜'} Layer ${i} (${(i * 0.5).toFixed(1)} m of soil): blocks <b>${Math.round(cuts[i] * 100)}%</b> <small>(+${Math.round((cuts[i] - cuts[i - 1]) * 100)}% from this layer)</small></div>`).join('');
   modal({ pause: false, title: `⛏ Soil layer ${n} added!`, html: `
-    <p>Your outpost is now under about <b>${(n * 0.5).toFixed(1)} m</b> of Mars soil. Look how much each layer adds:</p>
+    <p>Supported bag shielding behind the crew shelter is now about <b>${(n * 0.5).toFixed(1)} m</b> thick. The colour tint elsewhere is cosmetic; it does not represent a buried base. Look how much each layer adds in the game:</p>
     <div class="forecast layer-list">${rows}</div>
     <p>Every layer costs parts and work, but each one helps less than the one before. ${n < 3 ? 'Is another layer worth it? You decide!' : 'That is as thick as your crew can pile it.'}</p>
     ${factHTML(n === 1 ? F.regolith : F.regolithDepth)}
-    <p class="source">The percentages are game numbers that follow the real pattern - they are not measurements.</p>`,
+    <p class="source">Protection percentages are illustrative game values, not a validated shield design. Real performance depends on material, density, geometry and radiation type.</p>`,
     choices: [{ label: 'Back to the workbench', primary: true, onPick: openWorkbench }] });
 }
 
-// The water plant: dirty ice → melt and filter → clean water → split by electrolysis → oxygen.
+// Training water chain: extract → purify and verify → store → electrolyse.
 const ICE_TO_WATER = 0.9;   // game: 10% of what you dig up is dust and grit the filter takes out
 const O2_PER_L = 0.89;      // real: splitting 1 L (1 kg) of water gives 0.89 kg of oxygen
 const SALT_TO_WATER = 3;    // game balance: litres baked out of one sulfate salt sample
@@ -805,7 +805,7 @@ function selectPlayerTool(slot){
   toast(colony.tool?`${TOOLS[colony.tool].name} equipped · tap again or Q to put away`:'Empty hands · tools remain in your belt',2200);
 }
 function openTutorial(){
-  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s),lessons=tutorialLessons(outpost,colony.s),done=lessons.filter(l=>l.done).length;
+  const task=activeMissionObjective(),lessons=tutorialLessons(outpost,colony.s),done=lessons.filter(l=>l.done).length;
   modal({title:'Field guide · learn by doing',html:`${zhetelaPortraitHTML()}<h4>Now: ${task.title}</h4><p>${questHelp(task)}</p><p>${done}/${lessons.length} skills practised. Help does not reset your mission.</p>${lessons.map((l,i)=>`<details ${!l.done&&i===lessons.findIndex(x=>!x.done)?'open':''}><summary>${l.done?'✓ ':''}${i+1}. ${l.title}</summary><p>${l.text}</p></details>`).join('')}<p>Low air? Return inside to refill. T opens the quest log; the current objective stays at the side of the screen.</p>`,choices:[{label:'Repeat current hint',onPick:()=>zhetela(questHelp(task))},{label:'Back to game',primary:true}]});
 }
 
@@ -827,7 +827,7 @@ function openMonitor() {
     const n = h.at - o.sol, when = n <= 0 ? 'any moment now' : `in <b>${n} sol${n === 1 ? '' : 's'}</b>`;
     return h.kind === 'solar'
       ? `<div class="hazard solar"><b>☀️ Solar particle storm on the way</b> - arrives ${when}. The Sun has thrown out a cloud of fast particles, and it is crossing space towards Mars.<br>
-         <button data-plan="${i}">${h.plan ? '✅ Crew will shelter when it hits' : '🏠 Plan: shelter when it arrives'}</button> <button data-shield>🛡 Shields up now</button></div>`
+         <button data-plan="${i}">${h.plan ? '✅ Crew will shelter when it hits' : '🏠 Plan: shelter when it arrives'}</button> <button data-shield>Review shelter protection</button></div>`
       : `<div class="hazard"><b>🌪 Dust storm growing</b> - reaches the outpost ${when}, and should last about ${h.sols} sols. Solar power will drop to about a third.<br><small>Get ready: clean the solar panels and give life support more power.</small></div>`;
   }).join('') || '<p>No storms spotted right now. The instruments update every sol, so check back often.</p>';
   modal({ pause: false, title: '📟 Hazard monitor', html: `
@@ -844,7 +844,7 @@ function openMonitor() {
     ${factHTML(o.hazards.some(h => h.kind === 'dust') ? F.marci : F.cme)}`, choices: [{ label: 'Done', primary: true }] });
   const box = $('#modal .modal-box');
   box.querySelectorAll('[data-plan]').forEach(b => (b.onclick = () => { const h = o.hazards[+b.dataset.plan]; h.plan = !h.plan; b.textContent = h.plan ? '✅ Crew will shelter when it hits' : '🏠 Plan: shelter when it arrives'; }));
-  box.querySelectorAll('[data-shield]').forEach(b => (b.onclick = () => { o.setSplit({ ...o.split, shield: Math.max(o.split.shield, 0.45), science: o.split.science * 0.4, comms: o.split.comms * 0.8 }); toast('🛡 Shields up! Science and the radio get less power for now.'); }));
+  box.querySelectorAll('[data-shield]').forEach(b => (b.onclick = () => { toast('Thick walls and supported soil reduce radiation passively. Plan to shelter; extra electricity does not block radiation.',6000); }));
 }
 
 // The storage locker: tools, samples, seeds and water - and the radio link for trading with Earth.
@@ -971,7 +971,6 @@ function handle(ev) {
         <p>${planned ? 'Sheltering already. Anything else?' : 'What do you do?'}</p>`,
         choices: planned ? [{ label: 'Stay in the shelter', primary: true }] : [
           { label: 'Hide in the storm shelter', cost: `Safest. But no science for ${outpost.storm.sols} sols, and you must be inside the outpost.`, onPick: () => { earn('shelter'); outpost.shelter = outpost.storm.sols; if (!inside) toast('Head back to the outpost - the shelter only works inside!', 4500); } },
-          { label: '🛡 Put more power into shielding', cost: 'Takes power away from science and talking to Earth.', onPick: () => { outpost.setSplit({ ...outpost.split, shield: Math.max(outpost.split.shield, 0.45), science: outpost.split.science * 0.4, comms: outpost.split.comms * 0.8 }); toast('🛡 Shields up! Science and the radio get less power for now.'); } },
           { label: '⛏ Keep working and hope for the best', cost: 'You keep everything running - but your radiation badge will fill up much faster.' },
         ] });
       break;
@@ -1554,6 +1553,10 @@ function setupMissionHud(){
   const buildButton=document.createElement('button');buildButton.textContent='Builder (B)';buildButton.onclick=openBuild;$('#map-btn').after(buildButton);
   const button=document.createElement('button');button.textContent='Quest log (T)';button.onclick=openMissionLog;$('#map-btn').after(button);
 }
+function activeMissionObjective(){
+  const primary=marsObjective(outpost,colony.s);
+  return primary.id.startsWith('safety-')||primary.id==='relay'?primary:(builderQuest(outpost,colony.s)||primary);
+}
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
   if(['workbench','greenhouse','locker','water','console','safety-shelter','monitor'].includes(kind))return null; // The objective is the indoor station, never the stairs.
@@ -1595,10 +1598,10 @@ function drawMissionHud(){
   if(!missionCard||!world.settlement)return;
   const q=colony.s.farmQuest??={};
   if(!q.seedsCollected){const seedOrder=pending.find(p=>p.cargo?.seeds);if(seedOrder)q.seedArrival=seedOrder.sol;q.seedsLanded=world.pickups.some(p=>p.kind==='pod'&&p.cargo?.seeds);}
-  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s);
+  const task=activeMissionObjective();
   const milestones=firstMissionReport(outpost,colony.s);
   missionCard.querySelector('.mission-progress').textContent=`First base: ${milestones.filter(m=>m.done).length}/4 milestones · E / Use to interact`;
-  if(milestones.every(m=>m.done)&&!outpost.firstBaseDebrief){outpost.firstBaseDebrief=true;saveGame();zhetela('First base mission complete! Open the quest log for your learning debrief. The rover, shielding and relay are your next projects.',true);}
+  if(milestones.every(m=>m.done)&&!outpost.firstBaseDebrief){outpost.firstBaseDebrief=true;saveGame();zhetela('First base mission complete! Open the quest log for your learning debrief. Keep packaged food in reserve. Next: rover charging, supported shelter shielding and food-culture research.',true);}
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');
   if(task.id+'|'+(task.step||'')!==missionKey){missionKey=task.id+'|'+(task.step||'');zhetela(task.step||task.detail);missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;if(task.step){const next=document.createElement('small');next.className='mission-next-step';next.textContent=task.step;missionCard.querySelector('summary').append(next);}missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}
   if(missionCollapseAt&&performance.now()>missionCollapseAt){missionCard.open=false;missionCollapseAt=0;}
@@ -1620,7 +1623,7 @@ function drawMissionHud(){
 function researchMenu(){openResearch(outpost,colony,world,saveGame);}
 function openMissionLog(){
   if(!outpost||!colony)return;
-  const task=builderQuest(outpost,colony.s)||marsObjective(outpost,colony.s);
+  const task=activeMissionObjective();
   modal({title:'Mission objectives',choices:[{label:'Tutorial & current step',onPick:openTutorial},{label:'Food cultures & relay network',onPick:researchMenu}],html:`${zhetelaPortraitHTML()}<h4>${task.title}</h4><p>${task.detail}</p><details><summary>First base · progress & learning debrief</summary>${firstMissionReport(outpost,colony.s).map(m=>`<p>${m.done?'✓':'○'} <b>${m.title}</b>${m.done?'<br>'+m.lesson:''}</p>`).join('')}<p>Equipment, construction steps and growth times are simplified training rules. Continue playing to improve your base.</p></details><p>Builder projects completed: ${Object.entries(colony.s.buildHistory||{}).map(([k,n])=>`${RECIPES[k]?.name||k} × ${n}`).join(', ')||'none yet'}.</p><ol>${missionLog(outpost,colony.s).map(t=>`<li>${t.done?'✓':'○'} ${t.title}</li>`).join('')}</ol><details><summary>Optional exploration</summary><p>Collect samples, map landmarks, grow more crops and improve your shelter. The surface map tracks exploration; Settings → Information explains the science.</p></details><p>Solar panels make electricity. Solar sails propel spacecraft and are not needed here. Regolith shielding reduces radiation; it never makes exposure zero.</p>`});
 }
 function updateMissionPower(dt){

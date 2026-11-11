@@ -134,7 +134,7 @@ export async function installSettlement(world){
   }
   shielding.visible=false;berms.visible=false;
   // Supported half-metre-thick bag courses behind the shelter: keep entry and tunnels clear.
-  const shieldModule=layout.moduleColliders[0],soilCourses=[];
+  const shieldModule=layout.moduleColliders[3],soilCourses=[];
   for(let layer=0;layer<3;layer++){
     const course=new THREE.Group();
     for(let row=0;row<6;row++)for(let col=0;col<5;col++){
@@ -187,7 +187,7 @@ export async function installSettlement(world){
   world.scene.add(chargerCable);charging.visible=chargerCable.visible=false;
   world.colliders.push({x:-30.8,z:26,r:.5,object:charging});
   world.clearRocksAround(-34,26,6);
-  const shelter=layout.moduleColliders[0],shelterSite={x:shelter.x,z:shelter.z-shelter.r-1.8},soilSite={x:shelter.x-9,z:shelterSite.z-3};
+  const shelter=layout.moduleColliders[3],shelterSite={x:shelter.x,z:shelter.z-shelter.r-1.8},soilSite={x:shelter.x-9,z:shelterSite.z-3};
   const soilPile=new THREE.Mesh(new THREE.SphereGeometry(1,48,24),soilMat);soilPile.scale.set(2,.7,1.5);soilPile.position.set(soilSite.x,heightAt(soilSite.x,soilSite.z),soilSite.z);world.scene.add(soilPile);
   const equipmentBlock=equipmentContact(model);
   const objectiveBeacon=new THREE.Mesh(new THREE.RingGeometry(.8,1,64),new THREE.MeshBasicMaterial({color:'#c78aff',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));objectiveBeacon.rotation.x=-Math.PI/2;world.scene.add(objectiveBeacon);
