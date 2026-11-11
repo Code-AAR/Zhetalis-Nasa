@@ -1,4 +1,4 @@
-import {speakZhetela,stopZhetelaVoice,voiceEnabled,voiceStatus,setZhetelaVoice} from './zhetela-voice.js';
+import {speakZhetela,stopZhetelaVoice,voiceEnabled,voiceStatus,voiceBusy,setZhetelaVoice} from './zhetela-voice.js';
 // Original Zhetela artwork, shared by Mars and Moon. No microphone or AI service required.
 let card, timer, animation, activeStep, stepDismissed;
 const sheet = new Image(); sheet.src = new URL('../assets/zhetela-sprites.png', import.meta.url).href;
@@ -19,7 +19,7 @@ export function zhetela(message, success = false, {step, action} = {}) {
     actionButton.type = 'button';
     actionButton.dataset.guideAction = '';
     card.querySelector('[data-read-voice]').after(actionButton);
-    card.querySelector('[data-read-voice]').onclick=()=>{if(['Speaking','Preparing Kokoro voice…','Downloading Kokoro voice…'].includes(voiceStatus())){stopZhetelaVoice();return;}if(!voiceEnabled())setZhetelaVoice(true);speakZhetela(card.querySelector('p').textContent);};
+    card.querySelector('[data-read-voice]').onclick=()=>{if(voiceBusy()){stopZhetelaVoice();return;}if(!voiceEnabled())setZhetelaVoice(true);speakZhetela(card.querySelector('p').textContent);};
   }
   clearTimeout(timer); clearInterval(animation);
   const actionButton = card.querySelector('[data-guide-action]');
@@ -35,7 +35,7 @@ export function zhetela(message, success = false, {step, action} = {}) {
   };
   sheet.onload=paint;paint();
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) animation=setInterval(()=>{if(success&&performance.now()-since<1500)return;frame=frame===2?0:2;paint();},650);
-  if (!step) timer=setTimeout(()=>{if(!voiceEnabled()||!['Speaking','Preparing Kokoro voice…','Downloading Kokoro voice…'].includes(voiceStatus())){if(card)card.hidden=true;clearInterval(animation);}},Math.min(14000,Math.max(6500,message.length*65)));
+  if (!step) timer=setTimeout(()=>{if(!voiceEnabled()||!voiceBusy()){if(card)card.hidden=true;clearInterval(animation);}},Math.min(14000,Math.max(6500,message.length*65)));
 }
 function dismiss(){stopZhetelaVoice();if(card)card.hidden=true;clearTimeout(timer);clearInterval(animation);}
 export function finishZhetelaStep(step) {
@@ -50,4 +50,4 @@ addEventListener('zhetela-dismiss', () => { if (!activeStep) dismiss(); });
 
 addEventListener('zhetela-voice-status',e=>{if(!activeStep&&card&&!card.hidden&&e.detail==='Voice ready'){clearTimeout(timer);timer=setTimeout(()=>{card.hidden=true;clearInterval(animation);},5000);}});
 
-addEventListener('zhetela-voice-status',e=>{const b=card?.querySelector('[data-read-voice]');if(!b)return;const busy=['Speaking','Preparing Kokoro voice…','Downloading Kokoro voice…'].includes(e.detail);b.querySelector('span').textContent=busy?(e.detail==='Speaking'?'Stop':'Loading… · Stop'):'Listen';b.setAttribute('aria-label',busy?'Stop speaking':'Read this message aloud');b.title=e.detail;});
+addEventListener('zhetela-voice-status',e=>{const b=card?.querySelector('[data-read-voice]');if(!b)return;const busy=voiceBusy();b.querySelector('span').textContent=busy?(e.detail==='Speaking'?'Stop':e.detail+' · Stop'):(e.detail==='Voice ready'||e.detail==='Voice off'?'Listen':e.detail);b.setAttribute('aria-label',busy?'Stop speaking':'Read this message aloud');b.title=e.detail;});
