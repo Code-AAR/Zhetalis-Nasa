@@ -1,3 +1,4 @@
+import {roverSupport,suspensionPose} from '../../src/rover-support.js';
 // The pressurised rover: NASA's Space Exploration Vehicle 3D model (assets/sev.glb, NASA 3D Resources). The SEV
 // began life as NASA's Lunar Electric Rover concept, so it fits the Moon. Wheels are cut out of the solid model
 // (same approach as the Mars rover, using the shared splitGeometry helper, read-only) so they spin and steer.
@@ -51,8 +52,8 @@ export class MoonRover {
         if (part === 'body') { this.body.add(mesh); continue; }
         const row = +part[1], side = part[2];
         let w = this.wheels.find(w => w.row === row && w.side === side);
-        if (!w) { w = { row, side, steer: new THREE.Group(), spin: new THREE.Group() }; w.steer.position.set(0, r, axles[row]); w.steer.add(w.spin); this.body.add(w.steer); this.wheels.push(w); }
-        pg.translate(0, -r, -axles[row]); w.spin.add(mesh);
+        if (!w) { w = { row, side, track:(xIn+xOut)/2*(side==='L'?-1:1), axle:axles[row], steer: new THREE.Group(), spin: new THREE.Group() }; w.steer.position.set(w.track, r, axles[row]); w.steer.add(w.spin); this.body.add(w.steer); this.wheels.push(w); }
+        pg.translate(-w.track, -r, -axles[row]); w.spin.add(mesh);
       }
     });
     const front = Math.max(...axles), back = Math.min(...axles);
@@ -102,7 +103,7 @@ export class MoonRover {
     }
     this.blocked = blocked;
     if (clampToWorld(this.pos, 6)) { this.speed *= 0.5; this.hitEdge = true; } else this.hitEdge = false;
-    const ground = this.support(this.pos.x, this.pos.z);
+    const ground = this.groundSupport().height;
     if (!this.air && this.pos.y - ground > 0.35 && Math.abs(this.speed) > 2) { this.air = true; this.vy = 0; }
     if (this.air) {
       this.vy -= MOON.gravity * dt; this.pos.y += this.vy * dt;
@@ -127,13 +128,18 @@ export class MoonRover {
     let h=heightAt(x,z);
     for(const r of this.nearRocks||[]){const d=Math.hypot(x-r.x,z-r.z);if(d<r.r)h=Math.max(h,heightAt(r.x,r.z)+r.height*Math.sqrt(Math.max(0,1-(d/r.r)**2)));}return h;
   }
+  groundSupport(){return roverSupport(this.pos,this.yaw,(x,z)=>this.support(x,z),this.wheels);}
   place(dt) {
-    const L = 1.9, W = 1.3, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
-    const h = (f, r) => this.support(this.pos.x + s * f + c * r, this.pos.z + c * f - s * r);
-    const pitch = this.air ? this.body.rotation.x : Math.atan2(h(-L, 0) - h(L, 0), 2 * L), roll = this.air ? this.body.rotation.z : Math.atan2(h(0, W) - h(0, -W), 2 * W);
-    const k = dt ? Math.min(1, dt * 8) : 1;
-    this.group.position.copy(this.pos); this.group.rotation.y = this.yaw;
-    this.body.rotation.x += (pitch - this.body.rotation.x) * k; this.body.rotation.z += (roll - this.body.rotation.z) * k;
+    const support=this.groundSupport(),k=dt?1-Math.exp(-dt*8):1;
+    if(!this.air){
+      this.body.rotation.x+=(support.pitch-this.body.rotation.x)*k;
+      this.body.rotation.z+=(support.roll-this.body.rotation.z)*k;
+      const pose=suspensionPose(support.contacts,this.body.rotation.x,this.body.rotation.z,this.pos.y,dt,this.r);
+      this.pos.y=pose.y;
+      this.wheels.forEach((w,i)=>w.steer.position.y=this.r+pose.travel[i]);
+    }
+    this.group.position.copy(this.pos);this.group.rotation.y=this.yaw;
   }
+
   setLights(on) { for (const l of this.lights) l.intensity = on ? 60 : 0; }
 }

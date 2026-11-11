@@ -1,3 +1,4 @@
+import {roverSupport,suspensionPose} from './rover-support.js';
 // The crew rover you can drive: NASA's Space Exploration Vehicle (MMSEV) 3D model, from NASA 3D Resources.
 // It is a real NASA design for a small pressurised rover: the crew ride inside in normal clothes and climb
 // into their spacesuits through suitports at the back. The model is one solid mesh, so when it loads we cut out
@@ -68,9 +69,9 @@ export class Rover {
         if (!w) {
           const track = (xIn + xOut) / 2 * (side === 'L' ? -1 : 1);
           w = { row, side, track, axle: axles[row], travel: 0, steer: new THREE.Group(), spin: new THREE.Group() };
-          w.steer.position.set(0, r, axles[row]); w.steer.add(w.spin); this.body.add(w.steer); this.wheels.push(w);
+          w.steer.position.set(track, r, axles[row]); w.steer.add(w.spin); this.body.add(w.steer); this.wheels.push(w);
         }
-        pg.translate(0, -r, -axles[row]);
+        pg.translate(-w.track, -r, -axles[row]);
         w.spin.add(mesh);
       }
     });
@@ -139,35 +140,19 @@ export class Rover {
 
   // Sit on the ground: tilt to follow the slope under the wheels, smoothly (the suspension soaks up small bumps).
   place(dt, step = 0) {
-    const h = this.surfaceAt, s = Math.sin(this.yaw), c = Math.cos(this.yaw), L = 2.2, W = 1.6;
-    const at = (f, rgt) => h(this.pos.x + s * f + c * rgt, this.pos.z + c * f - s * rgt);
-    const fl = at(L, -W), fr = at(L, W), bl = at(-L, -W), br = at(-L, W);
-    const front = (fl + fr) / 2, back = (bl + br) / 2, left = (fl + bl) / 2, right = (fr + br) / 2;
-    for (const w of this.wheels) w.ground = at(w.axle, w.track);
-    const k = dt ? 1 - Math.exp(-dt * 6) : 1;
-    this.tilt.pitch += (Math.atan2(back - front, 2 * L) - this.tilt.pitch) * k;
-    this.tilt.roll += (Math.atan2(right - left, 2 * W) - this.tilt.roll) * k;
-    const wheelHigh = this.wheels.reduce((high, wheel) => Math.max(high, wheel.ground), -Infinity);
-    // A rock can pass between the tyres. Give the underside clearance too.
-    const bellyHigh = Math.max(at(L / 2, 0), at(0, 0), at(-L / 2, 0));
-    const rideHeight = Math.max((front + back) / 2, wheelHigh - 0.45, bellyHigh - 0.35);
-    this.tilt.y += (rideHeight - this.tilt.y) * k;
-    this.tilt.y = Math.max(this.tilt.y, rideHeight - .22); // keep the chassis above rising rock while suspension eases
-    this.pos.y = this.tilt.y;
-    this.group.position.copy(this.pos);
-    this.group.rotation.set(0, this.yaw, 0);
-    this.body.rotation.set(this.tilt.pitch, 0, this.tilt.roll);
-    this.body.position.y = Math.sin(performance.now() / 90) * 0.012 * Math.min(1, Math.abs(this.speed) / 4);   // engine/terrain buzz
-    const pitch = this.tilt.pitch, roll = this.tilt.roll;
-    const suspensionEase = dt ? 1 - Math.exp(-dt * 18) : 1;
-    for (const w of this.wheels) {
-      // Subtract the chassis slope so a wheel can rise independently over a rock.
-      const contact = this.tilt.y + Math.cos(pitch) * Math.sin(roll) * w.track - Math.sin(pitch) * w.axle;
-      const travel = THREE.MathUtils.clamp(w.ground - contact, -0.35, 0.55);
-      w.travel += (travel - w.travel) * suspensionEase;
-      w.steer.position.y = this.r + w.travel;
-      w.spin.rotation.x += step / this.r;
-      w.steer.rotation.y = (this.steer ?? 0) * 0.32 * w.steers;
+    const support=roverSupport(this.pos,this.yaw,this.surfaceAt,this.wheels);
+    const k=dt?1-Math.exp(-dt*8):1;
+    this.tilt.pitch+=(support.pitch-this.tilt.pitch)*k;
+    this.tilt.roll+=(support.roll-this.tilt.roll)*k;
+    const pose=suspensionPose(support.contacts,this.tilt.pitch,this.tilt.roll,this.tilt.y,dt,this.r);
+    this.tilt.y=pose.y;this.pos.y=pose.y;
+    this.group.position.copy(this.pos);this.group.rotation.set(0,this.yaw,0);
+    this.body.rotation.set(this.tilt.pitch,0,this.tilt.roll);this.body.position.y=0;
+    for(let i=0;i<this.wheels.length;i++){
+      const w=this.wheels[i];w.ground=support.contacts[i].ground;w.travel=pose.travel[i];
+      w.steer.position.y=this.r+w.travel;
+      w.spin.rotation.x+=step/this.r;
+      w.steer.rotation.y=(this.steer??0)*.32*w.steers;
     }
     if (dt) this.dust.update(dt, this, step);
   }
