@@ -43,13 +43,13 @@ export const TUNED = {
   commsNeedKWh: 2,         // power per sol to keep the Earth link up through the relay orbiters
   directToEarthFactor: 2.5,// with a relay orbiter lost, talking straight to Earth needs 2.5x the power
   shieldFullKWh: 4,        // power per sol for the storm-shelter systems
-  shieldCut: 0.6,          // full shield power removes 60% of radiation inside
+  shieldCut: 0.6,          // passive habitat shielding: illustrative 60% reduction, not a measured design
   wallCut: 0.15,           // water walls remove 15% more
   regolithCuts: [0, 0.18, 0.28, 0.33],   // Mars soil piled on the outpost: 0, 1, 2, 3 layers. Each layer helps less than the one before
-  supplyEvery: 12,         // Earth can send a supply pod every 12 sols
+  supplyEvery: 12,         // pre-positioned Mars depot can release a pod every 12 training sols
   stormDose: 110,          // extra mSv from an unshielded solar storm (stronger than reality - see facts)
   suitSeconds: 120,         // seconds of spacewalk on a full suit tank (in daylight)
-  coldSuit: 1.4,           // at night the suit uses air 40% faster (its heater works harder)
+  coldSuit: 1.4,           // training penalty at night; real heater demand is electrical, not oxygen consumption
   hazardLead: 2,           // sols between a storm being spotted and it arriving
   surpriseDose: 0.6,       // a solar storm nobody saw coming: the crew takes this share of a storm-sol's dose before reaching shelter
 };
@@ -68,7 +68,7 @@ export const TIERS = [
 export const UPGRADES = {
   suit:       { name: 'Suit tank upgrade',     parts: 3,  tier: 0, desc: 'Stay outside 50% longer.' },
   battery:    { name: 'Extra battery',         parts: 3,  tier: 0, desc: `Stores ${TUNED.batteryUpgrade} kWh more for the night, so the heater never runs out.` },
-  regolith:   { name: 'Add a layer of Mars soil (regolith)', parts: 3, tier: 0, max: 3, desc: 'Pile another half metre of Mars soil on the outpost to block radiation. The first layer helps most - each extra layer helps less.' },
+  regolith:   { name: 'Add a layer of Mars soil (regolith)', parts: 3, tier: 0, max: 3, desc: 'Add another half metre of supported shielding at the storm shelter. Thickness and protection are illustrative. The first layer helps most - each extra layer helps less.' },
   panel:      { name: 'Extra solar panel',     parts: 4,  tier: 1, desc: `+${TUNED.kWhPerPanel} kWh every clear sol (only in daylight).` },
   greenhouse: { name: 'Bigger greenhouse',     parts: 5,  tier: 1, desc: 'Adds 40% to each grow bed’s harvest.' },
   moxie:      { name: 'Better oxygen maker',   parts: 5,  tier: 2, desc: 'Makes 30% more oxygen from the same power - like an upgraded MOXIE.' },
@@ -88,6 +88,7 @@ export class Outpost {
     this.o2 = d.o2;
     this.food = this.crew * 3;
     this.rations = d.food;
+    this.safetyChecks = { reserves:false, shelter:false }; this.emergencyKWh = 36;
     this.powerStep = 0; this.baseConnected=false; this.chargerStep=0; this.roverCharged=false; this.soilStep=0; this.chargeReserve=0;
     this.harvestMeals = 0;
     this.parts = Math.max(0, d.parts + SITES[this.site].parts);
@@ -119,7 +120,8 @@ export class Outpost {
 
   solar() { if(this.powerStep<6 || this.baseConnected===false)return 0; return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1); }
   chargerAllocation() { return this.chargerStep>=3 ? Math.max(0,this.energy()-TUNED.heaterKWh)*.15 : 0; }
-  energy() { return this.solar() + this.reactors * TUNED.reactorKWh; }
+  emergencyDraw() { return this.baseConnected ? 0 : Math.min(12, Math.max(0, this.emergencyKWh || 0)); }
+  energy() { return this.solar() + this.reactors * TUNED.reactorKWh + this.emergencyDraw(); }
 
   setSplit(split) {
     const total = Object.values(split).reduce((a, b) => a + b, 0) || 1;
@@ -139,9 +141,9 @@ export class Outpost {
     const commsNeed = TUNED.commsNeedKWh * (this.relayDown > 0 ? TUNED.directToEarthFactor : 1);
     const link = e * this.split.comms >= commsNeed && this.blackout === 0;
     const shieldLevel = Math.min(1, (e * this.split.shield) / TUNED.shieldFullKWh);
-    const protection = Math.min(0.92, TUNED.shieldCut * shieldLevel + TUNED.wallCut * this.upgrades.wall + TUNED.regolithCuts[Math.min(3, this.upgrades.regolith)]);
+    const protection = Math.min(0.92, TUNED.shieldCut + TUNED.wallCut * this.upgrades.wall + TUNED.regolithCuts[Math.min(3, this.upgrades.regolith)]);
     const dose = this.facts.surfaceDose.value * this.s.dose * (1 - protection);
-    const science = e * this.split.science * this.s.science * (this.shelter > 0 ? 0 : 1);
+    const science = (this.baseConnected ? e : 0) * this.split.science * this.s.science * (this.shelter > 0 ? 0 : 1);
     return { total, solar: this.solar(), energy: e, heater, cold, o2, o2Net: o2 - this.o2Need, food, foodNet: food - this.crew,
              link, commsNeed, shieldLevel, protection, dose, science };
   }
@@ -154,6 +156,7 @@ export class Outpost {
     const events = [];
     const f = this.forecast();
     const tierBefore = this.tier;
+    this.emergencyKWh = Math.max(0, (this.emergencyKWh || 0) - this.emergencyDraw());
     this.sol += 1;
 
     this.o2 = Math.max(0, this.o2 + f.o2Net);

@@ -76,7 +76,7 @@ let mode = 'menu';             // menu | flyby | descent | surface
 let state = null;              // sim state (surface)
 let place = 'outside';         // outside | hab | rover | lift
 let view = 'third';            // third | first
-let camYaw = Math.PI, camPitch = 0.28, camDist = 6;
+let camYaw = Math.PI, camPitch = 0.28, camDist = 6, lookIdle = 0;   // lookIdle: seconds since the player last turned the view
 let lamp = 'auto', holdT = 0, nearSpot = null, descentT = 0, liftT = 0, liftDir = 0, edgeToast = 0, saveT = 0, factQueue = [], lastSun = null;
 let flybyPhotos = {}, cabinT = 0;
 const saved0 = readSave();
@@ -220,6 +220,7 @@ function startSurface(resume) {
     if (s.player) { astro.pos.set(s.player.x, heightAt(s.player.x, s.player.z), s.player.z); astro.yaw = s.player.yaw; astro.vel.set(0, 0, 0); astro.grounded = true; }
     if (s.rover) { rover.pos.set(s.rover.x, s.rover.y, s.rover.z); rover.yaw = s.rover.yaw; rover.settle(); }
     place = s.player?.place === 'rover' ? 'rover' : s.player?.place === 'hab' ? 'hab' : 'outside';
+    touchRoverLabel(); if (place === 'rover') { camYaw = rover.yaw; lookIdle = 9; }
     lander.userData.lift.position.y = place === 'hab' ? LANDER.hatchY : 0.2 - 1.7;
     setMode('surface'); if (place === 'hab') enterCabin(); toast('Mission resumed.', 'good');
   } else {
@@ -289,8 +290,15 @@ function endMission() {
     choices: [won ? { label: 'Keep exploring', primary: true, onPick: () => { s.status = 'playing'; s.tasks = Object.fromEntries(Object.keys(s.tasks).map(k => [k, true])); } } : { label: 'Try again', primary: true, onPick: () => { clearSave(); startSurface(false); } }, { label: 'Menu', onPick: () => setMode('menu') }],
   });
 }
-function enterRover() { place = 'rover'; astro.group.visible = false; rover.vy = 0; toast('In the rover · W/S drive · A/D steer · E / Use or R to exit.'); }
-function exitRover() { const p = rover.exitPoint(); astro.pos.set(p.x, heightAt(p.x, p.z), p.z); astro.vel.set(0, 0, 0); astro.grounded = true; place = 'outside'; astro.group.visible = view !== 'first'; }
+const BOARD_RANGE = 5.5;   // metres from the rover's middle
+function enterRover() {
+  place = 'rover'; astro.group.visible = false; rover.vy = 0;
+  camYaw = rover.yaw; camPitch = 0.3; lookIdle = 9;   // start behind the rover, looking where it will go
+  touchRoverLabel();
+  toast(document.body.classList.contains('touch') ? 'In the rover · left stick drives and steers · Rover button to get out.' : 'In the rover · W/S drive · A/D steer · E or R to get out.');
+}
+function touchRoverLabel() { const b = document.querySelector('[data-touch="rover"]'); if (b) b.textContent = place === 'rover' ? 'Exit' : 'Rover'; }
+function exitRover() { const p = rover.exitPoint(); astro.pos.set(p.x, heightAt(p.x, p.z), p.z); astro.vel.set(0, 0, 0); astro.grounded = true; place = 'outside'; astro.group.visible = view !== 'first'; touchRoverLabel(); }
 function toggleView() { view = view === 'third' ? 'first' : 'third'; astro.group.visible = place === 'outside' && view === 'third'; toast(view === 'first' ? 'Helmet view' : 'Follow camera'); }
 
 function pause() {
@@ -336,7 +344,7 @@ on('use', () => {
 on('rover', () => {
   if (mode !== 'surface') return;
   if (place === 'rover') { if (Math.abs(rover.speed) > 0.6) { toast('Stop the rover first.'); return; } exitRover(); }
-  else if (place === 'outside' && (astro.pos.distanceTo(rover.exitPoint().setY(astro.pos.y)) < 3.5 || Math.hypot(astro.pos.x - rover.pos.x, astro.pos.z - rover.pos.z) < 5.5)) enterRover();
+  else if (place === 'outside' && Math.hypot(astro.pos.x - rover.pos.x, astro.pos.z - rover.pos.z) < BOARD_RANGE) enterRover();
   else if (place === 'outside') toast('Walk to the back of the rover to climb in.');
 });
 on('lamp', () => { lamp = lamp === 'auto' ? 'on' : lamp === 'on' ? 'off' : 'auto'; toast('Lamps: ' + lamp); });
@@ -428,7 +436,8 @@ function surfaceFrame(dt, sun) {
   let env = { place: place === 'lift' ? 'hab' : place, lit: sun.lit, alertGap };
   if (place === 'outside') {
     const spots = outpost.spots(state, place);
-    const boarding=rover.exitPoint();spots.push({id:'rover',x:boarding.x,z:boarding.z,r:3.5,label:'Board rover · E / Use or R',hold:0});
+    // Board from anywhere beside the rover (front, sides or back): kids walk up to whichever part is nearest.
+    spots.push({id:'rover',x:rover.pos.x,z:rover.pos.z,r:BOARD_RANGE,label:'Drive the rover (or press R)',hold:0});
     nearSpot = null; let best = 1e9;
     for (const sp of spots) { const d = Math.hypot(sp.x - astro.pos.x, sp.z - astro.pos.z); if (d < sp.r && d < best) { best = d; nearSpot = sp; } }
     if (nearSpot?.hold && input.useHeld) { holdT += dt; astro.swing = nearSpot.id === 'drill' ? (holdT * 1.2) % 1 : -1; if (holdT >= nearSpot.hold) { holdT = 0; astro.swing = -1; doAction(nearSpot); } }
@@ -453,9 +462,15 @@ function surfaceFrame(dt, sun) {
     if (rover.hitEdge && performance.now() - edgeToast > 6000) { edgeToast = performance.now(); toast('Edge of the 1 km training area.', 'warn'); }
     env = { ...env, driving: r.driving, shadow:permanentShadow(rover.pos.x,rover.pos.z), nearBase: false };
     astro.pos.copy(rover.pos);
-    // Leave the view under mouse/touch control while driving.
+    // Follow camera: you can still look around freely, but about a second after you stop turning the view it
+    // swings back behind the rover while it moves, so "forward" is always up the screen.
+    lookIdle = input.lookX || input.lookY ? 0 : lookIdle + dt;
+    if (lookIdle > 1.1 && Math.abs(rover.speed) > 0.4) camYaw = lerpAngle(camYaw, rover.yaw, 1 - Math.exp(-dt * 2.2));
     chase(rover.pos, 2.4, Math.max(camDist, 9) + 3);
-    $('#prompt').hidden=false;$('#prompt span').textContent='W/S drive · A/D steer · E / Use or R to exit when stopped';$('#prompt .hold b').style.width='0%';
+    const kmh = Math.round(Math.abs(rover.speed) * 3.6), touchUi = document.body.classList.contains('touch');
+    $('#prompt').hidden=false;$('#prompt').classList.remove('holding');
+    $('#prompt span').textContent = noPower ? 'Rover battery empty · wait in sunlight or park by the lander to charge' : r.blocked ? 'Something is in the way · steer left or right, or reverse with ' + (touchUi ? 'the stick' : 'S') : `${rover.speed < -0.2 ? 'Reversing' : 'Rover'} ${kmh} km/h · ${touchUi ? 'left stick drives and steers · Exit button to get out' : 'W/S drive · A/D steer · E or R to get out'}${Math.abs(rover.speed) >= 0.6 ? ' (stop first)' : ''}`;
+    $('#prompt .hold b').style.width='0%';
     tickAudio(dt, { driving: r.driving, inSuit: false });
   } else if(place==='hab'){
     cabin.update(dt,$('#cabin').hidden?input:{});
@@ -619,7 +634,7 @@ window.MoonMission = {
   press: code => { window.dispatchEvent(new KeyboardEvent('keydown', { code })); window.dispatchEvent(new KeyboardEvent('keyup', { code })); },
   // Test hook: run the real frame logic for a number of game seconds with keys held (KeyboardEvent codes).
   simulate: (seconds = 1, codes = [], fps = 30) => { holdKeys(codes); for (let i = 0; i < seconds * fps; i++) step(1 / fps); holdKeys([]); return window.MoonMission.debug(); },
-  debug: () => ({ mode, place, quality: QUALITY, chunks: { ...world.stats }, dust: dust.n, prints: prints.list.length, player: { x: +astro.pos.x.toFixed(2), y: +astro.pos.y.toFixed(2), z: +astro.pos.z.toFixed(2), grounded: astro.grounded, vy: +astro.vy.toFixed(2) }, rover: { x: +rover.pos.x.toFixed(2), z: +rover.pos.z.toFixed(2), speed: +rover.speed.toFixed(2) }, gravity: MOON.gravity, sun: lastSun, renderer: renderer.info.render, memory: renderer.info.memory }),
+  debug: () => ({ mode, place, camYaw: +camYaw.toFixed(3), quality: QUALITY, chunks: { ...world.stats }, dust: dust.n, prints: prints.list.length, player: { x: +astro.pos.x.toFixed(2), y: +astro.pos.y.toFixed(2), z: +astro.pos.z.toFixed(2), grounded: astro.grounded, vy: +astro.vy.toFixed(2) }, rover: { x: +rover.pos.x.toFixed(2), z: +rover.pos.z.toFixed(2), speed: +rover.speed.toFixed(2) }, gravity: MOON.gravity, sun: lastSun, renderer: renderer.info.render, memory: renderer.info.memory }),
   info,
   quests: () => ({ objective, warnings: currentWarnings, log: state ? questLog(state, questCtx()) : null, open: questOpen, expanded: !$('#task').classList.contains('collapsed'), marker: objective?.target ? mapMarker(objective.target, focusPos()) : null }),
   three: () => ({ THREE, scene, camera, renderer, sunLight, fill, world, flyby, cabin, rover }),

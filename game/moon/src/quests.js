@@ -39,7 +39,7 @@ export function currentObjective(s, ctx = {}) {
       break;
     }
     case 'drive':
-      if (ctx.place !== 'rover') { go(ctx.rover || SITES.rover, 'Rover'); step = 'Walk to the rover and press R (or Rover) to climb in.'; sub = 'board'; }
+      if (ctx.place !== 'rover') { go(ctx.rover || SITES.rover, 'Rover'); step = 'Walk up to the rover and press E or R (or the Rover button) to climb in.'; sub = 'board'; }
       else { go(SITES.iceCrater, 'Shadowed crater'); step = 'Drive down into the dark crater. Use your lights.'; sub = 'drive'; }
       break;
     case 'ice':

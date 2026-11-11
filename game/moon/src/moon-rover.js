@@ -79,12 +79,28 @@ export class MoonRover {
     if (!this.air) this.yaw += this.speed * Math.tan(this.steer) / 3.2 * dt;
     const nx = this.pos.x + Math.sin(this.yaw) * this.speed * dt, nz = this.pos.z + Math.cos(this.yaw) * this.speed * dt;
     this.pos.x = nx; this.pos.z = nz;
-    let bump = 0;
+    // Obstacles: glance off and slide round them. Stopping dead on every touch froze the rover, because steering
+    // needs speed: once it touched a boulder or mast you could not turn away, only reverse.
+    let bump = 0, blocked = false;
     for (const c of colliders) {
       if(c.rock&&c.height<.9)continue;
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), r = c.r + 1.8;
-      if (d < r && d > 1e-4) { this.pos.x = c.x + dx / d * r; this.pos.z = c.z + dz / d * r; bump = Math.min(1, Math.abs(this.speed) / 4); this.speed = 0; }
+      if (d < r && d > 1e-4) {
+        const nx = dx / d, nz = dz / d; this.pos.x = c.x + nx * r; this.pos.z = c.z + nz * r;
+        const dir = Math.sign(this.speed) || Math.sign(input.throttle) || 1, hx = Math.sin(this.yaw) * dir, hz = Math.cos(this.yaw) * dir;
+        const into = -(hx * nx + hz * nz);                       // 1 = driving straight at it, 0 = brushing past
+        if (into <= 0) continue;
+        bump = Math.max(bump, Math.min(1, Math.abs(this.speed) * into / 4));
+        // turn the nose along the obstacle's edge: the side it already leans to, or the way the driver steers when head-on
+        const turn = (tx, tz) => (((Math.atan2(tx * dir, tz * dir) - this.yaw) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+        const side = hx * nz - hz * nx, a = turn(nz, -nx), b = turn(-nz, nx);
+        const pick = Math.abs(side) > .15 || !input.steer ? (side >= 0 ? a : b) : (Math.sign(a) === Math.sign(input.steer * dir) ? a : b);
+        this.yaw += pick * Math.min(1, dt * 2.8 * (.35 + into));
+        this.speed *= 1 - Math.min(.9, into * dt * 5);            // scrubs speed in proportion to how square the hit is
+        if (into > .75 && Math.abs(this.speed) < 1) blocked = true;
+      }
     }
+    this.blocked = blocked;
     if (clampToWorld(this.pos, 6)) { this.speed *= 0.5; this.hitEdge = true; } else this.hitEdge = false;
     const ground = this.support(this.pos.x, this.pos.z);
     if (!this.air && this.pos.y - ground > 0.35 && Math.abs(this.speed) > 2) { this.air = true; this.vy = 0; }
@@ -104,7 +120,7 @@ export class MoonRover {
       prints?.add(this.pos.x + sx, this.pos.z + sz, this.yaw, true); prints?.add(this.pos.x - sx, this.pos.z - sz, this.yaw, true);
       if (Math.abs(this.speed) > 1.5) { const back = -this.length / 2; dust?.kick(this.pos.x + Math.sin(this.yaw) * back + sx, ground, this.pos.z + Math.cos(this.yaw) * back + sz, -Math.sin(this.yaw) * this.speed, -Math.cos(this.yaw) * this.speed, 4, 2); }
     }
-    return { driving: Math.min(1, Math.abs(this.speed) / MAX), bump };
+    return { driving: Math.min(1, Math.abs(this.speed) / MAX), bump, blocked };
   }
 
   support(x,z){

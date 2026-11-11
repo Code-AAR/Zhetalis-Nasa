@@ -133,7 +133,19 @@ export async function installSettlement(world){
 
   }
   shielding.visible=false;berms.visible=false;
-  // No oversized soil spheres along the greenhouse corridor.
+  // Supported half-metre-thick bag courses behind the shelter: keep entry and tunnels clear.
+  const shieldModule=layout.moduleColliders[0],soilCourses=[];
+  for(let layer=0;layer<3;layer++){
+    const course=new THREE.Group();
+    for(let row=0;row<6;row++)for(let col=0;col<5;col++){
+      const bag=new THREE.Mesh(new THREE.BoxGeometry(.94,.47,.5),soilMat);
+      bag.position.set(shieldModule.x+(col-2)*.96,heightAt(shieldModule.x,shieldModule.z-4)+.25+row*.48,shieldModule.z-4-layer*.5);
+      bag.castShadow=bag.receiveShadow=true;course.add(bag);
+    }
+    course.visible=false;berms.add(course);soilCourses.push(course);
+    world.colliders.push({x:shieldModule.x,z:shieldModule.z-4-layer*.5,r:2.5,halfX:2.5,halfZ:.25,object:course});
+  }
+
   const finishes=[];let soilLevel=0;
   model.traverse(o=>{if(!o.isMesh||!/^Object_(17|18|19|20|21|22|23|24|25|26|27|28)$/.test(o.name))return;
     const tint=m=>{const copy=m.clone();finishes.push(regolithFinish(copy));return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);
@@ -142,7 +154,7 @@ export async function installSettlement(world){
   for(const m of hatchMaterials)finishes.push(regolithFinish(m));
   const domeMaterials=new Set();greenhouse.traverse(o=>{if(o.isMesh&&o.material?.color)domeMaterials.add(o.material);});
   for(const material of domeMaterials)finishes.push(regolithFinish(material));
-  const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=false;finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};
+  const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=soilLevel>0;soilCourses.forEach((course,i)=>course.visible=i<soilLevel);finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};
   const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
   pack.position.set(53.4,heightAt(53.4,-17)+.45,-17);world.scene.add(pack);
   world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});

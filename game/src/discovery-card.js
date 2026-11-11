@@ -5,6 +5,8 @@
 //
 // showDiscovery({ eyebrow, title, sub, accent }) shows one card. If another is already showing, this one
 // waits its turn (so a viewpoint sitting inside a mineral zone never overlaps two cards at once).
+// Each card stays about 3.5 seconds, has a close button, and with "reduce motion" on it only fades (no glow pulse,
+// no scale pop, no sparks).
 
 const CSS = `
 .dc { position: fixed; left: 50%; top: 15%; transform: translate(-50%, -50%) scale(1.3); z-index: 25;
@@ -24,6 +26,16 @@ const CSS = `
   50% { text-shadow: 0 0 10px #fff, 0 0 34px var(--dc, #7fd4e8), 0 0 64px var(--dc, #7fd4e8), 0 0 100px var(--dc, #7fd4e8); transform: scale(1.04); }
 }
 .dc-sub { font: 15px/1.3 system-ui, sans-serif; letter-spacing: .02em; color: #9fb3c4; margin: 0; max-width: 86%; }
+.dc-close { pointer-events: auto; position: absolute; top: -8px; right: -4px; width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  border: 1px solid rgba(159,179,196,.45); background: rgba(8,14,20,.72); color: #dfeaf2; font: 20px/1 system-ui, sans-serif; cursor: pointer; }
+.dc-close:focus-visible { outline: 2px solid var(--dc, #7fd4e8); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .dc, .dc:not(.show) { transform: translate(-50%, -50%); transition: opacity .2s linear; }
+  .dc.show { transform: translate(-50%, -50%); }
+  .dc.show .dc-title { animation: none; text-shadow: 0 0 8px var(--dc, #7fd4e8); }
+  .dc-rule { transition: none; }
+  .dc-spark { display: none; }
+}
 .dc-spark { position: fixed; left: 50%; top: 15%; width: 3px; height: 3px; border-radius: 50%;
   background: var(--dc, #7fd4e8); opacity: 0; pointer-events: none; z-index: 25; transform: translate(-50%, -50%); }
 .dc-spark.go { animation: dc-spark .8s ease-out .3s forwards; }
@@ -68,8 +80,9 @@ function playChime() {
   ping.connect(pGain).connect(ctx.destination); ping.start(t + .32); ping.stop(t + .52);
 }
 
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 function burstSparks(accent) {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || reducedMotion()) return;
   const n = 10;
   for (let i = 0; i < n; i++) {
     const ang = (Math.PI * 2 * i) / n + Math.random() * .3, dist = 70 + Math.random() * 50;
@@ -82,6 +95,7 @@ function burstSparks(accent) {
 }
 
 // ---- the card: a tiny queue so two discoveries at the same moment never fight for the screen
+export const DISCOVERY_MS = 3500;   // was 6 s: long enough to read a title and one line, short enough not to sit over the view
 const queue = []; let showing = false;
 export function showDiscovery(opts) { queue.push(opts); next(); }
 function next() {
@@ -90,7 +104,8 @@ function next() {
   const { eyebrow, title, sub, accent = '#7fd4e8' } = queue.shift();
   injectCSS();
   const root = document.createElement('div'); root.className = 'dc'; root.style.setProperty('--dc', accent);
-  root.innerHTML = '<p class="dc-eyebrow"></p><div class="dc-rule"></div><h2 class="dc-title"></h2><div class="dc-rule"></div><p class="dc-sub"></p>';
+  root.setAttribute('role', 'status');
+  root.innerHTML = '<button type="button" class="dc-close" aria-label="Dismiss message">×</button><p class="dc-eyebrow"></p><div class="dc-rule"></div><h2 class="dc-title"></h2><div class="dc-rule"></div><p class="dc-sub"></p>';
   root.querySelector('.dc-eyebrow').textContent = eyebrow || '';
   root.querySelector('.dc-title').textContent = title || '';
   root.querySelector('.dc-sub').textContent = sub || '';
@@ -99,8 +114,12 @@ function next() {
   playChime();
   requestAnimationFrame(() => root.classList.add('show'));
   setTimeout(() => burstSparks(accent), 300);
-  setTimeout(() => {
+  let closed = false;
+  const close = () => {
+    if (closed) return; closed = true; clearTimeout(timer);
     root.classList.remove('show'); duckHook(false);
-    setTimeout(() => { root.remove(); showing = false; next(); }, 650);
-  }, 6000);
+    setTimeout(() => { root.remove(); showing = false; next(); }, reducedMotion() ? 220 : 650);
+  };
+  root.querySelector('.dc-close').onclick = close;
+  const timer = setTimeout(close, DISCOVERY_MS);
 }

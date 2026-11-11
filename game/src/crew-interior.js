@@ -70,6 +70,23 @@ export class CrewInterior extends Interior {
     this.enter();
   }
   enter(){this.pos.set(0,0,1.25);this.yaw=Math.PI;this.pitch=0;this.vel={x:0,z:0};}
+  // Put the player at (x,z), or on the nearest clear floor when furniture stands there. Arriving through an
+  // airlock must never drop you inside a table: from inside a solid you cannot walk out again.
+  placeAt(x,z){
+    const crew=this.crewBodies;this.crewBodies=null;
+    // One-time map (20 cm grid) of floor you can reach on foot from the main airlock: "free" is not enough,
+    // a sealed gap between table legs is free but you could never leave it.
+    if(!this._floor){
+      const S=.2,X0=-6,Z0=-6.5,NX=Math.ceil((SPACING*5+12)/S)+1,NZ=Math.ceil(13/S)+1,ok=new Uint8Array(NX*NZ),queue=[[Math.round(-X0/S),Math.round((1.25-Z0)/S)]];
+      ok[queue[0][1]*NX+queue[0][0]]=1;
+      while(queue.length){const [i,j]=queue.pop();for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=i+di,b=j+dj;if(a<0||b<0||a>=NX||b>=NZ||ok[b*NX+a]||!this.walkable(X0+a*S,Z0+b*S))continue;ok[b*NX+a]=1;queue.push([a,b]);}}
+      this._floor={S,X0,Z0,NX,NZ,ok};
+    }
+    const {S,X0,Z0,NX,NZ,ok}=this._floor,open=(i,j)=>i>0&&j>0&&i<NX-1&&j<NZ-1&&ok[j*NX+i]&&ok[j*NX+i+1]&&ok[j*NX+i-1]&&ok[(j+1)*NX+i]&&ok[(j-1)*NX+i];
+    const ci=Math.round((x-X0)/S),cj=Math.round((z-Z0)/S);
+    if(!(open(ci,cj)&&this.walkable(x,z))){let best=Infinity;for(let j=1;j<NZ-1;j++)for(let i=1;i<NX-1;i++){if(!open(i,j))continue;const px=X0+i*S,pz=Z0+j*S,d=(px-x)**2+(pz-z)**2;if(d<best){best=d;var bx=px,bz=pz;}}if(best<Infinity){x=bx;z=bz;}}
+    this.crewBodies=crew;this.pos.set(x,0,z);this.vel={x:0,z:0};
+  }
   walkable(x,z){
     const v=this._wv||(this._wv=new THREE.Vector3());
     if(this.solids?.some(s=>{v.set(x,1,z).applyMatrix4(s.inv);return v.x>s.min.x-.22&&v.x<s.max.x+.22&&v.z>s.min.z-.22&&v.z<s.max.z+.22;}))return false;
