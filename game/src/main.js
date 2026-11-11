@@ -16,7 +16,8 @@ import { openResearch, tickResearch } from './surface-research.js';
 import { effectiveQuality } from './device-profile.js';
 import { createAdaptiveRes } from './adaptive-res.js';
 import { Pebbles, pebblesEnabled } from './pebbles.js';
-import { LandmarkTips } from './landmarks.js';
+import { LandmarkTips, LANDMARKS } from './landmarks.js';
+import { PlaceWatch } from './poi-watch.js';
 import {initSettings,openSettings} from './settings.js';
 import { GRAPHICS_MODE, WORLD_RADIUS, WORLD_LIMIT } from './surface-detail.js';
 import * as THREE from 'three';
@@ -36,6 +37,16 @@ import { Sites } from './sites.js';
 import { DetailCull } from './detail-cull.js';
 import { ZoneWatch } from './resource-zones.js';
 import { Viewpoints } from './viewpoints.js';
+import { showDiscovery, setDiscoverySoundGate, setDiscoveryDuckHook } from './discovery-card.js';
+// Title card + chime the first time you reach a place (saved, so it never repeats). `repeat` cards (the outpost) show on every return.
+function discover(id, card) {
+  outpost.discovered ||= [];
+  const known = outpost.discovered.includes(id);
+  if (known && !card.repeat) return;
+  if (!known) { outpost.discovered.push(id); saveGame(); }
+  showDiscovery(card);
+}
+const firstSentence = (t = '', max = 90) => { const s = t.split(/(?<=\.)\s/)[0]; return s.length <= max ? s : s.slice(0, max - 1).replace(/\s+\S*$/, '') + '…'; };
 import { Mist } from './mist.js';
 import { Capsule } from './capsule.js';
 import { Greenhouse } from './greenhouse.js';
@@ -285,6 +296,7 @@ $('#start').onclick = () => {
 
 function buildWorld() {
   world = new World(renderer, F, () => {});
+  world.renderer ??= renderer;   // cutscenes pre-build their shaders with it
   interior = new Interior(); capsule = new Capsule(); room = interior;
   capsule.onStep = () => footstep(0, true);
   ghRoom = new Greenhouse(); interior.scene.position.set(-20.4,0,23);
@@ -312,9 +324,10 @@ function buildWorld() {
     setupMissionHud();syncPowerHardware();
     new Lookouts(world, { modal, onFirst: (spot, i, n) => { outpost.science += 4; if (n === 4 && earn('lookout')) toast('Patch earned: High ground', 5000); } });
     new DetailCull(world);   // skip drawing parts too small to see from the camera
-    new ZoneWatch(world, toast);   // names each mineral zone as you arrive
+    new ZoneWatch(world, toast, zn => discover('zone-' + zn.id, { eyebrow: 'RESOURCE CONTACT', title: zn.name.toUpperCase(), sub: firstSentence(zn.tip), accent: '#e8b56a' }));   // names each mineral zone as you arrive
     new Viewpoints(world, { seen: outpost.viewpoints || [], onReach: (v, seen) => {   // cairns on high ground (viewpoints.js)
       outpost.viewpoints = seen; outpost.science += v.points; logFact({ id: v.id, kid: v.kid, source: v.source, url: v.url });
+      discover('vp-' + v.id, { eyebrow: 'OBSERVATION LOGGED', title: v.name.toUpperCase(), sub: `+${v.points} science`, accent: '#b79af0' });
       toast(`${v.name}: +${v.points} science. ${v.kid.split('. ')[0]}.`, 6000); saveGame();
     } });
     // Bright soil hidden under the dust: the first rover track through each salty or silica zone finds it (ground-marks.js)
@@ -329,11 +342,12 @@ function buildWorld() {
     };
     new Sites(world, { toast, modal,
       onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
+      onApproach: s => discover('site-' + s.id, { eyebrow: "SPIRIT'S STOP", title: s.name.toUpperCase(), sub: 'Press E to look', accent: '#7fd4e8' }),
       onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
     // the crater map: charted ground, trail, flags, survey finds, Ingenuity scout flights, Gusev landmarks
     const ms = new MapState(world, {
       toast, modal,
-      onFind: f => { outpost.science += 3; toast(`Found: ${f.name}. +3 science`, 4000); },
+      onFind: f => { outpost.science += 3; toast(`Found: ${f.name}. +3 science`, 4000); discover('find-' + (f.id ?? f.name), { eyebrow: 'SURVEY FIND', title: f.name.toUpperCase(), sub: '+3 science', accent: '#7dffb2' }); },
       onLandmark: (l, quiet) => { logFact({ id: l.id, ...l.fact }); if (!quiet) toast(`Landmark charted: ${l.name}. Added to your logbook.`, 4500); },
     });
     ms.weather = () => {
@@ -348,6 +362,21 @@ function buildWorld() {
     });
     if (pebblesEnabled()) world.pebbles = new Pebbles(world);
     new LandmarkTips(world, m => toast(`Landmark: ${m.tip}`, 9000));
+    { // every other place worth a title card, named on a sign or not
+      const KIND = { hill: ['COLUMBIA HILLS', '#e0a36a'], crater: ['IMPACT CRATER', '#e8b56a'], valley: ['VALLEY', '#e0a36a'], channel: ['ANCIENT RIVER CHANNEL', '#8fc7e8'], mesa: ['VOLCANIC PLATEAU', '#e8866a'] };
+      const loc = world.settlement?.layout?.locations || {}, door = world.shipDoor;
+      const places = [
+        ...LANDMARKS.filter(m => !world.sites?.list?.some(st => st.id === m.id)).map(m => ({ id: 'lm-' + m.id, x: m.x, z: m.z, r: Math.max(12, m.r * (m.kind === 'crater' ? 1.25 : .9)), eyebrow: (KIND[m.kind] || ['LANDMARK'])[0], title: m.name.toUpperCase(), sub: firstSentence(m.tip.split(/(?<=\.)\s/)[1] || m.tip), accent: (KIND[m.kind] || [, '#e0a36a'])[1] })),
+        ...(world.lookouts?.spots || []).map((sp, i) => ({ id: 'tower-' + i, x: sp.x, z: sp.z, r: 18, eyebrow: 'SURVEY TOWER', title: (sp.name + ' tower').toUpperCase(), sub: 'Press E at the foot to scan the land', accent: '#ffb347' })),
+        ...(loc.meteorite ? [{ id: 'poi-meteorite', x: loc.meteorite[0], z: loc.meteorite[1], r: 16, eyebrow: 'SURVEY SITE', title: 'METEORITE FIELD', sub: 'Iron from somewhere else in the solar system', accent: '#c9a0ff' }] : []),
+        ...(loc.relay ? [{ id: 'poi-relay', x: loc.relay[0], z: loc.relay[1], r: 16, eyebrow: 'SURVEY SITE', title: 'RELAY STATION', sub: 'Your link to the orbiters and to Earth', accent: '#7fd4e8' }] : []),
+        ...(loc.ice ? [{ id: 'poi-ice', x: loc.ice[0], z: loc.ice[1], r: 16, eyebrow: 'SURVEY SITE', title: 'SUBSURFACE ICE', sub: 'Buried water: the most precious thing on Mars', accent: '#9fe0ff' }] : []),
+        ...(door ? [{ id: 'poi-lander', x: door.x, z: door.z, r: 14, eyebrow: 'YOUR RIDE DOWN', title: 'THE LANDER', sub: 'Four astronauts rode to the surface in it', accent: '#d0d6dc' }] : []),
+        { id: 'poi-greenhouse', x: GH.x, z: GH.z, r: GH.r + 6, eyebrow: 'FOOD FROM MARS', title: 'THE GREENHOUSE', sub: 'Plants growing in Gusev soil', accent: '#7dffb2' },
+        ...(loc.base ? [{ id: 'poi-base', x: -5, z: 0, r: 40, repeat: true, eyebrow: 'GUSEV CRATER', title: 'ZHETALIS OUTPOST', sub: `Sol ${Math.max(1, Math.floor(outpost.sol || 1))} · home`, accent: '#7fd4e8' }] : []),
+      ];
+      new PlaceWatch(world, places, pl => discover(pl.id, { ...pl, sub: pl.id === 'poi-base' ? `Sol ${Math.max(1, Math.floor(outpost.sol || 1))} · home` : pl.sub }));
+    }
     new Minimap(world, $('#hud'), { onOpen: () => $('#map-btn').click() });
     ms.sync(true);
     return world.settlement;
@@ -504,6 +533,7 @@ function goOutside() {
 }
 
 function stationAction(s) {
+  if(s.type==='hab-note')return modal({ pause: false, title: s.title, html: typeof s.html==='function' ? s.html() : s.html });   // the hab's personal items and crewmates (hab-dressing.js, hab-crew.js)
   if(s.type==='airlock-control')return useAirlock();
   if(s.type==='suit-rack')return suitRack();
   if (s.type === 'exit' || s.type === 'ship-exit') return requestOutside();
@@ -1318,11 +1348,13 @@ devConsole({
 
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
-if (location.hash === '#debug') window.game = { get eva(){return eva;},get airlock(){return airlockRoom;}, get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds) };
+if (location.hash === '#debug') window.game = { get eva(){return eva;},get airlock(){return airlockRoom;}, get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds), discover: (title = 'TEST SITE', eyebrow = 'SITE CONTACT', sub = '+5 science', accent = '#7fd4e8') => showDiscovery({ eyebrow, title, sub, accent }) };
 let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
 setPatchContext(() => ({ sol: outpost?.sol }));
 setSoundGate(() => !isMuted());
 setDuckHook(on => duck(on));
+setDiscoverySoundGate(() => !isMuted());
+setDiscoveryDuckHook(on => duck(on));
 
 // Launch captions: when the words change, the old ones fade out slowly while the new ones fade in,
 // so there is time to finish reading. The countdown number and the height gauge update in place.
@@ -1379,7 +1411,8 @@ renderer.setAnimationLoop(() => {
   if (state.phase === 'mars' && world) {
     const paused = isPaused() || !!world.cinematic || (airlockRoom && room===airlockRoom);
     if(interior.rackedSuit)interior.rackedSuit.visible=!eva.equipped;
-    setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight) }); tickSound(dt);
+    setSound({ inside, suit, dust: !!outpost.dust, running: !!(world.keys.ShiftLeft || world.keys.ShiftRight), habPod: inside && room === interior ? Math.round(interior.pos.x / 10.2) : -1, habTread: !!interior?.habTreadmill }); tickSound(dt);
+    if (inside && room === interior) interior.setHabClock?.(solClock / TUNED.solSeconds, outpost.sol, outpost.crew);   // hab lights follow the sol; cabins follow crew size
     if (inside) room.update(dt, world.keys, !isModalOpen());
     if (airlockRoom && room === airlockRoom) updateAirlockGuide();
     if (inside && room===interior && interior.pos.z < -4.65){

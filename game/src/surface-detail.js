@@ -1,4 +1,6 @@
 // Procedural material detail, inspired by rover views; not measured topography.
+// The ground texture is one ~17 m tile repeated across the map, so everything in it wraps around its edges (no seams).
+// Real heights and the elevation colours live on the terrain mesh instead (measured-terrain.js, world.js).
 import * as THREE from 'three';
 import { effectiveQuality } from './device-profile.js';
 let saved; try { saved = localStorage.getItem('mars-graphics'); } catch {}
@@ -18,18 +20,28 @@ export function regolithMaps() {
   colour.width = colour.height = relief.width = relief.height = n;
   const c = colour.getContext('2d'), h = relief.getContext('2d'), ci = c.createImageData(n,n), hi = h.createImageData(n,n);
   let seed = 73; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  // Tileable value noise: repeats exactly every 1.0 in u/v, so patches wrap around the tile edges.
+  const th=(i,j,k)=>{const s2=Math.sin(i*127.1+j*311.7+k*74.7)*43758.5453;return s2-Math.floor(s2);};
+  const tnoise=(u,v,P,k)=>{const x=u*P,y=v*P,i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+    const a=th(i%P,j%P,k),b=th((i+1)%P,j%P,k),c2=th(i%P,(j+1)%P,k),d=th((i+1)%P,(j+1)%P,k);return(a+(b-a)*sx)*(1-sy)+(c2+(d-c2)*sx)*sy;};
+  const tfbm=(u,v,P,k)=>.55*tnoise(u,v,P,k)+.3*tnoise(u,v,P*2,k+1)+.15*tnoise(u,v,P*4,k+2);
+  const sm=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
   // Periodic ripples avoid visible seams; patchiness keeps them from looking ploughed.
   for (let y=0;y<n;y++) for (let x=0;x<n;x++) {
-    const u=x/n*Math.PI*2,v=y/n*Math.PI*2;
+    const tu=x/n,tv=y/n,u=tu*Math.PI*2,v=tv*Math.PI*2;
     const patch=Math.pow(Math.max(0,.4+.25*Math.sin(u+Math.sin(v*2))+.3*Math.cos(v*2+Math.sin(u*3))),3);
-    const crest=Math.pow(.5+.5*Math.sin(v*18+Math.sin(u*2)*1.6+Math.sin(v*3)*.45),5)*patch;
-    const grain=random(), pebble=grain>.994?random()*50:0;
+    // Fine dark basalt grit (lava-rock fragments) and pale dust films, small enough that the 17 m repeat doesn't show.
+    // Big dark/pale patches vary across the whole map instead, in the terrain colours (world.js, NASA albedo).
+    const basalt=sm(.58,.72,tfbm(tu,tv,24,11)), dust=sm(.62,.76,tfbm(tu,tv,18,23))*(1-basalt);
+    const crest=Math.pow(.5+.5*Math.sin(v*18+Math.sin(u*2)*1.6+Math.sin(v*3)*.45),5)*patch*(1-.8*dust);
+    const grain=random(), pebble=grain>(.994-basalt*.012)?random()*50:0;
     const mottling=Math.sin(u*11+Math.sin(v*7))*Math.cos(v*13+Math.sin(u*5));
     const grit=Math.sin(u*127+Math.sin(v*61))*Math.cos(v*113+Math.sin(u*79));
-    const shade=205+grain*25+mottling*4+grit*2-crest*24-pebble;
-    const height=95+grain*35+grit*4+crest*85+pebble;
+    const fleck=basalt*(random()<.35?random()*40:0);                // dark mineral flecks in the basalt sand
+    const shade=205+grain*25*(1-.6*dust)+mottling*4+grit*2-crest*24-pebble-basalt*12-fleck*.5+dust*6;
+    const height=95+grain*35*(1-.7*dust)+grit*4+crest*85+pebble+basalt*grain*18-dust*8;
     const i=(y*n+x)*4;
-    ci.data.set([shade,shade*.985,shade*.96,255],i); hi.data.set([height,height,height,255],i);
+    ci.data.set([shade,shade*.985,shade*.96-basalt*3,255],i); hi.data.set([height,height,height,255],i);
   }
   c.putImageData(ci,0,0);h.putImageData(hi,0,0);
   // Larger clustered grit survives mipmapping at normal walking-camera distance.

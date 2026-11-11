@@ -1,0 +1,118 @@
+// Enhanced Mars terrain with NASA data + multi-scale noise + geological features
+import {createNoise, createPerlinNoise} from './noise-utils.js';
+
+export function createMeasuredTerrain(samples, meta) {
+  const n = meta.n, span = meta.worldSpan;
+  if (samples.length !== n * n) throw new Error('Invalid MOLA terrain dimensions');
+  const clamp = v => Math.max(0, Math.min(n - 1, v));
+
+  // === BASE ELEVATION FROM NASA DATA (bilinear interpolation) ===
+  function baseElevation(x, z) {
+    const u = clamp((x / span + 0.5) * n - 0.5), v = clamp((z / span + 0.5) * n - 0.5);
+    const x0 = Math.floor(u), z0 = Math.floor(v), x1 = Math.min(n - 1, x0 + 1), z1 = Math.min(n - 1, z0 + 1), fx = u - x0, fz = v - z0;
+    const a = samples[z0 * n + x0] * (1 - fx) + samples[z0 * n + x1] * fx;
+    const b = samples[z1 * n + x0] * (1 - fx) + samples[z1 * n + x1] * fx;
+    return a * (1 - fz) + b * fz;
+  }
+
+  // === MULTI-SCALE NOISE OVERLAY (3 layers: coarse hills, mid valleys, fine detail) ===
+  function noiseOverlay(x, z) {
+    const nx = Math.floor(x / meta.noiseScale), nz = Math.floor(z / meta.noiseScale);
+    const noise1 = createNoise2D([nx * 8, nz * 8], baseAmplitude: 0.05, octaves: 3);
+    const noise2 = createNoise2D([nx * 4, nz * 4], baseAmplitude: 0.03, octaves: 2);
+    const noise3 = createNoise2D([nx * 2, nz * 2], baseAmplitude: 0.01, octaves: 1);
+    return noise1 + noise2 + noise3;
+  }
+
+  // === GEOLOGICAL ZONING (plains, hills, craters, valleys) ===
+  function geologicalFeatures(x, z) {
+    const nx = Math.floor(x / meta.geoScale), nz = Math.floor(z / meta.geoScale);
+    
+    // Plains region (low elevation, smooth)
+    const plainsMask = createNoise2D([nx * 16, nz * 16], baseAmplitude: 0.1, octaves: 1);
+    // Hills/highlands region (higher elevation, rougher)
+    const hillsMask = createNoise2D([nx * 8, nz * 8], baseAmplitude: 0.15, octaves: 2);
+    
+    // Crater-like circular depressions with raised rims
+    const craterCenters = meta.craters || [];
+    let craterEffect = 0;
+    for (const center of craterCenters) {
+      const dx = x - center.x * span, dz = z - center.z * span;
+      const dist = Math.hypot(dx, dz);
+      const rimHeight = 20 * Math.exp(-dist / 50); // raised rim around crater
+      craterEffect += rimHeight;
+    }
+    
+    // Valley systems (elongated low areas)
+    const valleyCenters = meta.valleys || [];
+    let valleyEffect = 0;
+    for (const center of valleyCenters) {
+      const dx = x - center.x * span, dz = z - center.z * span;
+      const distanceToValley = Math.abs(dx - center.y * span); // simplified valley direction
+      const valleyDepth = 15 * Math.exp(-distanceToValley / 80);
+      valleyEffect -= valleyDepth;
+    }
+    
+    return plainsMask + hillsMask + craterEffect + valleyEffect;
+  }
+
+  // === ELEVATION-BASED COLOR MAPPING (for visual realism) ===
+  function getColorForElevation(elev, baseColor) {
+    const normalized = Math.max(0, Math.min(1, (elev - meta.minElevation) / (meta.maxElevation - meta.minElevation)));
+    
+    // Simple palette: low areas = darker browns, high areas = lighter tan/ochre
+    if (normalized < 0.33) {
+      // Low elevation: dark brown/red
+      return {r: Math.floor(60 + normalized * 20), g: Math.floor(40 + normalized * 15), b: Math.floor(30 + normalized * 10)};
+    } else if (normalized < 0.66) {
+      // Mid elevation: transitional colors
+      return {r: Math.floor(120 + normalized * 30), g: Math.floor(80 + normalized * 25), b: Math.floor(60 + normalized * 20)};
+    } else {
+      // High elevation: light tan/ochre
+      return {r: Math.floor(180 + normalized * 20), g: Math.floor(140 + normalized * 15), b: Math.floor(100 + normalized * 10)};
+    }
+  }
+
+  // === ENHANCED BUMP MAP CALCULATION ===
+  function calculateBumpMap(x, z) {
+    const dx = noiseOverlay(x + 2, z) - noiseOverlay(x - 2, z);
+    const dz = noiseOverlay(x, z + 2) - noiseOverlay(x, z - 2);
+    return Math.hypot(dx, dz) * meta.bumpScale;
+  }
+
+  // === MAIN HEIGHT FUNCTION (combines all elements) ===
+  function height(x, z) {
+    const base = baseElevation(x, z);
+    const noise = noiseOverlay(x, z);
+    const geo = geologicalFeatures(x, z);
+    
+    // Normalize and blend all components
+    const normalizedBase = (base - meta.minElevation) / (meta.maxElevation - meta.minElevation);
+    const normalizedNoise = Math.max(-1, Math.min(1, noise));
+    
+    // Weighted combination: 70% NASA data + 30% procedural detail
+    const blendedHeight = normalizedBase * 0.7 + normalizedNoise * 0.3;
+    
+    // Apply elevation-based color mapping
+    const color = getColorForElevation(blendedHeight, baseColor);
+    
+    return {
+      height: blendedHeight * meta.verticalScale,
+      bumpMap: calculateBumpMap(x, z),
+      color: color,
+      normalizedElevation: blendedHeight
+    };
+  }
+
+  const origin = height(0, 0);
+  return {
+    elevation,
+    origin,
+    height,
+    baseElevation,
+    noiseOverlay,
+    geologicalFeatures,
+    getColorForElevation,
+    calculateBumpMap
+  };
+}

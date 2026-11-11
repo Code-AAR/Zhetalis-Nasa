@@ -20,6 +20,13 @@ export function puffTexture() {
   }
   return (puffTex = new THREE.CanvasTexture(c));
 }
+let starTex = null;
+function starTexture() {   // a tiny round dot, so stars are crisp points and not squares
+  if (starTex) return starTex;
+  const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d'), g = x.createRadialGradient(8, 8, 0, 8, 8, 8);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.35, 'rgba(255,255,255,.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 16, 16);
+  return (starTex = new THREE.CanvasTexture(c));
+}
 export function glowTexture() {
   if (glowTex) return glowTex;
   const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -136,14 +143,25 @@ export function createEDL(world) {
   const old = world.lander?.group; if (old) old.visible = false;   // a replay: hide the parked lander while the new one comes down
   const own = [];   const add = (...o) => { o.forEach(x => { scene.add(x); own.push(x); }); return o[0]; };
   // space set: stars, Mars, atmosphere, own sky for the parachute shot
-  const R = 3389, starsG = new THREE.BufferGeometry(), sp = new Float32Array(1500 * 3);
-  for (let i = 0; i < 1500; i++) { const a = r() * 6.283, b = Math.acos(2 * r() - 1); sp.set([Math.sin(b) * Math.cos(a) * 30000, Math.cos(b) * 30000, Math.sin(b) * Math.sin(a) * 30000], i * 3); }
-  starsG.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  const stars = add(new THREE.Points(starsG, new THREE.PointsMaterial({ color: '#ffffff', size: 40, sizeAttenuation: true, fog: false, transparent: true, opacity: .9 })));
+  const R = 3389, NS = 2600, starsG = new THREE.BufferGeometry(), sp = new Float32Array(NS * 3), sc = new Float32Array(NS * 3);
+  for (let i = 0; i < NS; i++) { const a = r() * 6.283, b = Math.acos(2 * r() - 1), k = Math.pow(r(), 3) * .85 + .15, warm = r();
+    sp.set([Math.sin(b) * Math.cos(a) * 30000, Math.cos(b) * 30000, Math.sin(b) * Math.sin(a) * 30000], i * 3); sc.set([k * (.9 + warm * .1), k * (.9 + warm * .05), k], i * 3); }
+  starsG.setAttribute('position', new THREE.BufferAttribute(sp, 3)); starsG.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+  const stars = add(new THREE.Points(starsG, new THREE.PointsMaterial({ map: starTexture(), size: 2.6, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+  stars.frustumCulled = false; stars.renderOrder = -1;
   const mars = add(new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), new THREE.MeshStandardMaterial({ map: marsTexture(), roughness: 1, metalness: 0, fog: false, emissive: '#2a1208', emissiveIntensity: .25 })));
-  const atmo = add(new THREE.Mesh(new THREE.SphereGeometry(R + 70, 64, 48), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide, fog: false,
-    vertexShader: 'varying vec3 vN, vV; void main(){ vN = normalize(normalMatrix * normal); vec4 p = modelViewMatrix * vec4(position, 1.); vV = normalize(-p.xyz); gl_Position = projectionMatrix * p; }',
-    fragmentShader: 'varying vec3 vN, vV; void main(){ float f = pow(1. - abs(dot(vN, vV)), 3.2); gl_FragColor = vec4(vec3(1., .55, .32) * f * 1.5, f); }' })));
+  const atmoU = { uC: { value: new THREE.Vector3() }, uR: { value: R }, uH: { value: 11 } };
+  const atmo = add(new THREE.Mesh(new THREE.SphereGeometry(R + 60, 96, 64), new THREE.ShaderMaterial({ uniforms: atmoU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide, fog: false,
+    vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: `varying vec3 vW; uniform vec3 uC; uniform float uR, uH;
+      void main(){
+        vec3 rd = normalize(vW - cameraPosition), oc = uC - cameraPosition; float tca = dot(oc, rd), d = sqrt(max(dot(oc, oc) - tca * tca, 0.));
+        bool hit = tca > 0. && d < uR;
+        float h = max(d - uR, 0.), glow = hit ? .18 + .55 * pow(d / uR, 40.) : exp(-h / uH) + .22 * exp(-h / (uH * 3.));
+        vec3 col = mix(vec3(1., .5, .28), vec3(1., .82, .62), clamp(1. - h / (uH * 2.5), 0., 1.));
+        gl_FragColor = vec4(col * glow * .95, 1.);
+      }` })));
+  atmo.renderOrder = 2;
   const dome = add(skyDome());
   // the vehicle and what it carries
   const veh = add(makeVehicle()), cruise = add(makeCruise()), payload = new THREE.Group(), stage = makeStage(), lander = makeLander(), chute = makeChute(r);
@@ -155,7 +173,7 @@ export function createEDL(world) {
   const plasma = new THREE.Group(); veh.add(plasma);
   const front = glow('#ffd9a8'), mid = glow('#ff8a3a'), wake = Array.from({ length: 30 }, () => glow('#ff6a20')); plasma.add(front, mid, ...wake);
   const EN = 280, ep = new Float32Array(EN * 3), eseed = new Float32Array(EN * 3); for (let i = 0; i < EN * 3; i++) eseed[i] = r();
-  const embers = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(ep, 3)), new THREE.PointsMaterial({ map: glowTexture(), color: '#ffb060', size: .38, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); embers.frustumCulled = false; plasma.add(embers);
+  const embers = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(ep, 3)), new THREE.PointsMaterial({ map: glowTexture(), color: '#ffb060', size: .16, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); embers.frustumCulled = false; plasma.add(embers);
   const LN = 110, lp = new Float32Array(LN * 6), lseed = new Float32Array(LN * 4); for (let i = 0; i < LN * 4; i++) lseed[i] = r();
   const streaks = add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(lp, 3)), new THREE.LineBasicMaterial({ color: '#ffc8a0', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, fog: false }))); streaks.frustumCulled = false;
   const heatLight = new THREE.PointLight('#ff7a30', 0, 60, 1.6); veh.add(heatLight);
@@ -211,19 +229,19 @@ export function createEDL(world) {
     cruise.position.set(S.x + cs * 4.5, S.y + 5.3 + cs * 7, S.z + cs * 2); cruise.rotation.set(cs * .5 + t * .1, t * .35, cs * .3);
     if (t < .9) cruise.position.set(S.x, S.y + 5.3 + (t / .9) * .1, S.z);
     // ---------- Mars, below the vehicle ----------
-    const alt = lerp(430, 150, smooth(t / 8)); mars.position.set(S.x, S.y - R - alt, S.z); mars.rotation.y = t * .01; atmo.position.copy(mars.position);
+    const alt = lerp(430, 150, smooth(t / 8)); mars.position.set(S.x, S.y - R - alt, S.z); mars.rotation.y = t * .01; atmo.position.copy(mars.position); atmoU.uC.value.copy(mars.position);
     // ---------- plasma and sparks ----------
     plasma.visible = I > .01; heatLight.intensity = I * 600;
     if (plasma.visible) {
-      front.position.set(0, -1.1, 0); front.scale.setScalar(7 * I + .01); front.material.opacity = I * .95;
-      mid.position.set(0, -.2, 0); mid.scale.setScalar(16 * I + .01); mid.material.opacity = I * .5;
-      wake.forEach((s, j) => { s.position.set(Math.sin(t * 17 + j * 2.1) * .35, 1.5 + j * 1.15, Math.cos(t * 13 + j * 1.7) * .35); s.scale.setScalar((4.5 + j * .35) * I + .01); s.material.opacity = I * Math.max(0, .55 - j * .017); s.material.color.set(j < 8 ? '#ffc890' : '#ff6a20'); });
+      front.position.set(0, -1.4, 0); front.scale.setScalar(4.2 * I + .01); front.material.opacity = I * .9;
+      mid.position.set(0, -.4, 0); mid.scale.setScalar(7.5 * I + .01); mid.material.opacity = I * .35;
+      wake.forEach((s, j) => { s.position.set(Math.sin(t * 17 + j * 2.1) * .25, 2.2 + j * .62, Math.cos(t * 13 + j * 1.7) * .25); s.scale.setScalar((2.4 + j * .16) * I + .01); s.material.opacity = I * Math.max(0, .34 - j * .011); s.material.color.set(j < 8 ? '#ffc890' : '#ff6a20'); });
       embers.material.opacity = I * .9;
       for (let i = 0; i < EN; i++) { const a = eseed[i * 3], b = eseed[i * 3 + 1], c = eseed[i * 3 + 2], y = 1 + ((c * 34 + t * 42) % 34), sp_ = .6 + y * .1; ep[i * 3] = Math.cos(a * 6.283) * sp_ * b; ep[i * 3 + 1] = y; ep[i * 3 + 2] = Math.sin(a * 6.283) * sp_ * b; }
       embers.geometry.attributes.position.needsUpdate = true;
     }
     // streaks of air rushing past, relative to the flight direction
-    streaks.visible = shot === 1; streaks.material.opacity = I * .5;
+    streaks.visible = shot === 1; streaks.material.opacity = I * .28;
     if (streaks.visible) for (let i = 0; i < LN; i++) { const a = lseed[i * 4] * 6.283, rd = 5 + lseed[i * 4 + 1] * 30, off = ((lseed[i * 4 + 2] * 120 + t * 160) % 120) - 60;
       const base = tmpV.set(S.x + Math.cos(a) * rd * .4, S.y + (lseed[i * 4 + 3] - .5) * 24, S.z + Math.sin(a) * rd), dx = -flight.x, dy = -flight.y;
       lp.set([base.x + dx * off, base.y + dy * off, base.z, base.x + dx * (off + 7), base.y + dy * (off + 7), base.z], i * 6); }

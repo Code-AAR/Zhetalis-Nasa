@@ -78,15 +78,18 @@ function runScene(create, { world, total, caps, title, manual, fadeIn }) {
   const cap = root.querySelector('.cs-cap'), ttl = root.querySelector('.cs-title'), blk = root.querySelector('.cs-black'), tintEl = root.querySelector('.cs-tint');
   const cam = world.camera, fov0 = cam.fov, hud = document.getElementById('hud'), hudShow = hud?.style.visibility, pv = world.player.visible;
   let scene; try { scene = create(world); } catch (e) { console.warn('cutscene failed', e); root.remove(); return manual ? null : Promise.resolve(); }
+  // build every shader the cutscene needs now, so the first frames of each shot don't stall while they compile
+  try { scene.frame(0); world.renderer?.compile?.(world.scene, cam); } catch (e) { /* not essential */ }
   holdAwards(true); const toastEl = document.getElementById('toast'), toastVis = toastEl?.style.visibility; if (toastEl) toastEl.style.visibility = 'hidden';
   if (hud) hud.style.visibility = 'hidden'; world.player.visible = false; const mg = world.mapState?.group, mg0 = mg?.visible; if (mg) mg.visible = false;
   const beams = [...world.pickups.map(p => p.group.children[1]), ...(world.lookouts?.beacons || []), ...(world.lookouts?.beacons || []).map(b => b.userData.halo)].filter(Boolean), beams0 = beams.map(b => b.visible); beams.forEach(b => (b.visible = false));
+  const vs0 = world.viewSlot?.visible ?? true; if (world.viewSlot) world.viewSlot.visible = false;
   const keep = world.player.position.clone(), cameraPos = cam.position.clone(), cameraRotation = cam.quaternion.clone(); let cur = 0, ended = false;
   world.cinematic = true; for (const key of Object.keys(world.keys)) world.keys[key] = false;   // the game pauses and the terrain streams around the camera
   const upd = world.update.bind(world);
   world.update = (dt, active) => {
     upd(dt, false); if (ended) return;
-    world.player.position.copy(keep); world.player.visible = false;
+    world.player.position.copy(keep); world.player.visible = false; if (world.viewSlot) world.viewSlot.visible = false;   // the tool in your hand stayed glued to the corner of every shot
     const gp = cam.position.clone(), gq = cam.quaternion.clone(), gf = cam.fov;
     tintEl.style.opacity = scene.frame(cur);
     const b = Math.max(fadeIn ? 0 : 1 - smooth(cur / 1.6), smooth((cur - (total - 1.8)) / 1.8));   // glide in from, and back to, the player's own view
@@ -101,7 +104,7 @@ function runScene(create, { world, total, caps, title, manual, fadeIn }) {
     const bars = smooth(t / 1) * (1 - smooth((t - (total - 1.2)) / 1.2)); root.querySelectorAll('.cs-bar').forEach(e => (e.style.height = 9 * bars + 'vh'));
     root.querySelector('.cs-skip').style.opacity = .55 * bars;
   };
-  const dispose = () => { if (ended) return; ended = true; world.cinematic = false; world.player.position.copy(keep); cam.position.copy(cameraPos); cam.quaternion.copy(cameraRotation); for (const key of Object.keys(world.keys)) world.keys[key] = false; world.update = upd; scene.dispose(); cam.fov = fov0; cam.updateProjectionMatrix(); if (hud) { hud.style.visibility = hudShow || ''; hud.style.transition = 'none'; hud.style.opacity = 0; void hud.offsetWidth; hud.style.transition = 'opacity 1.2s'; hud.style.opacity = 1; setTimeout(() => { hud.style.transition = ''; hud.style.opacity = ''; }, 1400); } world.player.visible = pv; holdAwards(false); if (toastEl) toastEl.style.visibility = toastVis || ''; if (mg) mg.visible = mg0; beams.forEach((b, i) => (b.visible = beams0[i])); root.remove(); };
+  const dispose = () => { if (ended) return; ended = true; world.cinematic = false; if (world.viewSlot) world.viewSlot.visible = vs0; world.player.position.copy(keep); cam.position.copy(cameraPos); cam.quaternion.copy(cameraRotation); for (const key of Object.keys(world.keys)) world.keys[key] = false; world.update = upd; scene.dispose(); cam.fov = fov0; cam.updateProjectionMatrix(); if (hud) { hud.style.visibility = hudShow || ''; hud.style.transition = 'none'; hud.style.opacity = 0; void hud.offsetWidth; hud.style.transition = 'opacity 1.2s'; hud.style.opacity = 1; setTimeout(() => { hud.style.transition = ''; hud.style.opacity = ''; }, 1400); } world.player.visible = pv; holdAwards(false); if (toastEl) toastEl.style.visibility = toastVis || ''; if (mg) mg.visible = mg0; beams.forEach((b, i) => (b.visible = beams0[i])); root.remove(); };
   setTime(0);
   if (manual) return { setTime, total, dispose, root };
   return new Promise(res => {

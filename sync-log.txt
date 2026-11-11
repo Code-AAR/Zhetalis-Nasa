@@ -1,0 +1,42 @@
+=== update to GitHub main
+Updating ebd9e0c..400fa19
+Fast-forward
+ game/EVA-ROVER-NOTES.md    | 20 ++++++++++
+ game/construction.css      | 17 ++++++++
+ game/index.html            |  8 ++--
+ game/src/airlock-room.js   | 39 +++++++++++++++++++
+ game/src/airlock-state.js  | 10 +++++
+ game/src/crew-interior.js  | 11 ++++++
+ game/src/main.js           | 96 +++++++++++++++++++++++++++++++++++++++-------
+ game/src/pressure-hatch.js |  8 ++--
+ game/src/rover-cockpit.js  | 19 +++++++++
+ game/src/rover.js          | 14 +++++--
+ game/src/world.js          | 15 +++++---
+ game/src/zhetela.js        | 33 +++++++++++++---
+ scripts/test-airlock.mjs   | 13 +++++++
+ 13 files changed, 266 insertions(+), 37 deletions(-)
+ create mode 100644 game/EVA-ROVER-NOTES.md
+ create mode 100644 game/src/airlock-room.js
+ create mode 100644 game/src/airlock-state.js
+ create mode 100644 game/src/rover-cockpit.js
+ create mode 100644 scripts/test-airlock.mjs
+=== local main now
+400fa19 Guide Mars EVA and airlock cycles with Zhetela
+=== status
+ M "game/Start Mars.cmd"
+ M game/Start-Mars.ps1
+ M game/src/landmarks.js
+ M game/src/measured-terrain.js
+ M game/src/surface-detail.js
+?? Finish-Sync.cmd
+?? Restore-And-Check.cmd
+?? Sync-From-GitHub.cmd
+?? game/HAB-INTERIOR-NOTES.md
+?? game/_broken-backup/
+?? game/hab-preview.html
+?? game/src/hab-dressing.js
+?? game/src/nasa-data-loader.js
+?? game/src/nasa-data.js
+?? game/src/nasa-terrain-integration.js
+?? sync-log.txt
+?? texture-test.html

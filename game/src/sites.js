@@ -24,17 +24,27 @@ function labelSprite(text, done) {
 }
 
 export class Sites {
-  constructor(world, { toast, modal, onVisit, onDevil }) {
-    Object.assign(this, { world, toast, modal, onVisit, onDevil });
-    this.list = SITES; this.visited = new Set(); this.meshes = new Map();
+  constructor(world, { toast, modal, onVisit, onDevil, onApproach }) {
+    Object.assign(this, { world, toast, modal, onVisit, onDevil, onApproach });
+    this.list = SITES; this.visited = new Set(); this.approached = new Set(); this.meshes = new Map();
     this.group = new THREE.Group(); this.group.name = 'Gusev stops'; world.scene.add(this.group);
     for (const s of SITES) this.place(s);
     const prev = world.extraTargets;
     world.extraTargets = p => [...(prev?.(p) || []), ...SITES.map(s => ({ type: 'site', id: s.id, label: s.verb, range: s.kind === 'silica' ? 5 : 4.5, d: Math.hypot(p.x - s.x, p.z - s.z) }))];
     this.devils = new DustDevils(world, this);
-    this.lodClock = 0;
-    const upd = world.update.bind(world); world.update = (dt, a) => { upd(dt, a); this.devils.tick(dt); this.lod(dt); };
+    this.lodClock = 0; this.nearClock = 0;
+    const upd = world.update.bind(world); world.update = (dt, a) => { upd(dt, a); this.devils.tick(dt); this.lod(dt); this.near(dt); };
     world.sites = this;
+  }
+  // Like Viewpoints/ZoneWatch: fires once per stop just from walking or driving close, well before you are
+  // near enough to press E. A wider radius than the E-prompt range, so the card arrives first.
+  near(dt) {
+    if ((this.nearClock -= dt) > 0) return; this.nearClock = .3;
+    const p = this.world.driving ? this.world.sev?.pos : this.world.player?.position; if (!p) return;
+    for (const s of SITES) {
+      if (this.approached.has(s.id)) continue;
+      if (Math.hypot(p.x - s.x, p.z - s.z) < 16) { this.approached.add(s.id); this.onApproach?.(s); }
+    }
   }
   place(s) {
     const root = new THREE.Group(); root.name = s.name;

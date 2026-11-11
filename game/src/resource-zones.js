@@ -60,9 +60,11 @@ export function placeDeposits(ground, blocked = () => false) {
 }
 
 // Says where you are when you walk or drive into a zone, and warns once when the rover hits soft salty soil.
+// onEnter is optional: it fires once per zone, right alongside the toast, so main.js can show a discovery
+// card without this file needing to know anything about discovery-card.js.
 export class ZoneWatch {
-  constructor(world, toast) {
-    this.world = world; this.toast = toast; this.told = new Set(); this.t = 0; this.toldSoft = false;
+  constructor(world, toast, onEnter) {
+    this.world = world; this.toast = toast; this.onEnter = onEnter; this.told = new Set(); this.t = 0; this.toldSoft = false;
     const upd = world.update.bind(world);
     world.update = (dt, active) => { upd(dt, active); this.tick(dt); };
   }
@@ -70,7 +72,7 @@ export class ZoneWatch {
     if ((this.t -= dt) > 0) return; this.t = .5;
     const p = this.world.player?.position; if (!p) return;
     const zn = zoneAt(p.x, p.z);
-    if (zn && !this.told.has(zn.id)) { this.told.add(zn.id); this.toast(`${zn.name}: ${zn.tip}`, 5000); }
+    if (zn && !this.told.has(zn.id)) { this.told.add(zn.id); this.toast(`${zn.name}: ${zn.tip}`, 5000); this.onEnter?.(zn); }
     if (!this.toldSoft && this.world.driving && this.world.sev?.softSoil > .4) { this.toldSoft = true; this.toast('Soft salty soil: the rover slows right down. Rover wheels slip in soil like this.', 5000); }
   }
 }

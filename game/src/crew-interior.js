@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Interior } from './interior.js';
 import {loadNasaAstronaut} from './suit.js';
+import { dressHab } from './hab-dressing.js';
 
 const SPACING=10.2,RADIUS=4;
 export class CrewInterior extends Interior {
@@ -65,10 +66,15 @@ export class CrewInterior extends Interior {
     loadNasaAstronaut().then(a=>{if(a){a.arms[0].rotation.z=1.36;a.arms[1].rotation.z=-1.36;this.rackedSuit.add(a.root);}});
     this.stations.push({type:'suit-rack',label:'store / wear EVA suit',x:-2.7,z:0});
     rack.updateWorldMatrix(true,true);this.obstacles??=[];this.obstacles.push(new THREE.Box3().setFromObject(rack));
+    dressHab(this);   // lived-in fit-out: cabins, wardroom, racks, circadian lighting (hab-dressing.js)
     this.enter();
   }
   enter(){this.pos.set(0,0,1.25);this.yaw=Math.PI;this.pitch=0;this.vel={x:0,z:0};}
   walkable(x,z){
+    const v=this._wv||(this._wv=new THREE.Vector3());
+    if(this.solids?.some(s=>{v.set(x,1,z).applyMatrix4(s.inv);return v.x>s.min.x-.22&&v.x<s.max.x+.22&&v.z>s.min.z-.22&&v.z<s.max.z+.22;}))return false;
+    // crewmates are solid too (only blocks moving closer, so you can never get stuck inside someone)
+    if(this.crewBodies?.some(p=>{if(!p.f.root.visible)return false;const q=p.f.root.position,d=Math.hypot(q.x-x,q.z-z);return d<.5&&d<Math.hypot(q.x-this.pos.x,q.z-this.pos.z);}))return false;
     if(this.obstacles?.some(b=>x>b.min.x-.18 && x<b.max.x+.18 && z>b.min.z-.18 && z<b.max.z+.18))return false;
     return (Math.abs(x-SPACING*2)<1.12 && z>=-5 && z<0)|| (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean);}
   update(dt,keys,active){
@@ -80,5 +86,5 @@ export class CrewInterior extends Interior {
     this.step=(this.step||0)+Math.hypot(this.vel.x,this.vel.z)*dt;if(this.step>.8){this.step=0;this.onStep?.();}
     this.camera.position.set(this.pos.x,1.65,this.pos.z);this.camera.lookAt(this.pos.x+Math.sin(this.yaw)*Math.cos(this.pitch),1.65+Math.sin(this.pitch),this.pos.z+Math.cos(this.yaw)*Math.cos(this.pitch));
   }
-  nearest(){let best;for(const s of this.stations){const dx=s.x-this.pos.x,dz=s.z-this.pos.z,d=Math.hypot(dx,dz);const facing=d>.01?(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/d:1;if(d<(['workbench','locker'].includes(s.type)?2.5:2)&&facing>-.1&&(!best||d<best.d))best={...s,d};}return best||null;}
+  nearest(){let best;for(const s of this.stations){const dx=s.x-this.pos.x,dz=s.z-this.pos.z,d=Math.hypot(dx,dz);const facing=d>.01?(dx*Math.sin(this.yaw)+dz*Math.cos(this.yaw))/d:1;const score=d-(s.priority||0);if(d<(['workbench','locker'].includes(s.type)?2.5:2)&&facing>-.1&&(!best||score<best.score))best={...s,d,score};}return best||null;}
 }

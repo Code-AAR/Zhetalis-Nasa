@@ -61,13 +61,17 @@ export class Lookouts {
       for (const hh of [.55, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.2, .02, 5, 36), MAT.white); r.rotation.x = Math.PI / 2; r.position.y = H + .1 + hh; t.add(r); }
       // the dish, on a short pedestal in the middle of the deck
       const d = dishAssembly(1.8); d.group.position.y = H + .11; t.add(d.group);
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, .8), MAT.white); cab.position.set(-2.5, .62, .2); t.add(cab);
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.12, .16, .82), MAT.orange); stripe.position.set(-2.5, .95, .2); t.add(stripe);
-      const door = new THREE.Mesh(new THREE.BoxGeometry(.6, .8, .03), MAT.steel); door.position.set(-2.5, .55, .62); t.add(door);
-      const vent = new THREE.Mesh(new THREE.BoxGeometry(.3, .12, .03), MAT.dark); vent.position.set(-2.5, 1.05, .62); t.add(vent);
-      t.add(tube([-1.95, .2, .2], [-w0 - .05, .2, .2], .03, MAT.rubber, 5));       // cable from the cabinet to the mast foot
-      const pv = solarPanel(cellMat, { w: 1.9, d: 1.2, tilt: .5, low: .45 }); pv.position.set(2.9, 0, .2); t.add(pv);
-      t.add(tube([2.9, .1, -.3], [w0 + .2, .15, -.3], .03, MAT.rubber, 5));
+      // the cabinet and the solar panel stand on their own patch of ground (the mast base sits at its highest corner)
+      const gC = Math.min(heightAt(sp.x - 2.5, sp.z + .2), ...[[-3.05, -.2], [-1.95, -.2], [-3.05, .6], [-1.95, .6]].map(([dx, dz]) => heightAt(sp.x + dx, sp.z + dz))) - base;
+      const gP = Math.min(...[[2, -.4], [3.8, -.4], [2, .8], [3.8, .8]].map(([dx, dz]) => heightAt(sp.x + dx, sp.z + dz))) - base;
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.3, .45, 1.0), MAT.concrete); plinth.position.set(-2.5, gC - .2, .2); t.add(plinth);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, .8), MAT.white); cab.position.set(-2.5, gC + .62, .2); t.add(cab);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.12, .16, .82), MAT.orange); stripe.position.set(-2.5, gC + .95, .2); t.add(stripe);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(.6, .8, .03), MAT.steel); door.position.set(-2.5, gC + .55, .62); t.add(door);
+      const vent = new THREE.Mesh(new THREE.BoxGeometry(.3, .12, .03), MAT.dark); vent.position.set(-2.5, gC + 1.05, .62); t.add(vent);
+      t.add(tube([-1.95, gC + .2, .2], [-w0 - .05, .2, .2], .03, MAT.rubber, 5));       // cable from the cabinet to the mast foot
+      const pv = solarPanel(cellMat, { w: 1.9, d: 1.2, tilt: .5, low: .45 }); pv.position.set(2.9, gP - .05, .2); t.add(pv);
+      t.add(tube([2.9, gP + .1, -.3], [w0 + .2, .15, -.3], .03, MAT.rubber, 5));
       // status light on its own mast
       const beacon = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), new THREE.MeshBasicMaterial({ color: '#ffb347' })); beacon.position.set(1.05, H + 1.35, 0);
       t.add(tube([1.05, H + .1, 0], [1.05, H + 1.2, 0], .02, MAT.steel, 4)); t.add(beacon);

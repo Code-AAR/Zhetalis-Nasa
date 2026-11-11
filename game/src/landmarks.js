@@ -1,4 +1,5 @@
 import { SITES, VIEWPOINTS } from './site-data.js';
+import { craterProfile } from './measured-terrain.js';
 // Real Gusev crater landmarks, ENLARGED so you can see and walk to them. In reality they are tiny at this map scale:
 // the game squeezes 240 km into 960 m, so Columbia Hills (about 3 to 4 km from Spirit's landing site) would be under
 // 15 m away and Bonneville crater (210 m wide) would be under a metre across. They keep their real direction from the
@@ -9,11 +10,13 @@ export const LANDMARKS = [
     tip: 'Husband Hill, in the Columbia Hills. Spirit climbed it in 2005. In real life it is about 3 km south-east of the landing site. Here it is enlarged.' },
   { id: 'mccool', name: 'McCool Hill', kind: 'hill', x: 120, z: 248, r: 56, h: 20,
     tip: 'McCool Hill, another of the Columbia Hills, named after astronaut William McCool. Enlarged for the game.' },
-  { id: 'bonneville', name: 'Bonneville crater', kind: 'crater', x: 144, z: 21, r: 22, depth: 5.5, rim: 1.6,
+  // realD / realDepth: NASA figures in metres. The game crater keeps the real depth-to-width ratio at its enlarged size.
+  // wear: 0 fresh to 1 very worn (low rim, sand-filled floor, faint rays).
+  { id: 'bonneville', name: 'Bonneville crater', kind: 'crater', x: 144, z: 21, r: 22, depth: 5.5, rim: 1.6, realD: 210, realDepth: 14, wear: .5,
     tip: 'Bonneville crater. Spirit reached it in 2004. In real life it is 210 m wide, 14 m deep and a few hundred metres from the lander. Enlarged here.' },
-  { id: 'missoula', name: 'Missoula crater', kind: 'crater', x: 268, z: -30, r: 14, depth: 4.5, rim: 1.2,
+  { id: 'missoula', name: 'Missoula crater', kind: 'crater', x: 268, z: -30, r: 14, depth: 4.5, rim: 1.2, realD: 90, realDepth: 18, wear: .7,
     tip: 'Missoula crater. Spirit reached it on sol 105. In real life it is about 90 m wide and 18 m deep. Enlarged here.' },
-  { id: 'lahontan', name: 'Lahontan crater', kind: 'crater', x: 380, z: 150, r: 9, depth: 3, rim: .8,
+  { id: 'lahontan', name: 'Lahontan crater', kind: 'crater', x: 380, z: 150, r: 9, depth: 3, rim: .8, realD: 55, realDepth: 9, wear: .6,
     tip: 'Lahontan crater. In real life it is about 55 m across and 9 m deep. Enlarged here.' },
   { id: 'tennessee', name: 'Tennessee Valley', kind: 'valley', x: 225, z: 122, r: 60, L: 62, W: 20, D: 8, ang: -.82,
     tip: 'Tennessee Valley, on the north side of Husband Hill. Spirit looked down into it from the summit in 2005 but never drove in. Here you can walk down into it.' },
@@ -60,10 +63,14 @@ export const nearStop = (x, z, r = 12) => SITES.some(s => (x - s.x) ** 2 + (z - 
 // world.js tells us the measured ground, so flat-topped features (Home Plate) can level the land under them.
 let baseHeight = null;
 export const bindBase = f => { baseHeight = f; };
+// Named craters with real data: shape filled in by landmarkLift (bowl/rim/ejecta 0..1, used for colour and rocks).
+export const namedCraterField = { bowl: 0, rim: 0, ejecta: 0 };
+const stopFade = (x, z) => { let f = 1; for (const s of SITES) { const d = Math.hypot(x - s.x, z - s.z); if (d < 26) f = Math.min(f, ease(12, 26, d)); } return f; };
 export function landmarkLift(x, z) {
   let y = 0;
+  namedCraterField.bowl = namedCraterField.rim = namedCraterField.ejecta = 0;
   for (const m of LANDMARKS) {
-    const dx = x - m.x, dz = z - m.z, d2 = dx * dx + dz * dz, R = m.r * 2.2;
+    const dx = x - m.x, dz = z - m.z, d2 = dx * dx + dz * dz, R = m.r * (m.realD ? 3.3 : 2.2);
     if (d2 > R * R) continue;
     if (m.kind === 'hill') {
       const s = m.r / 1.6, w = Math.exp(-d2 / (2 * s * s)), hw = m.h * w;
@@ -97,7 +104,15 @@ export function landmarkLift(x, z) {
       const top = baseHeight ? baseHeight(m.x, m.z) + m.h : m.h;
       y += (top - (baseHeight ? baseHeight(x, z) : 0)) * w;
     }
-    else { const d = Math.sqrt(d2), u = d / m.r; y += (u < 1 ? -m.depth * (1 - u * u) * (1 - u * u) : 0) + m.rim * Math.exp(-Math.pow((d - m.r * 1.04) / (m.r * .2), 2)); }
+    else if (m.realD) {
+      // real depth-to-width ratio, rim about 3.6% of the width (fresh simple craters), worn down by `wear`
+      const d = Math.sqrt(d2), c = craterProfile(d, m.r, { depth: 2 * m.r * m.realDepth / m.realD, rim: .036 * 2 * m.r, degradation: m.wear, angle: Math.atan2(dz, dx), seed: m.x * .1 });
+      const keep = d > m.r * 1.2 ? stopFade(x, z) : 1;   // ejecta thins out near a stop so the stop scene stays clean
+      y += c.lift * keep;
+      namedCraterField.bowl = Math.max(namedCraterField.bowl, c.bowl); namedCraterField.rim = Math.max(namedCraterField.rim, c.rim * keep);
+      namedCraterField.ejecta = Math.max(namedCraterField.ejecta, c.ejecta * keep);
+    }
+    else { const d = Math.sqrt(d2), u = d / m.r; y +=(u < 1 ? -m.depth * (1 - u * u) * (1 - u * u) : 0) + m.rim * Math.exp(-Math.pow((d - m.r * 1.04) / (m.r * .2), 2)); }
   }
   return y;
 }
@@ -136,7 +151,7 @@ export function driftLift(x, z) {
 // One crater at most per 36 m cell, at a fixed random spot, so the same ground comes out every time. They are old and
 // shallow (depth about a fifth of the radius), so the rover and the astronaut can cross them.
 const CRATER_CELL = 36, craterCache = new Map();
-const KEEP_CLEAR = [[110, 65, 16], [-125, -75, 16], [70, -60, 26], [-65, 35, 10]];     // relay, survey drill, pad, meteorite
+export const KEEP_CLEAR = [[110, 65, 16], [-125, -75, 16], [70, -60, 26], [-65, 35, 10]];     // relay, survey drill, pad, meteorite
 const hash2 = (a, b, k) => { const s = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453; return s - Math.floor(s); };
 function craterIn(ix, iz) {
   const key = ix * 4096 + iz;
@@ -179,5 +194,6 @@ export function rockWeight(x, z, clump) {
   craterLift(x, z);
   let foot = 0;
   for (const m of LANDMARKS) if (m.kind === 'hill') { const d = Math.hypot(x - m.x, z - m.z) / m.r; foot = Math.max(foot, Math.exp(-Math.pow((d - 1.05) / .45, 2))); }
-  return (.16 + .95 * craterField.rim + .7 * foot) * (.3 + 1.5 * clump);
+  landmarkLift(x, z);   // fills namedCraterField: boulders gather on the big craters' rims and ejecta rays
+  return (.16 + .95 * Math.max(craterField.rim, namedCraterField.rim * .8) + .6 * namedCraterField.ejecta + .7 * foot) * (.3 + 1.5 * clump);
 }

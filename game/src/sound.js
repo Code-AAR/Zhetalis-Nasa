@@ -9,6 +9,7 @@ import {startMusic,tickMusic} from './ambient-music.js';
 // Earth, and high pitches fade quickly - the wind is kept soft and muffled, not cut off at a fixed distance.
 
 let fxBus, ambienceBus;
+let habGains = null;
 let ctx, master, wind, windFilter, windGain, suitGain, breathGain, breathFilter, humGain, rumbleGain, rumbleFilter, noise;
 let muted = false, started = false, breathT = 0, gustT = 0, gust = 1, state = { scene: 'title' };
 try { muted = localStorage.getItem('ja-muted') === '1'; } catch { /* storage blocked */ }
@@ -74,6 +75,18 @@ export async function startSound() {
   const air = ctx.createBiquadFilter(); air.type = 'lowpass'; air.frequency.value = 400;
   const airG = ctx.createGain(); airG.gain.value = 0.6; loop(noise.brown, air); air.connect(airG).connect(humGain);
 
+  // inside the hab, each pod sounds a little different (habGains are faded by apply()):
+  //  racks = the steady airy whoosh of equipment fans (the ISS is famously never quiet), pump = a slow pulsing water pump
+  //  in Life support, fridge = the galley's hum, tread = the thump of feet on the treadmill
+  const mod = (src, rate, depth) => { const g = ctx.createGain(); g.gain.value = 1 - depth; const l = ctx.createOscillator(), d = ctx.createGain(); l.type = rate > 2 ? 'square' : 'sine'; l.frequency.value = rate; d.gain.value = depth; l.connect(d).connect(g.gain); l.start(); src.connect(g); return g; };
+  const make = (setup) => { const out = ctx.createGain(); out.gain.value = 0; setup(out); out.connect(ambienceBus); return out; };
+  habGains = {
+    racks: make(o => { const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = .5; loop(noise.white, f); const g = ctx.createGain(); g.gain.value = .25; f.connect(g).connect(o); }),
+    pump: make(o => { const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 170; f.Q.value = 2; loop(noise.brown, f); mod(f, .8, .5).connect(o); }),
+    fridge: make(o => { for (const [fr, v] of [[118, .3], [236, .08]]) { const os = ctx.createOscillator(), g = ctx.createGain(); os.frequency.value = fr; g.gain.value = v; os.connect(g).connect(o); os.start(); } }),
+    tread: make(o => { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 160; loop(noise.brown, f); const t = mod(f, 2.8, .5); const g = ctx.createGain(); g.gain.value = 2.2; t.connect(g).connect(o); }),
+  };
+
   // the launch: a deep rumble that grows with the thrust
   rumbleFilter = ctx.createBiquadFilter(); rumbleFilter.type = 'lowpass'; rumbleFilter.frequency.value = 120;
   rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0;
@@ -91,7 +104,14 @@ function apply() {
   ramp(windGain.gain, mars ? (outside ? 0.55 * gust * (s.dust ? 1.8 : 1) : 0.12) : s.scene === 'arrival' ? 0.18 : 0, 0.6);
   ramp(windFilter.frequency, outside ? (s.dust ? 3200 : 2200) : 320, 0.5);
   ramp(suitGain.gain, outside ? 0.05 : 0, 0.3);
-  ramp(humGain.gain, mars && s.inside ? 0.05 : 0, 0.8);
+  ramp(humGain.gain, mars && s.inside ? (s.habPod === 3 ? 0.03 : 0.05) : 0, 0.8);   // the crew quarters are kept quieter
+  if (habGains) {
+    const pod = mars && s.inside ? s.habPod ?? -1 : -1;
+    ramp(habGains.racks.gain, [0, 1, 2, 5].includes(pod) ? (pod === 2 ? .05 : .025) : pod === 3 || pod === 4 ? .008 : 0, 1);
+    ramp(habGains.pump.gain, pod === 2 ? .12 : pod === 1 || pod === 3 ? .025 : 0, 1);
+    ramp(habGains.fridge.gain, pod === 4 ? .025 : 0, 1);
+    ramp(habGains.tread.gain, s.habTread && pod >= 4 ? (pod === 5 ? .1 : .02) : 0, .6);
+  }
   ramp(rumbleGain.gain, s.scene === 'launch' ? Math.min(1, s.thrust || 0) * 0.9 : 0, 0.25);
   ramp(rumbleFilter.frequency, 80 + Math.min(1, s.thrust || 0) * 220, 0.3);
 }

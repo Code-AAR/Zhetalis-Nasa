@@ -1,6 +1,7 @@
-import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop, channelFloor } from './landmarks.js';
+import { landmarkLift, driftLift, craterLift, craterField, rockWeight, bindBase, plateWeight, nearStop, channelFloor, namedCraterField, KEEP_CLEAR, LANDMARKS } from './landmarks.js';
 import { WORLD_EXTENT, WORLD_HALF } from './chunk-plan.js';
-import { createMeasuredTerrain } from './measured-terrain.js';
+import { createMeasuredTerrain, createTerrainDetail, elevationColour } from './measured-terrain.js';
+import { SITES, VIEWPOINTS } from './site-data.js';
 import { makeTerrainChunks, nearbyRocks } from './terrain-chunks.js';
 import { GroundMarks } from './ground-marks.js';
 // The 3D Mars surface: terrain, sky, outpost, rocks, things to collect, and the astronaut.
@@ -91,7 +92,34 @@ const chartHeights=Uint16Array.from(measuredHeights,(_,i)=>{
   return Math.max(0,Math.min(65535,Math.round((raw-terrainMetadata.minMetres)/(terrainMetadata.maxMetres-terrainMetadata.minMetres)*65535)));
 });
 export const gusevGrid=()=>({data:chartHeights,n:terrainMetadata.n,cx:.5,cy:.5,span:WORLD_EXTENT});
-export const heightAt=(x,z)=>baseAt(x,z)+landmarkLift(x,z)+driftLift(x,z)+craterLift(x,z);   // measured NASA MOLA ground plus the enlarged landmarks (landmarks.js)
+// Procedural detail on top (measured-terrain.js): ~40 m swells and ~7 m bumps, rougher on high ground. It fades out on the
+// flat base apron, at Spirit's stops, at the pad/relay/drill/meteorite spots and on Home Plate's top, so those stay as built.
+const terrainDetail=createTerrainDetail(measuredTerrain);
+const easeIn=(a,b,v)=>{const t=Math.min(1,Math.max(0,(v-a)/(b-a)));return t*t*(3-2*t);};
+const PLATE=LANDMARKS.find(l=>l.kind==='mesa')||{x:1e9,z:1e9,r:0};
+function detailMaskExact(x,z){
+  let m=easeIn(terrainMetadata.flatBaseRadius,terrainMetadata.flatBaseBlendEnd+20,Math.hypot(x,z));
+  if(m<=0)return 0;
+  for(const p of DETAIL_CLEAR){const dx=x-p[0],dz=z-p[1];if(dx*dx+dz*dz<p[3]*p[3]){m*=easeIn(p[2],p[3],Math.sqrt(dx*dx+dz*dz));if(m<=0)return 0;}}
+  return m;
+}
+// [x, z, no detail inside this radius, full detail beyond this radius]
+const DETAIL_CLEAR=[...SITES.map(s=>[s.x,s.z,12,24]),...VIEWPOINTS.map(v=>[v.x,v.z,12,24]),...KEEP_CLEAR.map(([x,z,r])=>[x,z,r,r+10])];
+// The mask is baked once into a 4 m grid (the fades are 10+ m wide, so nothing is lost); Home Plate's edge is checked exactly.
+const MASK_CELL=4,MASK_HALF=WORLD_HALF+8,MASK_N=Math.ceil(MASK_HALF*2/MASK_CELL)+1,maskGrid=new Float32Array(MASK_N*MASK_N);
+for(let j=0;j<MASK_N;j++)for(let i=0;i<MASK_N;i++)maskGrid[j*MASK_N+i]=detailMaskExact(-MASK_HALF+i*MASK_CELL,-MASK_HALF+j*MASK_CELL);
+function detailMask(x,z){
+  const u=Math.max(0,Math.min(MASK_N-1.001,(x+MASK_HALF)/MASK_CELL)),v=Math.max(0,Math.min(MASK_N-1.001,(z+MASK_HALF)/MASK_CELL));
+  const i=Math.floor(u),j=Math.floor(v),fx=u-i,fz=v-j,k=j*MASK_N+i,g=maskGrid;
+  let m=(g[k]*(1-fx)+g[k+1]*fx)*(1-fz)+(g[k+MASK_N]*(1-fx)+g[k+MASK_N+1]*fx)*fz;
+  // Home Plate's top stays flat (only checked near it: plateWeight is costly)
+  if(m>0&&Math.abs(x-PLATE.x)<PLATE.r*1.3&&Math.abs(z-PLATE.z)<PLATE.r*1.3)m*=1-plateWeight(x,z);
+  return m;
+}
+// Add ?detail=0 to the address to switch the procedural detail off (for comparing with the plain NASA ground).
+const DETAIL_ON=new URLSearchParams(location.search).get('detail')!=='0';
+export const detailAt=(x,z)=>{if(!DETAIL_ON)return 0;const m=detailMask(x,z);return m>0?terrainDetail.detail(x,z)*m:0;};
+export const heightAt=(x,z)=>baseAt(x,z)+landmarkLift(x,z)+driftLift(x,z)+craterLift(x,z)+detailAt(x,z);   // measured NASA MOLA ground plus the enlarged landmarks (landmarks.js)
 // The far ground is drawn from a coarser grid (24 cells per 64 m tile) than the near ground, so the surface you see
 // can sit up to about half a metre above the exact height. For anything that stands on the ground (rocks, masts)
 // use this: it is the highest of the exact height and both ways the coarse mesh can be cut, so nothing floats.
@@ -230,9 +258,9 @@ function gravelTexture() {
 }
 
 function makeTerrain() {
-  const rust=new THREE.Color('#9e7054'),dusty=new THREE.Color('#bc9470'),basalt=new THREE.Color('#55504a'),darkSand=new THREE.Color('#6b5444'),pale=new THREE.Color('#cab292');
+  const elevTint=new THREE.Color(),rust=new THREE.Color('#9e7054'),dusty=new THREE.Color('#bc9470'),basalt=new THREE.Color('#55504a'),darkSand=new THREE.Color('#6b5444'),pale=new THREE.Color('#cab292');
   return makeTerrainChunks(heightAt,(x,z,y,col)=>{
-    const slope=Math.abs(heightAt(x+1.5,z)-y)+Math.abs(heightAt(x,z+1.5)-y);
+    const hx=heightAt(x+1.5,z)-y,hz=heightAt(x,z+1.5)-y,slope=Math.abs(hx)+Math.abs(hz);
     // Broad patches (dark basalt sand against pale dust), rocky hill flanks, pale dust drifted into the dips.
     const patch=fbm(x*.011+9,z*.011-4,3),fine=fbm(x*.08,z*.08,3),hollow=THREE.MathUtils.clamp((heightAt(x+6,z)+heightAt(x-6,z)+heightAt(x,z+6)+heightAt(x,z-6))/4-y,0,.6)/.6;
     craterLift(x,z);const bowl=craterField.bowl,rimW=craterField.rim,hillH=landmarkLift(x,z);
@@ -248,6 +276,15 @@ function makeTerrain() {
     if(hillH>1.5&&onPlate<.5){const strata=.5+.5*Math.sin(hillH*1.7+fbm(x*.05,z*.05,2)*3);col.lerp(strata>.55?basalt:dusty,Math.min(.3,hillH/30)*Math.abs(strata-.5)*1.6);}
     // Home Plate's top: pale layered rock under thin dust, with darker sand caught in hollows
     if(onPlate>0)col.lerp(pale,onPlate*.55).lerp(darkSand,onPlate*THREE.MathUtils.clamp((fbm(x*.09+3,z*.09,3)-.52)*3,0,.45));
+    // Elevation palette (measured-terrain.js): darker reddish-brown on Gusev's low floor, paler tan up on the rim and hills.
+    // Light touch, and less where NASA's albedo says the ground is dark, so the real pattern still leads.
+    const lo=measuredTerrain.zones.lo,hi=measuredTerrain.zones.hi,ec=elevationColour((measuredTerrain.elevation(x,z)-lo)/(hi-lo));
+    elevTint.setRGB(ec.r,ec.g,ec.b);col.lerp(elevTint,.26*(1-gd*.6)*(1-onPlate));
+    // Rough rocky zones a little darker; named craters: pale dust settled on the floor, darker blocky ejecta rays.
+    const geo=terrainDetail.geologicalFeatures(x,z);col.lerp(basalt,Math.max(0,geo.roughness-.55)*.25);
+    if(namedCraterField.bowl||namedCraterField.ejecta){col.lerp(pale,namedCraterField.bowl*.45).lerp(basalt,namedCraterField.ejecta*.35+namedCraterField.rim*.15);}
+    // Dust settles on the sheltered (downwind) side of slopes. Wind runs the same way as the drift ridges (landmarks.js).
+    const lee=THREE.MathUtils.clamp(((hx*.94+hz*.34)/1.5)*-3,0,1)*(1-gd*.5);col.lerp(pale,lee*.22);
     col.offsetHSL(0,-.2,-.015);
   },(x,z)=>{const g=groundAlbedo(x,z);return g.dark*g.w;});   // last part: how dark NASA says it is, so storm dust can cover it
 }

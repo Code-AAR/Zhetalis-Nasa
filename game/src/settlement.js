@@ -8,6 +8,7 @@ import { installHabitatAccess } from './access.js';
 import { loadModel } from './nasamodels.js';
 import { GREENHOUSE } from './colony.js';
 import { GH, heightAt } from './world.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export async function installSettlement(world){
   const gltf=await loadAssetWithRetry(new GLTFLoader(), 'assets/mars-base/scene.gltf'),model=gltf.scene;
@@ -59,6 +60,7 @@ export async function installSettlement(world){
   if(cells)cells.visible=false;world.fixedSolar=[];
   const staticCrew=model.getObjectByName('Object_16');staticCrew?.removeFromParent();
   model.updateMatrixWorld(true);model.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
+  plantFeet(model,world.scene);   // the module legs stopped half a metre above the ground: give them footings
   const layout=await createOpenLayout(world,model);
   const access=installHabitatAccess(world,model,layout);
   const anchor=layout.moduleColliders[2];GH.x=anchor.x;GH.z=anchor.z-23;
@@ -244,4 +246,34 @@ function equipmentContact(model){
       if(d<r){if(d<1e-6){pos.x+=r;}else{pos.x+=dx*(r/d-1);pos.z+=dz*(r/d-1);}}
     }
   };
+}
+
+// The base model's modules stand on legs whose feet end ~0.5 m above the ground (the model was set down by its
+// lowest part, a flat pad). Find every foot (the lowest vertices of each visible mesh that is clear of the ground)
+// and put a concrete footing under it reaching into the soil, plus a dusty disc so the legs read as planted.
+function plantFeet(model,scene){
+  const v=new THREE.Vector3(),boxes=[],discs=[];
+  model.traverse(o=>{
+    if(!o.isMesh||!o.visible)return;
+    const pos=o.geometry.attributes.position;let ymin=Infinity;const P=new Float32Array(pos.count*3);
+    for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z;if(v.y<ymin)ymin=v.y;}
+    const clusters=[];
+    for(let i=0;i<pos.count;i++){const x=P[i*3],y=P[i*3+1],z=P[i*3+2];if(y>ymin+.1)continue;
+      let c=clusters.find(c=>Math.abs(c.cx-x)<.9&&Math.abs(c.cz-z)<.9);if(!c){c={cx:x,cz:z,x0:x,x1:x,z0:z,z1:z};clusters.push(c);}
+      c.x0=Math.min(c.x0,x);c.x1=Math.max(c.x1,x);c.z0=Math.min(c.z0,z);c.z1=Math.max(c.z1,z);}
+    if(clusters.length>40)return;                               // a big flat underside, not legs
+    for(const c of clusters){const x=(c.x0+c.x1)/2,z=(c.z0+c.z1)/2,g=heightAt(x,z),gap=ymin-g;if(gap<.08||gap>.9)continue;
+      const w=Math.max(.42,c.x1-c.x0+.18),d=Math.max(.42,c.z1-c.z0+.18),h=gap+.3;
+      const j=boxes.length%5,b=new THREE.BoxGeometry(w+j*.008,h,d+j*.008);b.translate(x,g-.3+h/2,z);boxes.push(b);
+      const k=boxes.length%7,pad=new THREE.BoxGeometry(w+.28+k*.012,.1+k*.006,d+.28+k*.012);pad.translate(x,g+.02+k*.003,z);boxes.push(pad);   // neighbouring pads overlap: never at exactly the same height (flicker)
+      discs.push([x,g,z,Math.max(w,d)]);}
+  });
+  if(!boxes.length)return;
+  const concrete=new THREE.MeshStandardMaterial({color:'#8d8378',roughness:.95});
+  const feet=new THREE.Mesh(mergeGeometries(boxes,false),concrete);feet.name='module-footings';feet.castShadow=feet.receiveShadow=true;scene.add(feet);
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,4,32,32,32);
+  r.addColorStop(0,'rgba(60,35,22,.55)');r.addColorStop(1,'rgba(60,35,22,0)');g.fillStyle=r;g.fillRect(0,0,64,64);
+  const dm=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4});
+  const geos=discs.map(([x,y,z,s])=>{const q=new THREE.PlaneGeometry(s*2.6,s*2.6);q.rotateX(-Math.PI/2);q.translate(x,y+.03,z);return q;});
+  const dust=new THREE.Mesh(mergeGeometries(geos,false),dm);dust.name='module-footing-dust';dust.renderOrder=1;scene.add(dust);
 }

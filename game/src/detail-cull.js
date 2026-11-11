@@ -25,6 +25,10 @@ export class DetailCull {
     walk(w.scene);
   }
   tick(dt) {
+    // During a cutscene the camera jumps far from the player (the landing starts 40 km up), and this runs before the
+    // cutscene moves the camera each frame, so it would judge everything from the player's spot and hide the whole
+    // spacecraft. Show everything while a cutscene plays and start again afterwards.
+    if (this.world.cinematic) { if (this.hidden.size) { for (const o of this.hidden) { o.layers.enable(0); o.layers.disable(30); } this.hidden.clear(); } this.scan = 0; return; }
     if ((this.scan -= dt) <= 0) { this.scan = 3; this.collect(); }   // new buildings and models appear over time
     if ((this.t -= dt) > 0) return; this.t = .25;
     const cam = this.world.camera?.position; if (!cam) return;
