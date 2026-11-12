@@ -1,0 +1,44 @@
+{
+  "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/87S/ldem_87s_5mpp.tif",
+  "product": "https://pgda.gsfc.nasa.gov/products/81",
+  "citation": "Barker et al. (2021), doi:10.1016/j.pss.2020.105119",
+  "retrieved": "2026-11-12T16:59:57.518682+00:00",
+  "lat": -89.4624,
+  "lon": -137.7808,
+  "radiusMetres": 1737400.0,
+  "width": 321,
+  "stepMetres": 5,
+  "halfMetres": 800,
+  "originHeightMetres": 1935.604893218207,
+  "quantizationMetres": 0.1,
+  "sourceWindow": {
+    "col": 17582,
+    "row": 22188,
+    "width": 454,
+    "height": 454
+  },
+  "sourceWindowFloat32LEsha256": "2191109460509dcc1a17c774bd0bc31c41a2fb53f9b099acd8c685ed8d352a6d",
+  "heightsInt16LEsha256": "5b51f6a3c23a207e62541eac2d4db5e8ae4e1d550937531a4a7bbd39394b2899",
+  "sourceCRS": "PROJCS[\"Moon2000_spole\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon_2000\",SPHEROID[\"Moon_2000_IAU_IAG\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+  "sourceTransform": [
+    5.0,
+    0.0,
+    -100000.0,
+    0.0,
+    -5.0,
+    100000.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "sourceRangeMetres": [
+    1640.3123779296875,
+    1959.4486083984375
+  ],
+  "derivedRangeMetres": [
+    1798.0895950821018,
+    1959.2700539886218
+  ],
+  "method": "5 m local east/south grid, spherical geodesic to source south-polar stereographic; bilinear interpolation at source pixel centers; relative decimetres. LOLA DEM includes interpolated cells, not an independent laser shot per grid cell.",
+  "limitations": "5 m grid spacing is not 5 m resolving power or decimetre accuracy. No source count/error map included. Gameplay pad, crater field, ice/shadow and surface grain are synthetic overlays; not measured ice deposits or illumination."
+}

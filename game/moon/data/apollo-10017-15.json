@@ -1,0 +1,32 @@
+{
+  "sample": "10017,15",
+  "mission": "Apollo 11",
+  "collected": "LM Site, Mare Tranquillitatis",
+  "classification": "High-Ti, High-K Ilmenite Basalt",
+  "credit": "NASA / ARES / Astromaterials 3D",
+  "source": "https://ares.jsc.nasa.gov/astromaterials3d/sample-details.htm?sample=10017-15",
+  "metadata": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/10017-15/10017-15_A3D_EXPLORER_metadata.json",
+  "mesh": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/10017-15/2b_10017-15_SFM_Web-Resolution-Model_Coordinate-Registered/10017-15_SFM_Web-Resolution-Model_Coordinate-Registered.obj",
+  "texture": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/10017-15/2b_10017-15_SFM_Web-Resolution-Model_Coordinate-Registered/10017-15_SFM_Web-Resolution-Model_Coordinate-Registered.jpg",
+  "retrieved": "2026-11-12T17:05:02.726920+00:00",
+  "objSha256": "8319b763e33dbb470e283ec6568e38d90f64408bfd0a073568b86506af79c9b6",
+  "textureSha256": "10d1c0559d83022b77929d72d51159491e78e932e7d1629ea9be8784097a1bf1",
+  "glbSha256": "fac29b2013439c3aa1bea38b097a0f03d7bb7a441ff53081d25452f771928aea",
+  "conversion": "All source triangles and UV seams retained; OBJ bottom-origin V converted to glTF top-origin V; source has no normals, so area-weighted smooth normals generated across UV seams; original JPEG embedded unchanged; no decimation or texture resizing.",
+  "display": "20x linear enlargement of the metre-unit source. Imported educational replica at the south-pole training base, not a locally discovered rock.",
+  "triangles": 200000,
+  "vertices": 103662,
+  "sourceVertices": 100002,
+  "boundsMetres": {
+    "min": [
+      -0.022225,
+      -0.022551,
+      -0.024604
+    ],
+    "max": [
+      0.024497,
+      0.024219,
+      0.026614
+    ]
+  }
+}

@@ -24,6 +24,14 @@ draco.setWorkerLimit(2);
 draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
 export const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
+// Separate decoder workers as well as admission slots: an optional Draco task
+// must not monopolize the decoder used for walkable gameplay geometry.
+const criticalDraco = new DRACOLoader();
+criticalDraco.setWorkerLimit(2);
+criticalDraco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const criticalLoader = new GLTFLoader();
+criticalLoader.setDRACOLoader(criticalDraco);
+const gameplayModels = new Set(['greenhouse-walkway.glb']);
 
 // Space Apps rules: no NASA logo in the game. Some NASA models have it printed on their texture, so we paint
 // our Zhetalis badge over it. spots: [{ x, y, r }] as fractions of the texture (0..1); `plain` spots are just
@@ -51,7 +59,9 @@ const cache = new Map();
 // Resolves to the loaded glTF, or null if it couldn't load (the game then keeps its simple shapes).
 export function loadModel(file, { required = false } = {}) {
   if (!cache.has(file)) {
-    const pending = loadAssetWithRetry(loader, 'assets/' + file).catch(error => {
+    // Known gameplay assets reserve capacity even when prefetched as optional.
+    const critical = required || gameplayModels.has(file);
+    const pending = loadAssetWithRetry(critical ? criticalLoader : loader, 'assets/' + file, { critical }).catch(error => {
       cache.delete(file); // A failed download must not poison later attempts.
       throw error;
     });

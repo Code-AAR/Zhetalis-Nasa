@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { buildOrion, MISSIONS } from './orion.js';
 import { effectiveQuality } from '../../src/device-profile.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mountLunarExhibit } from './lunar-assets.js';
 
 const MOON_R = 173.74, EARTH_R = 637.1, EARTH_D = 38440, MU = 4902.8;   // units of 10 km; MU in km^3/s^2
 const SUN = new THREE.Vector3(0.2, 0.12, -0.97).normalize();   // approach sees a lit Moon; the far side is half-lit at closest approach
@@ -29,20 +29,9 @@ export class Flyby {
     const moonTex = tl.load('assets/moon-map.jpg'); moonTex.colorSpace = THREE.SRGBColorSpace; moonTex.anisotropy = 8;
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_R, 128, 96), new THREE.MeshStandardMaterial({ map: moonTex, roughness: 1, metalness: 0, bumpMap: moonTex, bumpScale: 0.6 }));
     this.scene.add(this.moon);
-    // Full original NASA LRO topographic mesh + texture. Load once and retain across missions.
-    // The lightweight sphere is only a loading placeholder, not a quality downgrade.
-    let choice; try { choice = new URLSearchParams(location.search).get('graphics') || localStorage.getItem('mars-graphics'); } catch {}
-    const lite = effectiveQuality(choice) === 'low';
-    this.moonModelReady = new GLTFLoader().loadAsync(`moon/assets/nasa/moon-lro${lite ? '-lite' : ''}.glb`).then(gltf => {
-      const model = gltf.scene, box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
-      model.position.sub(centre); const wrapper = new THREE.Group(); wrapper.add(model);
-      wrapper.scale.setScalar(MOON_R * 2 / Math.max(size.x, size.y, size.z));
-      wrapper.rotation.copy(this.moon.rotation); wrapper.name = lite ? 'NASA LRO Moon — phone Lite' : 'NASA LRO full-resolution Moon';
-      model.traverse(o => { if(o.isMesh) { o.material.side = THREE.FrontSide; o.material.map && (o.material.map.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy())); } });
-      this.scene.remove(this.moon); this.moon.geometry.dispose(); this.moon.material.dispose(); moonTex.dispose();
-      this.moon = wrapper; this.scene.add(wrapper); return true;
-    }).catch(error => { console.warn('NASA Moon model unavailable; showing loading fallback', error); return false; });
+    // Do not request the 81.5 MB globe while this eagerly constructed scene is only a menu.
+    this.moonModelReady = null;
+    this.exhibit = mountLunarExhibit();
     const earthTex = tl.load('assets/earth-map.jpg'); earthTex.colorSpace = THREE.SRGBColorSpace;
     this.earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R, 96, 64), new THREE.MeshStandardMaterial({ map: earthTex, roughness: 0.7, metalness: 0 }));
     this.earth.position.set(EARTH_D, 0, 0); this.scene.add(this.earth);
@@ -59,7 +48,29 @@ export class Flyby {
     this.yaw = 0; this.pitch = 0; this.warp = 1; this.photos = {}; this.done = false;
   }
 
+  // Called only by start(): deduplicate in-flight/successful loads, retry on the next mission after failure.
+  ensureMoonModel() {
+    if (this.moonModelReady) return this.moonModelReady;
+    let choice; try { choice = new URLSearchParams(location.search).get('graphics') || localStorage.getItem('mars-graphics'); } catch {}
+    const lite = effectiveQuality(choice) === 'low';
+    this.moonModelReady = import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) =>
+      new GLTFLoader().loadAsync(new URL(`../assets/nasa/moon-lro${lite ? '-lite' : ''}.glb`, import.meta.url).href)
+    ).then(gltf => {
+      const model = gltf.scene, box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+      model.position.sub(centre); const wrapper = new THREE.Group(); wrapper.add(model);
+      wrapper.scale.setScalar(MOON_R * 2 / Math.max(size.x, size.y, size.z));
+      wrapper.rotation.copy(this.moon.rotation); wrapper.name = lite ? 'NASA LRO Moon — phone Lite' : 'NASA LRO full-resolution Moon';
+      model.traverse(o => { if(o.isMesh) { o.material.side = THREE.FrontSide; o.material.map && (o.material.map.anisotropy = Math.min(16, this.renderer.capabilities.getMaxAnisotropy())); } });
+      this.scene.remove(this.moon); this.moon.geometry.dispose(); this.moon.material.dispose(); this.moon.material.map?.dispose();
+      this.moon = wrapper; this.scene.add(wrapper); return true;
+    }).catch(error => { console.warn('NASA Moon model unavailable; retaining sphere', error); this.moonModelReady = null; return false; });
+    return this.moonModelReady;
+  }
+
   start(missionId, prior = {}) {
+    this.exhibit.close();
+    this.ensureMoonModel();
     this.id = missionId; this.m = MISSIONS[missionId];
     if (this.orion) { this.near.remove(this.orion); disposeTree(this.orion); }
     this.orion = buildOrion(missionId); this.near.add(this.orion);
@@ -134,6 +145,7 @@ export class Flyby {
 
   // Slow cinematic of the Moon with Earth beyond, for the title screen.
   backdrop(t) {
+    if (this.exhibit.isOpen) return; // The exhibit renders only on interaction; no second continuous scene.
     const a = -2.5 + t * 0.012, r = 720;
     this.camera.position.set(Math.cos(a) * r, 90 + Math.sin(t * 0.05) * 20, Math.sin(a) * r);
     this.camera.up.set(0, 1, 0); this.camera.lookAt(0, 0, 0);

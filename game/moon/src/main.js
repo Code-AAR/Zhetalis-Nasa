@@ -8,7 +8,7 @@ import { modal } from '../../src/ui.js';
 import { startMusic, tickMusic } from '../../src/ambient-music.js';
 import { onLayout } from '../../src/layout.js';
 import { MOON, GAME_DAY_SECONDS, SITES, WORLD } from './config.js';
-import { heightAt, permanentShadow } from './terrain.js';
+import { heightAt, permanentShadow, TERRAIN_SOURCE } from './terrain.js';
 import { sunAt, earthAt, skyVector } from './sun.js';
 import * as sim from './sim.js';
 import { currentObjective, questLog, warnings, mapMarker } from './quests.js';
@@ -67,6 +67,7 @@ const astro = new Astronaut(scene);
 const rover = new MoonRover(scene);
 const cabin = new LunarCabin();
 const colliders = outpost.colliders();
+colliders.push(world.apolloSample.collider);
 
 // ---------- flyby scene ----------
 const flyby = new Flyby(renderer);
@@ -150,9 +151,10 @@ function showSources() {
   const img = IMAGES.items || [];
   modal({
     title: 'Data sources & credits', html: `<ul class="sources">
-    <li><b>Horizon and sunlight</b> - computed from NASA LRO LOLA elevation, <a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noopener">NASA's Scientific Visualization Studio CGI Moon Kit</a> (${esc(SITE?.source?.resolution || '')}) Archived ${esc(SITE?.retrieved || 'n/a')}. Site ${esc(SITE?.site?.lat)}°, ${esc(SITE?.site?.lon)}° - a training site, not an Artemis landing site.</li>
-    <li><b>Walkable ground</b> - a procedural crater field (many small craters, few big), not measured topography.</li>
+    <li><b>Horizon and sunlight</b> - archived NASA LRO LOLA <a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noopener">CGI Moon Kit</a> global elevation at 16 pixels per degree (about 1.9 km along a meridian), used for the distant horizon and simplified sunlight. Archived ${esc(SITE?.retrieved || 'n/a')}; site ${esc(SITE?.site?.lat)}°, ${esc(SITE?.site?.lon)}°. ${SITE?.site?.lat === TERRAIN_SOURCE.lat && SITE?.site?.lon === TERRAIN_SOURCE.lon ? 'The archived horizon and local DEM share the same centre coordinates, but use different elevation products and resolutions.' : 'The archived horizon and local DEM have different centre coordinates.'} The horizon has not been recomputed from the 5 m DEM; neither product validates an Artemis landing site.</li>
+    <li><b>Walkable ground</b> - <a href="${esc(TERRAIN_SOURCE.url)}" target="_blank" rel="noopener">${esc(TERRAIN_SOURCE.name)}</a>: ${esc(TERRAIN_SOURCE.stepMetres)} m interpolated DEM centred at ${esc(TERRAIN_SOURCE.lat)}°, ${esc(TERRAIN_SOURCE.lon)}°. ${esc(TERRAIN_SOURCE.note)} Elevations are relative to the DEM origin; the pad, crater field, fine grain and ice-shadow overlays are synthetic training features.</li>
     <li><b>Moon and Earth globes</b> - NASA SVS / LRO LROC colour map; NASA Earth map (shared Mars game assets).</li>
+    <li><b>Optional lunar survey &amp; history</b> - <a href="https://science.nasa.gov/3d-resources/lunar-reconnaissance-orbiter-a/" target="_blank" rel="noopener">LRO: NASA / Christopher R. Meaney</a>; <a href="https://science.nasa.gov/3d-resources/apollo-lunar-module/" target="_blank" rel="noopener">Apollo Lunar Module: NASA / Michael D. Carbajal</a>. Saturn V: user-supplied Stanley Creative model, CC BY-ND 4.0, unchanged, with source and license in the exhibit. Models download only when selected. The optional LRO survey orbit is illustrative, not live tracking or measured coverage.</li>
     <li><b>Astronaut and rover models</b> - NASA 3D Resources (Astronaut; Space Exploration Vehicle, which began as the Lunar Electric Rover).</li>
     <li><b>Orion and the training lander</b> - built from simple shapes for this game. The lander is only <i>inspired by</i> human landing system concepts; it is not a real design.</li>
     <li><b>Solar particle alerts</b> - ${sepEvents.length ? `${sepEvents.length} events from <a href="https://kauai.ccmc.gsfc.nasa.gov/DONKI/" target="_blank" rel="noopener">NASA DONKI</a>, archived ${esc(WEATHER.retrieved)}, squeezed into game time.` : 'practice drills; the NASA DONKI snapshot could not be downloaded.'}</li>
@@ -258,6 +260,7 @@ function drawCabin() {
 function updateCabin() { const el = document.querySelector('#cabin .cabin-meters'); if (el && state) el.innerHTML = meter('Suit O₂', state.suitO2) + meter('Suit power', state.suitPower) + meter('Base power', state.battery, 25) + meter('Base O₂', state.oxygen, 30); }
 
 function doAction(spot) {
+  if (spot.id === 'apollo-exhibit') { world.apolloSample.interact(); return; }
   let msg = '';
   const roverNear = rover.pos.distanceTo(astro.pos) < 25;
   if (spot.id === 'rover') { enterRover(); return; }
@@ -436,6 +439,7 @@ function surfaceFrame(dt, sun) {
   let env = { place: place === 'lift' ? 'hab' : place, lit: sun.lit, alertGap };
   if (place === 'outside') {
     const spots = outpost.spots(state, place);
+    spots.push(world.apolloSample.spot);
     // Board from anywhere beside the rover (front, sides or back): kids walk up to whichever part is nearest.
     spots.push({id:'rover',x:rover.pos.x,z:rover.pos.z,r:BOARD_RANGE,label:'Drive the rover (or press R)',hold:0});
     nearSpot = null; let best = 1e9;

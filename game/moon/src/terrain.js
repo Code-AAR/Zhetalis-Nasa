@@ -1,7 +1,9 @@
-// The walkable lunar surface: a procedural crater field (NOT measured topography - the distant horizon is the
-// measured part, from LOLA). Craters follow the real pattern "many small, few big" with bowl shapes, raised
-// rims and ejecta. Pure maths, no Three.js, so Node tests can check bounds, determinism and the chunk planner.
+// Walkable lunar terrain: measured 5 m NASA LOLA regional relief, plus explicitly synthetic
+// training craters, pad and fine regolith. Static data is ready before spawn/collisions.
+// Pure maths/data: no browser globals, fetch, Three.js or runtime height switching.
 import { WORLD, SITES, CHUNKS_PER_SIDE } from './config.js';
+import { measuredHeightAt } from './measured-region.js';
+export { measuredHeightAt, TERRAIN_SOURCE } from './measured-region.js';
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) ^ Math.imul(s ^ (s >>> 13), 3266489909), (s ^= s >>> 16) >>> 0) / 4294967296); }
 function hash(x, z) { let h = Math.imul(x | 0, 374761393) + Math.imul(z | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
@@ -50,11 +52,22 @@ function craterShape(c, d) {
 // Ground height (metres) at x, z. Deterministic: same input, same output, on every device.
 export function heightAt(x, z) {
   const d0 = Math.hypot(x, z);
-  let h = 14 * Math.exp(-((d0 / 520) ** 2)) - 6;                  // the ridge top the base stands on
-  h += (fbm(x / 140, z / 140) - 0.5) * 10 + (fbm(x / 22, z / 22) - 0.5) * 1.1 + (noise(x / 2.3, z / 2.3) - 0.5) * 0.12;
-  h *= 1 - 0.7 * Math.exp(-((d0 / 30) ** 2));                     // flattened landing pad
+  // The entire playable square is within the measured patch. Outside it, only the
+  // decorative horizon uses the old procedural continuation (blend beyond 600 m).
+  const measured = measuredHeightAt(x, z), edge = Math.max(Math.abs(x), Math.abs(z));
+  const blend = Math.max(0, Math.min(1, (edge - 600) / 200));
+  const fade = blend * blend * (3 - 2 * blend);
+  const outer = measured === null || fade > 0 ? 14 * Math.exp(-((d0 / 520) ** 2)) - 6 + (fbm(x / 140, z / 140) - 0.5) * 10 : 0;
+  let h = measured === null ? outer : measured * (1 - fade) + outer * fade;
+  // Synthetic landing pad blends to measured relief over 24–70 m; no height scaling.
+  const pad = Math.max(0, Math.min(1, (d0 - 24) / 46));
+  h *= pad * pad * (3 - 2 * pad);
+  h += (fbm(x / 22, z / 22) - 0.5) * 1.1 + (noise(x / 2.3, z / 2.3) - 0.5) * 0.12;
   const list = index.get(Math.floor(x / CELL) + ',' + Math.floor(z / CELL));
-  if (list) for (const c of list) h += craterShape(c, Math.hypot(x - c.x, z - c.z));
+  if (list) for (const c of list) {
+    const dx=x-c.x, dz=z-c.z, d2=dx*dx+dz*dz;
+    if(d2 < 9*c.r*c.r) h += craterShape(c, Math.sqrt(d2));
+  }
   return h;
 }
 
@@ -85,7 +98,9 @@ export function chunkPlan(x, z, radius = WORLD.detailRadius) {
   if (radius === 'map') {
     // Every chunk whose square touches the minimap's 120 m circle (AABB vs circle), like the shared Mars planner.
     const px = Number.isFinite(x) ? Math.max(-WORLD.half, Math.min(WORLD.half, x)) : 0, pz = Number.isFinite(z) ? Math.max(-WORLD.half, Math.min(WORLD.half, z)) : 0, r = MINIMAP_SPAN / 2, out = [];
-    for (let iz = 0; iz < n0; iz++) for (let ix = 0; ix < n0; ix++) {
+    const lo = v => Math.max(0, Math.floor((v - r + WORLD.half) / S) - 1);
+    const hi = v => Math.min(n0 - 1, Math.floor((v + r + WORLD.half) / S));
+    for (let iz = lo(pz); iz <= hi(pz); iz++) for (let ix = lo(px); ix <= hi(px); ix++) {
       const left = -WORLD.half + ix * S, top = -WORLD.half + iz * S;
       const dx = Math.max(left - px, 0, px - left - S), dz = Math.max(top - pz, 0, pz - top - S);
       if (dx * dx + dz * dz <= r * r) out.push({ x: ix, z: iz, key: ix + ',' + iz, d: (left + S / 2 - px) ** 2 + (top + S / 2 - pz) ** 2 });

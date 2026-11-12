@@ -35,9 +35,11 @@ export function createAssetLoadQueue(limit = 2) {
   });
 }
 const queue = createAssetLoadQueue(2);
+// Reserved capacity: optional scenery cannot consume gameplay geometry slots.
+const criticalQueue = createAssetLoadQueue(2);
 const inFlight = new WeakMap();
 
-export function loadAssetWithRetry(loader, url, { attempts = 3, delay = 800, timeout = 120000 } = {}) {
+export function loadAssetWithRetry(loader, url, { attempts = 3, delay = 800, timeout = 120000, critical = false } = {}) {
   if (!Number.isInteger(attempts) || attempts < 1 || !Number.isFinite(delay) || delay < 0 ||
       !Number.isFinite(timeout) || timeout <= 0 || timeout > 2147483647) {
     return Promise.reject(new RangeError('Invalid asset loading limits'));
@@ -59,7 +61,7 @@ export function loadAssetWithRetry(loader, url, { attempts = 3, delay = 800, tim
       reject(error);
     }, timeout);
   });
-  const operation = queue(async () => {
+  const operation = (critical ? criticalQueue : queue)(async () => {
     let cause;
     for (let attempt = 0; attempt < attempts; attempt++) {
       if (signal.aborted) throw signal.reason;

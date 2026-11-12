@@ -6,6 +6,7 @@ import { effectiveQuality } from '../../src/device-profile.js';
 import { WORLD, CHUNKS_PER_SIDE } from './config.js';
 import { heightAt, permanentShadow, chunkPlan, chunkOrigin, CRATERS, MAP_CHUNK_CAP } from './terrain.js';
 import { horizonAt, skyVector } from './sun.js';
+import { createApolloSample } from './apollo-sample.js';
 
 // Shared settings keys: 'mars-graphics' (quality) and 'mission-world-limit' / ?chunks= (detail area).
 // Default 'map' = every 80 m chunk touching the minimap's 240 m circle (at most 16).
@@ -73,6 +74,7 @@ export class MoonWorld {
     this.addHorizon();
     this.addRocks();
     this.addSky();
+    this.apolloSample = createApolloSample(scene);
     this.stats = { detailed: 0, queued: 0, limit: QUALITY.radius === 'map' ? MAP_CHUNK_CAP : (2 * QUALITY.radius + 1) ** 2, range: QUALITY.radius };
   }
 
@@ -95,6 +97,7 @@ export class MoonWorld {
   // Streams detailed chunks around the focus point; at most one new chunk per frame (no hitches) and never
   // more than (2r+1)^2 detailed chunks alive. Game state never lives in chunks.
   update(focus) {
+    this.apolloSample.update(focus);
     // Avoid rebuilding the same residency plan while standing still; queued chunks still stream.
     const moved = focus.x !== this.lastFocusX || focus.z !== this.lastFocusZ;
     const plan = moved ? chunkPlan(focus.x, focus.z, QUALITY.radius) : null;

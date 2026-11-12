@@ -501,7 +501,10 @@ function makeSolarField() {
     const px = (i % 4) * 4.6, pz = Math.floor(i / 4) * 3.4, p = solarPanel(cellMat, { w: 3.2, d: 2, tilt: .5, low: .6 });
     p.position.set(px, heightAt(g.position.x + px, g.position.z + pz), pz);
     p.visible = false; g.add(p); panels.push(p);
-    mergeStatic(p);   // ~20 parts -> a few draw calls
+    // The top is the raycast surface; feet are fitted to terrain after placement.
+    // Preserve both objects rather than baking their transforms too early.
+    mergeStatic(p.children[0]);
+    mergeStatic(p, { exclude: [p.children[0], ...p.userData.feet] });
   }
   return { group: g, panels };
 }

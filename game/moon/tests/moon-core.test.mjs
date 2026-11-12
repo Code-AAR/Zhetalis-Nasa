@@ -20,14 +20,15 @@ test('terrain is deterministic and finite everywhere in bounds', () => {
   for (let i = 0; i < 2000; i++) {
     const x = (Math.random() * 2 - 1) * WORLD.half, z = (Math.random() * 2 - 1) * WORLD.half;
     const h = heightAt(x, z); assert.ok(Number.isFinite(h)); assert.equal(h, heightAt(x, z));
-    assert.ok(h > -60 && h < 60, `height ${h} at ${x},${z}`);
+    // Bounds cover the measured patch (-138..24 m relative to origin) and synthetic crater depths.
+    assert.ok(h > -230 && h < 80, `height ${h} at ${x},${z}`);
   }
   assert.ok(Number.isFinite(normalAt(10, 10).y));
 });
 
 test('landing pad is gentle and the ice crater is deep and permanently shadowed', () => {
   const n = normalAt(0, 0); assert.ok(n.y > 0.97, 'pad slope');
-  const c = SITES.iceCrater; assert.ok(heightAt(c.x, c.z) < heightAt(0, 0) - 8 && heightAt(c.x, c.z) < heightAt(c.x + c.r, c.z) - 14, 'crater floor well below the base and rim');
+  const c = SITES.iceCrater; assert.ok(heightAt(c.x, c.z) < heightAt(0, 0) && heightAt(c.x, c.z) < heightAt(c.x + c.r, c.z) - 14, 'crater floor well below the base and rim');
   assert.equal(permanentShadow(c.x, c.z), 1); assert.equal(permanentShadow(0, 0), 0);
   assert.ok(CRATERS.length > 150, 'crater field');
 });

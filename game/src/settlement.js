@@ -12,7 +12,7 @@ import { GH, heightAt } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export async function installSettlement(world){
-  const gltf=await loadAssetWithRetry(new GLTFLoader(), 'assets/mars-base/scene.gltf'),model=gltf.scene;
+  const gltf=await loadAssetWithRetry(new GLTFLoader(), 'assets/mars-base/scene.gltf', { critical: true }),model=gltf.scene;
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   model.scale.setScalar(102/Math.max(size.x,size.z));
   const box=new THREE.Box3().setFromObject(model),centre=box.getCenter(new THREE.Vector3());model.position.set(-centre.x,-box.min.y,-centre.z);
