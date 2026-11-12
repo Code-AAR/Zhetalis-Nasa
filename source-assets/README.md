@@ -15,3 +15,9 @@ Rules:
   publicly: it allows using them in a project, but not redistributing the raw files on their own.
 - These files are still in the Git repository, so they still count towards its size. To shrink the repository
   itself the team would need to remove them from Git (keeping local copies) or move them to Git LFS / a release.
+
+## space-pack/
+
+The editable OBJ originals of the team's Zhetalis Space Pack (made for the Unity project in
+`../Zhetalis-Nasa-Unity`), with the shared `SpacePalette.mtl`, the pack README and manifest. The web copies are
+in `game/assets/space-pack/`, built with `python scripts/build-space-pack.py`. Original team work: free to reuse.

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Space Pack Models · Zhetalis</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100dvh; display: grid; grid-template-rows: auto 1fr; background: #080e14; color: #e8eef2; font: 14px/1.4 Poppins, system-ui, sans-serif; }
+    header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #253039; }
+    h1 { font-size: 16px; margin: 0 8px 0 0; }
+    select, button, a { font: inherit; color: inherit; background: #15202a; border: 1px solid #34414a; border-radius: 8px; padding: 8px 12px; min-height: 44px; text-decoration: none; display: inline-flex; align-items: center; }
+    #info { color: #9fb3c4; font-size: 13px; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  </style>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+  <header>
+    <h1>Zhetalis Space Pack</h1>
+    <label>Model <select id="pick" aria-label="Choose a model"></select></label>
+    <button id="spin" aria-pressed="true">Turning</button>
+    <a id="dl" download>Download GLB</a>
+    <span id="info"></span>
+  </header>
+  <canvas id="view" aria-label="3D model preview. Drag to rotate, scroll or pinch to zoom."></canvas>
+  <script type="module">
+    // Preview of game/assets/space-pack (built by scripts/build-space-pack.py). Drag to orbit, scroll to zoom.
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    const canvas = document.getElementById('view'), info = document.getElementById('info'), pick = document.getElementById('pick');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b121a');
+    scene.add(new THREE.HemisphereLight('#cfe4ff', '#2a2f36', 1.1)); const sun = new THREE.DirectionalLight('#fff3e2', 2.4); sun.position.set(5, 8, 6); scene.add(sun);
+    const camera = new THREE.PerspectiveCamera(40, 1, .01, 1000), controls = new OrbitControls(camera, canvas); controls.enableDamping = true;
+    const grid = new THREE.GridHelper(40, 40, '#2c3a46', '#1a242d'); scene.add(grid);
+    const loader = new GLTFLoader(); let current = null, spinning = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const spin = document.getElementById('spin'); const setSpin = on => { spinning = on; spin.textContent = on ? 'Turning' : 'Still'; spin.setAttribute('aria-pressed', on); }; setSpin(spinning); spin.onclick = () => setSpin(!spinning);
+    const manifest = await (await fetch('assets/space-pack/manifest.json')).json();
+    for (const m of manifest.models) pick.add(new Option(m.name.replace(/^\d+_/, '').replace(/([a-z])([A-Z])/g, '$1 $2'), m.name));
+    async function show(name) {
+      const m = manifest.models.find(x => x.name === name); pick.value = name; document.getElementById('dl').href = m.file;
+      info.textContent = 'Loading…';
+      const gltf = await loader.loadAsync(m.file);
+      if (current) { scene.remove(current); current.traverse(o => { o.geometry?.dispose(); o.material?.dispose?.(); }); }
+      current = gltf.scene; scene.add(current);
+      const box = new THREE.Box3().setFromObject(current), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()), r = Math.max(size.x, size.y, size.z);
+      grid.position.y = box.min.y; grid.scale.setScalar(Math.max(.1, r / 20));
+      controls.target.copy(c); camera.position.copy(c).add(new THREE.Vector3(r * .9, r * .45, r * 1.25)); camera.near = r / 200; camera.far = r * 50; camera.updateProjectionMatrix();
+      info.textContent = `${m.triangles.toLocaleString()} triangles · ${m.parts} parts · ${(m.bytes / 1024).toFixed(0)} KB · ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m`;
+      window.__shown = { name, triangles: m.triangles, meshes: (() => { let n = 0; current.traverse(o => o.isMesh && n++); return n; })() };
+    }
+    pick.onchange = () => show(pick.value);
+    const wanted = new URLSearchParams(location.search).get('model'); pick.value = manifest.models.some(m => m.name === wanted) ? wanted : manifest.models[0].name; await show(pick.value);
+    const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); };
+    addEventListener('resize', resize); resize();
+    renderer.setAnimationLoop(() => { if (spinning && current) current.rotation.y += .004; controls.update(); renderer.render(scene, camera); });
+    window.__spacePack = { manifest, show };
+  </script>
+</body>
+</html>
