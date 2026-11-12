@@ -107,8 +107,9 @@ function toast(text, kind = '') {
 }
 function showFact(id) {
   const f = facts[id]; if (!f) return; const pop = $('#fact-pop');
-  pop.innerHTML = `<h4>${esc(f.title)}</h4><p>${esc(f.short)}</p><div class="row"><button data-more>More in Settings → Information</button><button data-close>Got it</button></div><a href="${esc(f.source.url)}" target="_blank" rel="noopener">Source: ${esc(f.source.name)}</a>`;
-  pop.hidden = false; pop.querySelector('[data-more]').onclick = () => info(id); pop.querySelector('[data-close]').onclick = () => (pop.hidden = true);
+  pop.innerHTML = `<h4>${esc(f.title)}</h4><p>${esc(f.short)}</p><div class="row"><button data-more>Learn more</button><button data-close aria-label="Dismiss fact">Close</button></div><a href="${esc(f.source.url)}" target="_blank" rel="noopener">Source: ${esc(f.source.name)}</a>`;
+  dispatchEvent(new Event('zhetela-dismiss'));
+  pop.hidden = false; pop.querySelector('[data-more]').onclick = () => { pop.hidden = true; info(id); }; pop.querySelector('[data-close]').onclick = () => (pop.hidden = true);
   clearTimeout(showFact.t); showFact.t = setTimeout(() => (pop.hidden = true), 14000);
 }
 const meter = (label, v, warnAt = 30) => `<div class="meter ${v < warnAt / 2 ? 'crit' : v < warnAt ? 'low' : ''}"><span>${label}</span><span class="track"><span class="fill" style="width:${v.toFixed(1)}%"></span></span><output>${Math.round(v)}%</output></div>`;
@@ -121,7 +122,7 @@ function setMode(m) {
   $('#skip').hidden = m !== 'descent'; if (m !== 'descent') caption('');
   $('#cabin').hidden = true; $('#alert').hidden = true; $('#prompt').hidden = true;
   if (m !== 'surface') { closeQuestLog(); document.body.classList.remove('alert-on'); }
-  if (m === 'menu') { refreshMenu(); document.exitPointerLock?.(); }
+  if (m === 'menu') { $('#fact-pop').hidden = true; dispatchEvent(new Event('zhetela-dismiss')); refreshMenu(); document.exitPointerLock?.(); }
 }
 
 // ---------- menu ----------
@@ -542,10 +543,9 @@ function updateObjective() {
     $('#obj-count').textContent = o.id === 'free' ? 'All objectives done' : `Objective ${o.index + 1} of ${o.total}`;
     $('#obj-title').textContent = o.title;
     $('#obj-detail').textContent = o.detail;
-    // A new objective shows its full explanation for a few seconds, then folds down to its title.
+    // Keep the next action visible; explanations are opened deliberately.
     if (newTask || first) {
-      zhetela(o.detail);
-      setObjectiveOpen(true); objUntil = state.t + (innerWidth<600?4:9);   // game seconds: pausing or Settings does not eat the reading time
+      setObjectiveOpen(false); objPinned = false; objUntil = 0;
       const card = $('#task'); card.classList.remove('fresh'); void card.offsetWidth; if (!reducedMotion.matches) card.classList.add('fresh');
     }
   }
@@ -556,6 +556,7 @@ function updateObjective() {
   lg.hidden = !o.target; if (o.target) lg.querySelector('span').textContent = `${o.target.label} · ${Math.round(Math.hypot(o.target.x - f.x, o.target.z - f.z))} m`;
 }
 $('#obj-toggle').onclick = () => { const open = $('#task').classList.contains('collapsed'); objPinned = open; objUntil = 0; setObjectiveOpen(open); };
+$('#obj-guide').onclick = () => { $('#fact-pop').hidden = true; setObjectiveOpen(false); objPinned = false; zhetela(objective.detail); };
 $('#obj-info').onclick = () => info(objective?.fact || 'moon-gravity');
 $('#obj-log').onclick = () => openQuestLog();
 $('#quest-btn').onclick = () => toggleQuestLog();

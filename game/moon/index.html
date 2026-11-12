@@ -33,7 +33,7 @@
     "./moon/src/controls.js": "./moon/src/controls.js?v=crouch-1",
     "./moon/src/flyby.js": "./moon/src/flyby.js?v=lunar-loading-1",
     "./moon/src/lander.js": "./moon/src/lander.js?v=surface-missions-68",
-    "./moon/src/main.js": "./moon/src/main.js?v=lunar-loading-1",
+    "./moon/src/main.js": "./moon/src/main.js?v=clear-hud-1",
     "./moon/src/moon-rover.js": "./moon/src/moon-rover.js?v=ground-contact-1",
     "./moon/src/orion.js": "./moon/src/orion.js?v=surface-missions-68",
     "./moon/src/player.js": "./moon/src/player.js?v=crouch-1",
@@ -118,6 +118,7 @@
   }
 }</script>
 <link rel="stylesheet" href="construction.css?v=surface-missions-68">
+<link rel="stylesheet" href="moon/hud.css?v=clear-hud-1">
 </head>
 <body class="booting">
   <canvas id="view" aria-label="3D view of the Moon mission"></canvas>
@@ -161,6 +162,18 @@
     <div class="hud-top-left">
       <div class="bars" id="bars"></div>
       <div class="suit" id="suit"></div>
+    <section class="task objective collapsed" id="task" aria-label="Current objective">
+      <button class="obj-head" id="obj-toggle" aria-expanded="false" aria-controls="obj-body">
+        <small id="obj-count">Objective</small>
+        <b id="obj-title"></b>
+        <span class="obj-dist" id="obj-dist"></span>
+      </button>
+      <p class="obj-step" id="obj-step"></p>
+      <div class="obj-body" id="obj-body">
+        <p class="obj-detail" id="obj-detail"></p>
+        <div class="obj-actions"><button id="obj-guide">Ask Zhetela</button><button id="obj-info">Information</button><button id="obj-log">Quest log (T)</button></div>
+      </div>
+    </section>
     </div>
     <div class="hud-top-center" id="clock"></div>
     <div class="hud-top-right">
@@ -173,18 +186,7 @@
         <button id="pause-btn" aria-label="Pause">❚❚</button>
       </div>
     </div>
-    <section class="task objective collapsed" id="task" aria-label="Current objective">
-      <button class="obj-head" id="obj-toggle" aria-expanded="false" aria-controls="obj-body">
-        <small id="obj-count">Objective</small>
-        <b id="obj-title"></b>
-        <span class="obj-dist" id="obj-dist"></span>
-      </button>
-      <div class="obj-body" id="obj-body">
-        <p class="obj-step" id="obj-step"></p>
-        <p class="obj-detail" id="obj-detail"></p>
-        <div class="obj-actions"><button id="obj-info">Why it matters</button><button id="obj-log">Quest log (T)</button></div>
-      </div>
-    </section>
+
     <aside class="quest-log" id="quest-log" hidden role="dialog" aria-modal="false" aria-labelledby="ql-title">
       <header><h3 id="ql-title">Quest log</h3><button id="ql-close" aria-label="Close quest log">×</button></header>
       <div class="ql-body" id="ql-body"></div>
@@ -214,6 +216,6 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="loading">Loading the Moon…</div>
 
-  <script type="module" src="moon/src/main.js?v=lunar-loading-1"></script>
+  <script type="module" src="moon/src/main.js?v=clear-hud-1"></script>
 </body>
 </html>
