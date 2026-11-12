@@ -1,19 +1,8 @@
-// Orion, built from simple shapes: the cone-shaped crew module (heat shield at the bottom), the European
-// Service Module (a cylinder) and its four X-shaped solar array wings. Artemis I flew it uncrewed with
-// cameras on the array wings; Artemis II carried four astronauts (lit windows, crew in the seats).
+// Orion uses the complete NASA/JPL Eyes spacecraft after a lazy, bounded load.
+// Simple shapes remain only while loading or after failure. Stable camera anchors
+// belong to the flight rig, not either visual model, so a swap never moves the view.
 import * as THREE from 'three';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js';
-// NASA's printable crew-module mesh. Only the capsule is NASA geometry;
-// service module, arrays and materials below remain illustrative game geometry.
-const capsuleGeometry = new STLLoader().loadAsync('moon/assets/nasa/orion-capsule.stl').then(geo => {
-  geo.computeBoundingBox();
-  const box = geo.boundingBox, scale = 5 / (box.max.x - box.min.x);
-  geo.translate(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
-  geo.scale(scale, scale, scale);
-  geo.computeBoundingSphere();
-  return geo;
-}).catch(() => null);
-
+import { loadNasaOrion, disposeNasaOrion } from './orion-model.js';
 
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.2, ...o });
 const cells = (() => {
@@ -24,7 +13,7 @@ const cells = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 })();
 
-export function buildOrion(mission = 'artemis2') {
+export function buildOrion(mission = 'artemis2', renderer) {
   const g = new THREE.Group(); g.name = `Orion (${mission})`;
   const silver = std('#c9ccd1', { metalness: 0.75, roughness: 0.32 }), white = std('#eeeeec'), black = std('#1e1f22', { roughness: 0.8 }), gold = std('#c79a3e', { metalness: 0.85, roughness: 0.3 });
   // crew module: truncated cone, heat shield at its wide end facing the service module
@@ -53,15 +42,48 @@ export function buildOrion(mission = 'artemis2') {
     wing.rotation.z = 0.12; g.add(wing); g.userData.wings.push(wing);
   }
   g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  // the whole stack flies heat-shield-forward-ish; rotate so +z is "forward"
-  g.rotation.x = Math.PI / 2;
-  const root = new THREE.Group(); root.add(g); root.userData.body = g;
-  capsuleGeometry.then(geo => {
-    if (!geo || root.userData.disposed) return;
-    cm.geometry.dispose(); cm.geometry = geo.clone(); cm.position.y = 0;
-    cm.name = 'NASA Orion capsule'; root.userData.nasaCapsule = true;
+  // Keep the historical rig unchanged while swapping ONLY its visual child.
+  const body = new THREE.Group(); body.rotation.x = Math.PI / 2;
+  body.userData.wings = g.userData.wings.map(wing => {
+    const anchor = new THREE.Object3D(); anchor.name = 'Stable Orion wing-camera anchor';
+    anchor.position.copy(wing.position); anchor.quaternion.copy(wing.quaternion);
+    body.add(anchor); return anchor;
   });
+  body.add(g);
+  const root = new THREE.Group(); root.name = `Orion (${mission})`; root.add(body);
+  root.userData.body = body; root.userData.fallback = g; root.userData.modelStatus = 'fallback';
+  if (renderer) {
+    const controller = new AbortController(); root.userData.loadController = controller;
+    root.userData.modelStatus = 'loading';
+    root.userData.modelReady = loadNasaOrion(renderer, {signal:controller.signal}).then(model => {
+      if (root.userData.disposed) { disposeNasaOrion(model); return false; }
+      body.remove(g); disposeFallback(g); root.userData.fallback = null;
+      body.add(model); root.userData.nasaModel = model; root.userData.modelStatus = 'ready';
+      return true;
+    }).catch(error => {
+      if (!root.userData.disposed) {
+        root.userData.modelStatus = 'failed'; root.userData.modelError = error.message;
+        console.warn('NASA Orion unavailable; keeping flight fallback', error);
+      }
+      return false;
+    });
+  } else root.userData.modelReady = Promise.resolve(false);
   return root;
+}
+
+function disposeFallback(root) {
+  const geometries = new Set(), materials = new Set();
+  root.traverse(o => { if(o.geometry)geometries.add(o.geometry); for(const m of [].concat(o.material||[]))materials.add(m); });
+  geometries.forEach(g=>g.dispose()); materials.forEach(m=>m.dispose());
+  // Solar-cell CanvasTexture is module-shared across fallback builds.
+}
+
+export function disposeOrion(root) {
+  if (!root || root.userData.disposed) return;
+  root.userData.disposed = true; root.userData.loadController?.abort();
+  if (root.userData.nasaModel) disposeNasaOrion(root.userData.nasaModel);
+  if (root.userData.fallback) disposeFallback(root.userData.fallback);
+  root.clear(); root.userData.nasaModel = root.userData.fallback = null;
 }
 
 export const MISSIONS = {

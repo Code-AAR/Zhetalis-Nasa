@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { loadModel } from './nasamodels.js';
+import { buildStarshipModel } from './starship-model.js';
+import { loadNasaOrion, disposeNasaOrion } from '../moon/src/orion-model.js';
 
 // Reusable illustrated 3D stage. Imported models are cloned, never moved out of
 // the running game. Every scene has a readable procedural fallback while loading.
@@ -15,7 +17,7 @@ export class JourneyVisual {
     const indicator=canvas.parentElement.querySelector('.art-progress');
     let settled=0;
     const assetSettled=()=>{
-      const percent=++settled*20;
+      const percent=++settled*25;
       if(!indicator)return;
       indicator.textContent=percent+'%';indicator.style.setProperty('--loaded',percent+'%');
       indicator.setAttribute('aria-valuenow',percent);
@@ -31,14 +33,14 @@ export class JourneyVisual {
     }
     this.parts.rocket=this.rocket();this.group.add(this.parts.rocket);
     this.parts.craft=this.craft();this.group.add(this.parts.craft);
-    this.parts.lander=this.lander();this.group.add(this.parts.lander);
+    this.parts.orion=new THREE.Group();this.group.add(this.parts.orion);
+    this.parts.lander=this.lander('mars');this.group.add(this.parts.lander);
+    this.parts.lunarLander=this.lander('hls');this.group.add(this.parts.lunarLander);
     this.parts.ground=new THREE.Group();const soil=new THREE.Mesh(new THREE.CircleGeometry(6,48),this.material('#905238'));soil.rotation.x=-Math.PI/2;soil.position.y=-1.4;this.parts.ground.add(soil);
     for(let i=0;i<28;i++){const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.12+rand()*.25),this.material(i%2?'#683b2c':'#aa6d47'));rock.position.set((rand()-.5)*9,-1.3,(rand()-.5)*6);rock.scale.y=.5;this.parts.ground.add(rock);}this.group.add(this.parts.ground);
-    this.parts.chute=new THREE.Group();const canopy=new THREE.Mesh(new THREE.SphereGeometry(1.5,32,16,0,Math.PI*2,0,Math.PI/2),this.material('#e5dbca',{side:THREE.DoubleSide}));this.parts.chute.add(canopy);
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2,g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(Math.cos(a)*1.5,0,Math.sin(a)*1.5),new THREE.Vector3(0,-2,0)]),m=new THREE.LineBasicMaterial({color:'#b3b6b4'});this.parts.chute.add(new THREE.Line(g,m));this.owned.push(g,m);}this.group.add(this.parts.chute);
     this.parts.heat=new THREE.Group();for(let i=0;i<12;i++){const streak=new THREE.Mesh(new THREE.ConeGeometry(.06,.8+i%3*.15,8),this.material(i%2?'#ff8d45':'#ffd48a',{emissive:'#ed5c25',emissiveIntensity:1}));streak.position.set(Math.sin(i)*.5,-.3-Math.abs(Math.cos(i))*.3,Math.cos(i)*.3);this.parts.heat.add(streak);}this.group.add(this.parts.heat);
     this.route=new THREE.Group();this.group.add(this.route);
-    for(const args of [['sls.glb','rocket',3.7],['lander.glb','lander',1.8]])this.installModel(...args).then(assetSettled,assetSettled);
+    for(const args of [['sls.glb','rocket',3.7]])this.installModel(...args).then(assetSettled,assetSettled);
     this.pointer=null;this.dragStart=e=>{this.pointer={id:e.pointerId,x:e.clientX};canvas.setPointerCapture(e.pointerId);};this.dragMove=e=>{if(this.pointer?.id===e.pointerId){const yaw=this.group.rotation.y+(e.clientX-this.pointer.x)*.006;
       this.group.rotation.y=diagrams.has(this.mode)?THREE.MathUtils.clamp(yaw,-.62,.62):yaw;this.pointer.x=e.clientX;}};this.dragEnd=()=>{this.pointer=null;};
     canvas.addEventListener('pointerdown',this.dragStart);canvas.addEventListener('pointermove',this.dragMove);canvas.addEventListener('pointerup',this.dragEnd);canvas.addEventListener('pointercancel',this.dragEnd);canvas.style.touchAction='pan-y';
@@ -62,8 +64,25 @@ export class JourneyVisual {
     dish.position.set(.3,.62,0);dish.rotation.z=-.38;g.add(dish);
     return g;
   }
-  lander(){const g=new THREE.Group(),cabin=new THREE.Mesh(new THREE.ConeGeometry(.5,.8,12),this.material('#ded8cb'));g.add(cabin);for(const x of[-.55,.55]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.08,.65,.08),this.material('#737c81'));leg.position.set(x,-.45,0);leg.rotation.z=-Math.sign(x)*.35;g.add(leg);}return g;}
+  lander(variant){
+    const model=buildStarshipModel({variant,height:1.8,baseY:-.9});
+    const materials=new Set();model.traverse(o=>{for(const m of [].concat(o.material||[]))materials.add(m);});
+    this.owned.push(...materials);return model;
+  }
   async installModel(file,key,height){const loaded=await loadModel(file);if(!this.alive||!loaded)return;const model=loaded.scene.clone(true),before=new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());if(key==='rocket'){if(before.z>before.y&&before.z>before.x)model.rotation.x=-Math.PI/2;else if(before.x>before.y)model.rotation.z=Math.PI/2;}model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),scale=height/size.y;model.scale.multiplyScalar(scale);const center=box.getCenter(new THREE.Vector3()).multiplyScalar(scale);model.position.sub(center);this.parts[key].traverse(o=>{if(o.isMesh&&!o.userData.sharedAsset)o.geometry.dispose();});model.traverse(o=>{o.userData.sharedAsset=true;});this.parts[key].clear();this.parts[key].add(model);}
+  ensureOrion(){
+    if(this.orionPending)return;
+    this.orionAbort=new AbortController();
+    this.orionPending=loadNasaOrion(this.renderer,{signal:this.orionAbort.signal}).then(model=>{
+      if(!this.alive){disposeNasaOrion(model);return;}
+      model.rotation.z=-Math.PI/2;model.updateMatrixWorld(true);
+      const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3());
+      const scale=2.8/Math.max(size.x,size.y,size.z);model.scale.multiplyScalar(scale);
+      model.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(scale));
+      model.traverse(o=>{o.userData.sharedAsset=true;});this.orionModel=model;this.parts.orion.add(model);
+      this.canvas.dataset.orion='ready';if(this.mode==='moon')this.setMode('moon');
+    }).catch(()=>{if(this.alive){this.canvas.dataset.orion='unavailable';this.orionPending=null;}});
+  }
   setMode(mode){this.mode=mode;this.group.rotation.set(0,0,0);for(const part of Object.values(this.parts)){part.visible=false;part.scale.setScalar(1);part.rotation.set(0,0,0);}this.clearRoute();
     const show=(key,x,y,z=0,scale=1)=>{const p=this.parts[key];p.visible=true;p.position.set(x,y,z);p.scale.setScalar(scale);return p;};
     if(mode==='overview'||mode==='transfer'){
@@ -76,24 +95,24 @@ export class JourneyVisual {
     if(mode==='launch')show('rocket',0,0,0,1.24);
     if(mode==='moon'||mode==='mars'){
       // Local orbital view: spacecraft share one orbital plane around a single body.
-      const lunar=mode==='moon',radius=1.48;
+      const lunar=mode==='moon',radius=1.48;if(lunar)this.ensureOrion();
       show(lunar?'moon':'mars',0,0,0,radius);
       const orbit=new THREE.EllipseCurve(0,0,2.13,2.13,0,Math.PI*2);
       const position=t=>{const v=orbit.getPoint(t);return new THREE.Vector3(v.x,v.y*.44,v.y*.898).applyAxisAngle(new THREE.Vector3(0,0,1),.18);};
       const curve=new THREE.CatmullRomCurve3(Array.from({length:48},(_,i)=>position(i/48)),true);
-      this.drawTrajectory(curve,show,.45,.12);
-      if(lunar){const lander=show('lander',0,0,0,.10);lander.position.copy(position(.33));}
+      this.drawTrajectory(curve,show,.45,lunar?.30:.12,lunar&&this.orionModel?'orion':'craft');
+      if(lunar){const lander=show('lunarLander',0,0,0,.28);lander.position.copy(position(.33));}
     }
     if(mode==='cruise'){const ship=show('craft',0,.05,0,1.55);ship.rotation.set(.26,-.40,-.08);}
     if(mode==='entry'){show('mars',1,-3,-2,3);const lander=show('lander',-.6,.6,0,.36);lander.rotation.z=-.45;show('heat',-.6,.42,0,.54);}
-    if(mode==='descent'){show('ground',0,0,0);show('lander',0,-.5,0,.8);show('chute',0,2.1,0,.9);}
-    if(mode==='landing'){show('ground',0,0,0);show('lander',0,-.55,0,1.1);show('heat',0,-1.15,0,.6);}
+    if(mode==='descent'){show('ground',0,0,0);show('lander',0,.4,0,.8);show('heat',0,-.55,0,.65);}
+    if(mode==='landing'){show('ground',0,0,0);show('lander',0,-.41,0,1.1);show('heat',0,-1.15,0,.6);}
     if(mode==='signal'){show('earth',-2.55,0,0,1.15);show('mars',2.75,0,0,1.15*marsRatio);this.line([new THREE.Vector3(-1.4,0,0),new THREE.Vector3(2.75-1.15*marsRatio,0,0)]);}
   }
   clearRoute(){for(const line of this.route.children){line.geometry.dispose();line.material.dispose();}this.route.clear();}
-  drawTrajectory(curve,show,t,scale){
+  drawTrajectory(curve,show,t,scale,key='craft'){
     this.line(curve.getPoints(112));
-    const ship=show('craft',0,0,0,scale);
+    const ship=show(key,0,0,0,scale);
     ship.position.copy(curve.getPoint(t));
     ship.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),curve.getTangent(t).normalize());
     ship.rotateX(.42);
@@ -111,5 +130,5 @@ export class JourneyVisual {
     Object.assign(this.camera,{left:-halfHeight*aspect,right:halfHeight*aspect,top:halfHeight,bottom:-halfHeight});
     this.camera.updateProjectionMatrix();
   }
-  dispose(){this.clearRoute();this.alive=false;cancelAnimationFrame(this.frame);for(const[type,fn]of[['pointerdown',this.dragStart],['pointermove',this.dragMove],['pointerup',this.dragEnd],['pointercancel',this.dragEnd]])this.canvas.removeEventListener(type,fn);this.scene.traverse(o=>{if(o.isMesh&&!o.userData.sharedAsset)o.geometry.dispose();});this.textures.forEach(t=>t.dispose());this.owned.forEach(r=>r.dispose());this.renderer.dispose();this.renderer.forceContextLoss();}
+  dispose(){this.clearRoute();this.alive=false;this.orionAbort?.abort();disposeNasaOrion(this.orionModel);cancelAnimationFrame(this.frame);for(const[type,fn]of[['pointerdown',this.dragStart],['pointermove',this.dragMove],['pointerup',this.dragEnd],['pointercancel',this.dragEnd]])this.canvas.removeEventListener(type,fn);this.scene.traverse(o=>{if(o.isMesh&&!o.userData.sharedAsset)o.geometry.dispose();});this.textures.forEach(t=>t.dispose());this.owned.forEach(r=>r.dispose());this.renderer.dispose();this.renderer.forceContextLoss();}
 }

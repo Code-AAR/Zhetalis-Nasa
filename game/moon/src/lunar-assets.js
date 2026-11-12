@@ -51,7 +51,7 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
   let dialog, session, generation = 0;
   const close = () => { dialog?.close(); };
   const cleanup = () => {
-    generation++; session?.controller?.abort(); session?.observer?.disconnect();
+    generation++; session?.mission?.dispose(); session?.controller?.abort(); session?.observer?.disconnect();
     session?.renderer?.setAnimationLoop(null); disposeExhibit(session?.survey);
     session?.controls?.dispose(); disposeExhibit(session?.model);
     session?.renderer?.dispose(); session?.renderer?.forceContextLoss(); session = null;
@@ -65,6 +65,7 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
     dialog.innerHTML = `<div style="display:flex;justify-content:space-between;gap:16px;align-items:center"><h2 id="lunar-exhibit-title" style="margin:0">Lunar survey & history</h2><button type="button" data-close>Back to missions</button></div>
       <p>Explore the spacecraft behind lunar mapping and Apollo. Choose a model to download; nothing here is needed to play.</p>
       <div data-choices style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      <div data-mission-tools hidden style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" data-mission-pause>Pause</button><button type="button" data-mission-next>Next stage</button><button type="button" data-mission-replay>Replay</button><button type="button" data-mission-back>Back to model viewer</button></div>
       <h3 data-title></h3><p data-description style="max-width:70ch;line-height:1.55"></p>
       <div data-stage style="height:clamp(200px,40dvh,380px);width:100%;background:#05070a;border-radius:12px;overflow:hidden"></div>
       <p data-status role="status" aria-live="polite">Choose an exhibit above.</p>
@@ -82,6 +83,7 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
       b.textContent = `${item.title.split(' · ')[0]} (${(item.bytes / 1e6).toFixed(1)} MB)`;
       b.onclick = () => select(item); choiceHost.append(b);
     }
+    const missionButton=document.createElement('button');missionButton.type='button';missionButton.dataset.apolloMission='';missionButton.textContent='Fly Apollo mission';missionButton.disabled=true;missionButton.onclick=flyApollo;choiceHost.append(missionButton);
     dialog.showModal(); dialog.querySelector('[data-close]').focus();
     session = {};
     status.textContent = 'Starting the 3D viewer…';
@@ -148,11 +150,65 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
       dialog.querySelector('[data-survey]').textContent = 'Survey demo';
       status.textContent = 'Drag to rotate; scroll or pinch to zoom. Use the buttons to rotate with a keyboard.';
     }
+    function stopMission() {
+      if(!session)return;
+      session.mission?.dispose();session.mission=null;session.controls.enabled=true;
+      dialog.querySelector('[data-mission-tools]').hidden=true;
+      stage.removeAttribute('data-mission-phase');
+    }
+    async function flyApollo() {
+      if(!session?.controls)return;
+      const current=session;
+      current.controller?.abort();stopSurvey();stopMission();
+      const controller=new AbortController();current.controller=controller;
+      if(current.model){current.scene.remove(current.model);disposeExhibit(current.model);current.model=null;}
+      current.controls.enabled=false;
+      choiceHost.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===missionButton)));
+      dialog.querySelector('[data-tools]').hidden=true;
+      const missionTools=dialog.querySelector('[data-mission-tools]');missionTools.hidden=false;
+      missionTools.querySelectorAll('button:not([data-mission-back])').forEach(b=>b.disabled=true);
+      dialog.querySelector('[data-mission-back]').onclick=()=>select(LUNAR_EXHIBITS.find(x=>x.id==='apollo'));
+      dialog.querySelector('[data-title]').textContent='Fly Apollo · Earth launch to lunar touchdown';
+      dialog.querySelector('[data-description]').textContent='Follow the actual Saturn V and Apollo Lunar Module models through an accelerated educational journey.';
+      const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+      dialog.querySelector('[data-note]').textContent='Historically inspired, not Artemis or Starship. Loading mission…';
+      const credit=dialog.querySelector('[data-credit]');credit.replaceChildren();
+      for(const item of LUNAR_EXHIBITS.filter(x=>x.id==='saturn'||x.id==='apollo')){
+        const link=document.createElement('a');link.href=item.source;link.target='_blank';link.rel='noopener';link.textContent=item.credit;credit.append(link,document.createTextNode(' · '));
+        if(item.license){const license=document.createElement('a');license.href=item.license;license.target='_blank';license.rel='noopener';license.textContent='Saturn V license';credit.append(license,document.createTextNode(' · '));}
+      }
+      status.textContent='Preparing the Apollo mission…';draw();
+      try {
+        const {createApolloMission,APOLLO_NOTE}=await import('./apollo-mission.js');
+        if(session!==current||controller.signal.aborted)return;
+        dialog.querySelector('[data-note]').textContent=APOLLO_NOTE+(reduce?' Reduced motion: starts paused; use Next stage for still views, or Play to animate.':'');
+        current.mission=createApolloMission({THREE,scene:current.scene,camera:current.camera,renderer:current.renderer,reducedMotion:reduce,
+          disposeTree:disposeExhibit,
+          loadModel:async(id,signal)=>{
+            const item=LUNAR_EXHIBITS.find(x=>x.id===id),url=new URL(`../assets/nasa/${item.file}`,import.meta.url);
+            const response=await fetch(url,{signal});if(!response.ok)throw new Error(`HTTP ${response.status}`);
+            const bytes=await response.arrayBuffer();signal.throwIfAborted();
+            const draco=new DRACOLoader().setDecoderPath(new URL('../assets/nasa/draco/',import.meta.url).href).setWorkerLimit(1);
+            try{return (await abortableParse(new GLTFLoader().setDRACOLoader(draco).parseAsync(bytes,new URL('.',url).href),signal)).scene;}
+            finally{draco.dispose();}
+          },
+          onStatus:text=>{if(session===current&&!controller.signal.aborted)status.textContent=text;},
+          onState:state=>{
+            if(session!==current||controller.signal.aborted)return;
+            stage.dataset.missionPhase=state.failed?'failed':state.phase;
+            missionTools.querySelectorAll('button:not([data-mission-back])').forEach(b=>b.disabled=!state.ready||state.failed);
+            const pause=dialog.querySelector('[data-mission-pause]');pause.textContent=state.finished?'Play again':state.paused?'Play':'Pause';pause.setAttribute('aria-pressed',String(!state.paused&&!state.finished));
+          }});
+        dialog.querySelector('[data-mission-pause]').onclick=()=>current.mission?.toggle();
+        dialog.querySelector('[data-mission-next]').onclick=()=>current.mission?.next();
+        dialog.querySelector('[data-mission-replay]').onclick=()=>current.mission?.restart();
+      }catch(error){if(session===current&&!controller.signal.aborted)status.textContent='Apollo mission could not start. Select Fly Apollo mission to retry, or choose an exhibit.';}
+    }
     async function select(item) {
       if (!session?.controls) { status.textContent = 'Viewer is starting. Please select the model again in a moment.'; return; }
       session.controller?.abort(); const controller = new AbortController(); session.controller = controller;
       const current = session;
-      stopSurvey();
+      stopSurvey();stopMission();
       if (current.model) { current.scene.remove(current.model); disposeExhibit(current.model); current.model = null; }
       choiceHost.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.exhibit === item.id)));
       dialog.querySelector('[data-title]').textContent = item.title;

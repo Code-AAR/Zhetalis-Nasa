@@ -3,19 +3,12 @@
 // it although it is tiny next to the Moon. The path is a real-physics hyperbola around the Moon (Kepler's
 // law sets the speed) but it is simplified: not NASA's actual trajectory.
 import * as THREE from 'three';
-import { buildOrion, MISSIONS } from './orion.js';
+import { buildOrion, disposeOrion, MISSIONS } from './orion.js';
 import { effectiveQuality } from '../../src/device-profile.js';
 import { mountLunarExhibit } from './lunar-assets.js';
 
 const MOON_R = 173.74, EARTH_R = 637.1, EARTH_D = 38440, MU = 4902.8;   // units of 10 km; MU in km^3/s^2
 const SUN = new THREE.Vector3(0.2, 0.12, -0.97).normalize();   // approach sees a lit Moon; the far side is half-lit at closest approach
-
-// Free a removed object's own geometries and materials. Textures shared between builds (Orion's solar-cell
-// canvas) are left alone: material.dispose() does not free textures.
-function disposeTree(root) {
-  root.userData.disposed = true;
-  root.traverse(o => { o.geometry?.dispose(); for (const m of [].concat(o.material || [])) m.dispose(); });
-}
 
 export class Flyby {
   constructor(renderer) {
@@ -72,8 +65,8 @@ export class Flyby {
     this.exhibit.close();
     this.ensureMoonModel();
     this.id = missionId; this.m = MISSIONS[missionId];
-    if (this.orion) { this.near.remove(this.orion); disposeTree(this.orion); }
-    this.orion = buildOrion(missionId); this.near.add(this.orion);
+    if (this.orion) { this.near.remove(this.orion); disposeOrion(this.orion); }
+    this.orion = buildOrion(missionId, this.renderer); this.near.add(this.orion);
     const altKm = this.m.periapsisKm ?? 6500;   // Artemis II: illustrative pass height
     this.rp = MOON_R + altKm / 10; this.e = 1.4;
     this.tMax = Math.acos(-1 / this.e) * 0.9;
