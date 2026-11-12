@@ -5,6 +5,8 @@ import { loadAssetWithRetry } from './asset-loading.js';
 //   assets/mobile-launcher.glb  - the Mobile Launcher tower SLS launches from (Kennedy Space Center)
 //   assets/mro.glb              - Mars Reconnaissance Orbiter, a real relay orbiter for Mars rovers
 //   assets/ingenuity.glb        - Ingenuity, the Mars helicopter
+//   assets/perseverance-animated.glb - Mars 2020 Perseverance rover with 23 animation clips (arm, turret, mast
+//                                 camera, covers); the salvage rover on laptops/tablets. Phones keep perseverance.glb
 //   assets/pistol-grip-tool.glb - Pistol Grip Tool, the ISS spacewalk power tool (on the outpost workbench)
 //   assets/wrench.glb           - Wrench (on the outpost workbench)
 //   assets/nasa-astronaut.glb   - NASA's "Astronaut" model: the player (logo painted over, cut into joints in suit.js)

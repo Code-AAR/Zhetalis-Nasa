@@ -12,7 +12,7 @@ for(const surface of [
  const p={x:0,z:-5};assert.ok(moveOverSurface(p,0,20,0,surface)<1);
  assert.ok(p.z<0,'Stop before the front tyres tunnel into a wall or steep face');
 }
-assert.equal(ROVER_MOTION.max,18);assert.equal(ROVER_MOTION.accel,9);
+assert.equal(ROVER_MOTION.max,16);assert.equal(ROVER_MOTION.accel,9);
 console.log('Rover ramp ascent/descent, wall, steep face and high-speed sweep checks passed');
 
 const small=(x,z)=>({height:Math.abs(z)<1?.6:0,normalY:.15,obstacleHeight:Math.abs(z)<1?.6:0});

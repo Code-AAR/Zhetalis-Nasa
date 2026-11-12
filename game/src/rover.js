@@ -122,7 +122,8 @@ export class Rover {
     }else{this.pos.x+=dx;this.pos.z+=dz;}
     // bump into the outpost, boulders and the old rover
     for (const c of this.colliders) {
-      if (c.self || (c.rock && this.surfaceSample) || (c.object && !c.object.visible)) continue;
+      // boulders, mineral deposits and the Mars rocks are part of the surface the tyres climb (drive-props.js)
+      if (c.self || ((c.rock || c.driveOver) && this.surfaceSample) || (c.object && !c.object.visible)) continue;
       if(c.halfX !== undefined){if(blockPanel(this.pos,c,2.2))this.speed*=0.5;continue;}
       const dx = this.pos.x - c.x, dz = this.pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 2.2;
       if (d < min && d > 0.001) { this.pos.x = c.x + dx / d * min; this.pos.z = c.z + dz / d * min; this.speed *= 0.5; }

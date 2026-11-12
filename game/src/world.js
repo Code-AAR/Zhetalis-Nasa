@@ -13,7 +13,10 @@ import { loadModel } from './nasamodels.js';
 import { loadNasaAstronaut, poseAstronaut } from './suit.js';
 import { Rover } from './rover.js';
 import { createRockContact } from './rock-contact.js';
-import { SURFACE_DETAIL, regolithMaps, rockMaterial, makeGroundDust } from './surface-detail.js';
+import { createDriveProps } from './drive-props.js';
+import { addMarsRockField } from './mars-rock-field.js';
+import { SURFACE_DETAIL, GRAPHICS_MODE, regolithMaps, rockMaterial, makeGroundDust } from './surface-detail.js';
+import { effectiveQuality } from './device-profile.js';
 import { solarPanel, makeCellMat } from './models.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeStars, makePlanets } from './sky.js';
@@ -595,7 +598,12 @@ export class World {
     const roverBeam = makePickup('metal').children[1]; roverBeam.material = roverBeam.material.clone(); roverBeam.material.color.set('#ffd27a');
     this.rover.group.add(roverBeam);
     this.colliders.push({ x: this.rover.x, z: this.rover.z, r: 2.2 });
-    new GLTFLoader().load('assets/perseverance.glb', gltf => {
+    // Laptops and tablets get NASA's animated Perseverance (perseverance-animated.glb: 23 clips - robotic arm and
+    // drill turret, mast camera head, drill and hazard-camera covers). Phones keep the lighter, still model
+    // (about a third of the triangles). wakeRover() plays the clips once when you salvage it.
+    const animated = effectiveQuality(GRAPHICS_MODE) !== 'low';
+    loadModel(animated ? 'perseverance-animated.glb' : 'perseverance.glb').then(gltf => {
+      if (!gltf) { onLoaded?.(); return; }
       const model = gltf.scene, box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
       const scale = 3 / Math.max(size.x, size.z);  // the real rover is about 3 m long
       model.scale.setScalar(scale);
@@ -603,8 +611,14 @@ export class World {
       model.rotation.y = 0.7;
       model.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material?.color) o.material.color.lerp(new THREE.Color('#c58a62'), 0.35); } }); // 105 years of Mars dust
       this.rover.group.add(model);
+      if (gltf.animations?.length) {
+        const mixer = new THREE.AnimationMixer(model);
+        this.rover.clips = gltf.animations.map(clip => { const a = mixer.clipAction(clip); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; return a; });
+        this.rover.mixer = mixer; this.rover.wakeLength = Math.max(...gltf.animations.map(c => c.duration));
+        mixer.setTime(0);   // the stowed pose until it is woken
+      }
       onLoaded?.();
-    }, undefined, err => { console.warn('Perseverance model failed to load', err); onLoaded?.(); });
+    });
 
     // NASA's Ingenuity helicopter (official NASA 3D model), resting near the old rover - real size, 49 cm tall
     this.heli = { x: this.rover.x + 5, z: this.rover.z + 4, seen: false };
@@ -622,15 +636,24 @@ export class World {
     // Sample rendered rock triangles, including large sloping slabs. Cache only
     // within a frame so movement checks and suspension share exact contacts.
     this.roverSurfaceCache = new Map();
+    // Mineral deposits and the textured Mars rocks join the drivable surface (drive-props.js).
+    this.driveProps = createDriveProps();
     const roverSample = (x,z) => {
       const key = `${x},${z}`;
       let value = this.roverSurfaceCache.get(key);
-      if(!value){value=this.rockContact.surface(x,z,heightAt(x,z));this.roverSurfaceCache.set(key,value);}
+      if(!value){
+        value=this.rockContact.surface(x,z,heightAt(x,z));
+        const prop=this.driveProps.surface(x,z,heightAt(x,z));
+        if(prop&&prop.height>value.height)value=prop;
+        this.roverSurfaceCache.set(key,value);
+      }
       return value;
     };
     this.sev = new Rover(this.scene, (x,z)=>roverSample(x,z).height, this.colliders);
     this.sev.surfaceSample = roverSample;
     this.sevCollider = { x: this.sev.pos.x, z: this.sev.pos.z, r: 2.4, self: true };
+    // Textured Mars boulders (mars-rock-field.js): fewer on phones.
+    this.rockField = addMarsRockField(this, heightAt, { count: effectiveQuality(GRAPHICS_MODE) === 'low' ? 55 : 110 }).catch(err => { console.warn('Mars rocks failed to load', err); return null; });
     this.marks = new GroundMarks(this.scene, heightAt, { onBright: z => this.onBrightSoil?.(z) });   // tyre tracks and boot prints (ground-marks.js)
     this.colliders.push(this.sevCollider);
     this.driving = false;
@@ -891,8 +914,17 @@ export class World {
     this.yaw = this.sev.yaw + Math.PI; this.pitch = 0.25;
   }
 
+  // The old rover stirs: plays its NASA animation clips once (arm, turret, mast camera, covers). Returns the
+  // seconds it takes, or 0 for the phone model, which has no animation.
+  wakeRover() {
+    const r = this.rover; if (!r.mixer) return 0;
+    for (const a of r.clips) { a.reset(); a.play(); }
+    r.waking = r.wakeLength; return r.wakeLength;
+  }
+
   update(dt, controlsActive) {
     this.time += dt; this.frameDt = dt; this.sky.material.uniforms.cloudTime.value = this.time;
+    if (this.rover?.waking > 0) { this.rover.mixer.update(dt); this.rover.waking -= dt; }
     const nearHome = Math.hypot(this.sev.pos.x, this.sev.pos.z) < 32;
     this.roverSurfaceCache.clear();
     this.sev.update(dt, controlsActive ? this.keys : {}, this.driving, nearHome, this.night);

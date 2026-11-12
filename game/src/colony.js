@@ -266,7 +266,8 @@ export class Colony {
       }
       group.position.y=support-.08;
       group.updateMatrixWorld(true);
-      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:.85, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
+      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:.85, driveOver:true, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
+      world.driveProps?.add({ x, z, r: 1.9, object: group.children[0], alive: () => !!group.parent });   // the rover can drive onto and over unmined deposits
     });
     for(const d of this.deposits){d.startPosition=d.group.position.clone();d.startQuaternion=d.group.quaternion.clone();d.startTop=d.collider.top;}
     this.restore();

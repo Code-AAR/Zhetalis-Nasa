@@ -18,10 +18,12 @@ export async function createOpenLayout(world, habitat) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,1.7,6),grey);pole.position.y=.85;p.add(pole);
     const tab=new THREE.Mesh(new THREE.BoxGeometry(.26,.22,.04),orange);tab.position.y=1.5;p.add(tab);group.add(p);
   }
+  const signs={};
+  function paintSign(key){const {ctx,texture}=signs[key];ctx.clearRect(0,0,512,96);ctx.fillStyle='#161b1ee8';ctx.fillRect(0,0,512,96);ctx.fillStyle='#edf0ea';ctx.font='24px system-ui';ctx.textAlign='center';ctx.fillText(names[key],256,42);ctx.font='18px system-ui';ctx.fillStyle='#b3b7ad';ctx.fillText('Surface operations',256,72);texture.needsUpdate=true;}
   function sign(key) {
     const [x,z]=locations[key], c=document.createElement('canvas');c.width=512;c.height=96;
-    const ctx=c.getContext('2d');ctx.fillStyle='#161b1ee8';ctx.fillRect(0,0,512,96);ctx.fillStyle='#edf0ea';ctx.font='24px system-ui';ctx.textAlign='center';ctx.fillText(names[key],256,42);ctx.font='18px system-ui';ctx.fillStyle='#b3b7ad';ctx.fillText('Surface operations',256,72);
     const texture=new THREE.CanvasTexture(c), sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:true}));sprite.position.set(x,heightAt(x,z)+3.2,z);sprite.scale.set(8,1.5,1);group.add(sprite);
+    signs[key]={ctx:c.getContext('2d'),texture};paintSign(key);
   }
   for(const key of ['meteorite','relay','ice']) {
     const [x,z]=locations[key]; sign(key); post(x-1.5,z);
@@ -38,6 +40,13 @@ export async function createOpenLayout(world, habitat) {
   const rock=new THREE.LOD();const high=new THREE.Mesh(rockGeo,rockMat);high.castShadow=true;high.receiveShadow=true;rock.addLevel(high,0);
   const low=new THREE.Mesh(new THREE.IcosahedronGeometry(.33,1),rockMat);low.position.y=.23;low.scale.set(1,.7,.85);rock.addLevel(low,18);
   rock.position.set(-65,heightAt(-65,35),35);group.add(rock);
+  // Block Island (the NASA model above) is a real iron meteorite that Opportunity found at Meridiani Planum.
+  // It only appears when you land somewhere other than the two crater sites (Gusev, Jezero); at those, the
+  // meteorite field shows a plain iron meteorite instead. setSite() switches between them once the site is known.
+  const plain=new THREE.Mesh(new THREE.DodecahedronGeometry(.32,1),new THREE.MeshStandardMaterial({color:'#4a4038',roughness:.55,metalness:.5}));
+  plain.scale.set(1.15,.75,.9);plain.position.set(-65,heightAt(-65,35)+.18,35);plain.rotation.y=.8;plain.castShadow=true;plain.visible=false;group.add(plain);
+  const CRATER_SITES=['gusev','jezero'];
+  const setSite=site=>{const crater=CRATER_SITES.includes(site);rock.visible=!crater;plain.visible=crater;names.meteorite=crater?'Meteorite field':'Block Island meteorite';paintSign('meteorite');return !crater;};
   // A remote communications instrument, separated from the pressure modules.
   const relay=new THREE.Group();relay.position.set(110,heightAt(110,65),65);
   const mast=new THREE.Mesh(new THREE.CylinderGeometry(.10,.16,3.8,10),grey);mast.position.y=1.9;relay.add(mast);
@@ -64,5 +73,5 @@ export async function createOpenLayout(world, habitat) {
   }
   refit();
   const targets=p=>['meteorite','relay','ice'].map(key=>({type:'survey-'+key,d:Math.hypot(p.x-locations[key][0],p.z-locations[key][1])}));
-  return {group,locations,names,door,targets,refit,get moduleColliders(){return moduleColliders;},get colliders(){return colliders;},get route(){return route;},get spawn(){return spawn;},setVisible:visible=>{group.visible=visible;}};
+  return {group,locations,names,door,targets,refit,setSite,blockIsland:rock,plainMeteorite:plain,get moduleColliders(){return moduleColliders;},get colliders(){return colliders;},get route(){return route;},get spawn(){return spawn;},setVisible:visible=>{group.visible=visible;}};
 }

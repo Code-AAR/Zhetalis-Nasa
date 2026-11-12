@@ -1,5 +1,5 @@
 // Game traversal limits, not a specification for NASA's real rover.
-export const ROVER_MOTION = { max: 18, reverse: 5, accel: 9, brake: 14 };
+export const ROVER_MOTION = { max: 16, reverse: 5, accel: 9, brake: 14 };   // max was 18 m/s: a little slower, easier over rock fields
 const slopeLimit = Math.cos(45 * Math.PI / 180);
 const contacts = [-2.2, 0, 2.2].flatMap(f => [-1.6, 0, 1.6].map(r => [f, r]));
 

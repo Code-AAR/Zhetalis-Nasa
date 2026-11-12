@@ -237,6 +237,7 @@ async function resume(d) {
   state.difficulty = d.difficulty; state.site = SITES[d.outpost.site] ? d.outpost.site : 'plains'; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
   buildWorld();
   if (!await waitForBase(world.ready)) return;
+  world.settlement?.layout?.setSite?.(state.site);   // Block Island only away from Gusev and Jezero
   world.settlement.surveys = new Set(d.surveys || []);
   if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
   world.mapState?.load(d.map); world.mapState?.sync(true); world.mist?.snap(); placeLander(world);
@@ -399,6 +400,7 @@ async function arrive() {
   if (!selectedSite) { location.reload(); return; }
   state.site = selectedSite;
   outpost.site = selectedSite;
+  world.settlement?.layout?.setSite?.(selectedSite);   // Block Island only away from Gusev and Jezero
   outpost.parts = Math.max(0, outpost.d.parts + SITES[selectedSite].parts);
   outpost.today = outpost.forecast();
   world.setLink(outpost.today.link);
@@ -1006,6 +1008,7 @@ function handle(ev) {
     case 'wind-clean': toast('💨 A gust of wind blew some dust off your solar panels! (This really happened to the Spirit and Opportunity rovers.)', 5000); break;
     case 'relay-lost': outpost.today = outpost.forecast(); say('relay'); modal({ title: '📡 A relay orbiter has failed!', html: `${eventArt('relay-lost', 'A relay orbiter above Mars')}<p>Your messages to Earth usually bounce off orbiters circling Mars. One of them just went silent. Until Earth moves another one into place (about ${outpost.relayDown} sols), you must talk straight to Earth - which needs much more power.</p>${factHTML(F.relay)}` }); break;
     case 'relay-restored': toast('📡 A new relay orbiter is in place - talking to Earth is easy again.'); break;
+    case 'rover-salvage': modal({ title: '🤖 You found an old rover!', html: `${factHTML(F.perseverance)}${factHTML(F.moxie)}<p>You carefully salvage <b>8 spare parts</b> for your workbench.</p>` }); break;
   }
 }
 
@@ -1045,7 +1048,10 @@ function collect(n) {
   if (n.type === 'rover') {
     world.rover.salvaged = true; outpost.parts += 8; say('rover'); earn('percy');
     world.rover.group.children[0].visible = false; // switch off its beacon
-    modal({ title: '🤖 You found an old rover!', html: `${factHTML(F.perseverance)}${factHTML(F.moxie)}<p>You carefully salvage <b>8 spare parts</b> for your workbench.</p>` });
+    // On laptops and tablets the rover's NASA animation plays first: you plug in a power pack and its arm and mast
+    // camera move one last time. The pop-up follows (it would pause the game and hide the motion).
+    if (world.wakeRover()) { toast('🔌 You plug a power pack into the old rover. Watch: its arm and mast camera move one last time.', 6500); setTimeout(() => queue.push({ type: 'rover-salvage' }), 7000); }
+    else queue.push({ type: 'rover-salvage' });
     return;
   }
   if (n.type === 'heli') {
