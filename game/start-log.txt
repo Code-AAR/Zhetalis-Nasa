@@ -1,12 +1,12 @@
 ﻿**********************
 Windows PowerShell transcript start
-Start time: 20261111224045
+Start time: 20261112120041
 Username: MAINE\Ewan
 RunAs User: MAINE\Ewan
 Configuration Name: 
 Machine: MAINE (Microsoft Windows NT 10.0.26300.0)
 Host Application: powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\Ewan\Desktop\NASA\game\Start-Mars.ps1
-Process ID: 49780
+Process ID: 52200
 PSVersion: 5.1.26100.9818
 PSEdition: Desktop
 PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9818
@@ -20,5 +20,5 @@ Python: C:\Users\Ewan\AppData\Local\Programs\Python\Launcher\py.exe -3
 Opened http://127.0.0.1:8777/
 **********************
 Windows PowerShell transcript end
-End time: 20261111224046
+End time: 20261112120041
 **********************

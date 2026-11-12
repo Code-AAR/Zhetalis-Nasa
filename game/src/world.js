@@ -438,6 +438,37 @@ function makeOutpost() {
   return { group: g, dish, beacon, wall, colliders: [{ x: 0, z: 0, r: 7 }, { x: -14, z: 1, r: 4.4 }, { x: -8.5, z: 1, r: 1.8 }, { x: -6, z: -17, r: 2.3 * LANDER_SCALE }, { x: 9, z: 9, r: 0.6 }] };
 }
 
+// Small parts the lander model lacks (model units, door and ladder on +z): stand-off brackets that tie the ladder to
+// the hull, grab bars beside the hatch, a hatch frame with hinges and a lever handle, a round port over the flat
+// window, a grated step at the sill and a foot pad at the bottom of the ladder.
+export function landerDetails() {
+  const g = new THREE.Group(); g.name = 'lander-details';
+  const steel = new THREE.MeshStandardMaterial({ color: '#9aa4aa', roughness: .4, metalness: .6 }), dark = new THREE.MeshStandardMaterial({ color: '#2b2f33', roughness: .6, metalness: .3 });
+  const frame = new THREE.MeshStandardMaterial({ color: '#d8d6cf', roughness: .5, metalness: .2 }), glass = new THREE.MeshStandardMaterial({ color: '#173a48', roughness: .12, metalness: .6 });
+  const yellow = new THREE.MeshStandardMaterial({ color: '#f2c230', roughness: .5 });
+  const add = (geo, m, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; g.add(o); return o; };
+  for (const y of [.9, 1.9, 2.9, 3.9]) for (const x of [-.42, .42]) add(new THREE.BoxGeometry(.05, .06, .32), steel, x, y, 1.93);   // ladder stand-offs
+  for (const x of [-.42, .42]) add(new THREE.BoxGeometry(.06, .06, .3), steel, x, .03, 2.06);   // rail feet
+  add(new THREE.BoxGeometry(1.2, .04, .6), dark, 0, .02, 2.25);                                    // foot pad
+  for (const x of [-.66, .66]) {   // grab bars either side of the hatch
+    const c = new THREE.CatmullRomCurve3([new THREE.Vector3(x * .64, 4.1, 2.06), new THREE.Vector3(x, 4.6, 1.85), new THREE.Vector3(x, 5.9, 1.78), new THREE.Vector3(x, 6.2, 1.66)]);
+    const t = new THREE.Mesh(new THREE.TubeGeometry(c, 20, .025, 8, false), yellow); t.castShadow = true; g.add(t);
+    for (const y of [4.7, 5.8]) add(new THREE.BoxGeometry(.04, .04, .14), steel, x, y, 1.72);
+  }
+  // hatch frame: a raised rim round the door, two hinges, lever handle and a round port over the window
+  const rr = (w, h, r, p) => { const x = -w / 2, y = -h / 2; p.moveTo(x + r, y); p.lineTo(x + w - r, y); p.quadraticCurveTo(x + w, y, x + w, y + r); p.lineTo(x + w, y + h - r); p.quadraticCurveTo(x + w, y + h, x + w - r, y + h); p.lineTo(x + r, y + h); p.quadraticCurveTo(x, y + h, x, y + h - r); p.lineTo(x, y + r); p.quadraticCurveTo(x, y, x + r, y); };
+  const sh = new THREE.Shape(); rr(1.22, 2.05, .16, sh); const hole = new THREE.Path(); rr(1.0, 1.85, .12, hole); sh.holes.push(hole);
+  add(new THREE.ExtrudeGeometry(sh, { depth: .06, bevelEnabled: true, bevelSize: .015, bevelThickness: .015, bevelSegments: 2 }), frame, 0, 5.15, 1.74);
+  for (const y of [4.55, 5.75]) add(new THREE.CylinderGeometry(.035, .035, .2, 10), steel, -.52, y, 1.86);
+  add(new THREE.BoxGeometry(.24, .05, .05), dark, .3, 5.0, 1.86); add(new THREE.CylinderGeometry(.04, .04, .05, 12), steel, .2, 5.0, 1.84, Math.PI / 2);
+  add(new THREE.BoxGeometry(.64, .6, .03), frame, 0, 5.62, 1.85);
+  add(new THREE.TorusGeometry(.19, .035, 10, 32), steel, 0, 5.62, 1.875);
+  add(new THREE.CircleGeometry(.18, 32), glass, 0, 5.62, 1.88);
+  // grated step at the sill with yellow edge
+  add(new THREE.BoxGeometry(1.0, .05, .42), steel, 0, 4.22, 1.98); add(new THREE.BoxGeometry(1.0, .055, .05), yellow, 0, 4.22, 2.2);
+  return g;
+}
+
 // Sun disc + glow (the glow turns blue at sunset - real Mars sunsets are blue) and a star field for night.
 function makeSkyLights(scene) {
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -649,10 +680,10 @@ export class World {
     const lander = this.outpost.group.getObjectByName('lander');
     lander.updateWorldMatrix(true, false);
     this.shipDoor = lander.localToWorld(new THREE.Vector3(0, 0, 2.2 + 0.9 / LANDER_SCALE)); this.shipDoor.y = 0;   // the foot of the ladder
-    this.swapModel('lander.glb', lander, 11);
+    this.swapModel('lander.glb', lander, 11, undefined, model => model.add(landerDetails()));
   }
 
-  swapModel(file, target, height, onlyChildren) {
+  swapModel(file, target, height, onlyChildren, onLoaded) {
     if (!target) return;
     new GLTFLoader().load('assets/' + file, gltf => {
       const model = gltf.scene;
@@ -664,7 +695,7 @@ export class World {
       const box = new THREE.Box3().setFromObject(model); model.position.y -= box.min.y;
       model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       old.forEach(o => (o.visible = false));
-      target.add(model);
+      target.add(model); onLoaded?.(model);
       console.info('Using team model', file);
       // If the model comes with animations named like "Idle", "Walk" and "Run" (e.g. from Mixamo), play them.
       if (file === 'astronaut.glb' && gltf.animations?.length) {

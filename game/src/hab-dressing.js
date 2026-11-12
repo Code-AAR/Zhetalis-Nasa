@@ -282,6 +282,49 @@ function blanket(w, d, colourA, colourB) {   // a crocheted granny-square blanke
 // ---------- the crew cabins ----------
 // Each cabin is a small private room (about the size of the ISS crew quarters' bigger Mars cousin: 1.9 x 2.2 m)
 // built outward from a doorway in the pod wall. Bunk, fold-down desk, shelf, reading light, wall of keepsakes.
+// The tall Wardroom ceiling: radial roof ribs round a hub, a ring air duct with diffusers, three felt acoustic clouds
+// on wires (sound bounces round a hard round room), a proper ring pendant over the table, and fairy lights the crew
+// strung along the galley wall.
+function wardroomCeiling(P, cx, panelMat) {
+  const rib = mat('roofRib', '#c9c4b8', { r: .6, m: .2 }), steel = mat('pSteel', '#b8bec4', { m: .7, r: .32 }), wire = mat('cableHang', '#333'), dark = mat('pendantBody', '#3a3f45', { r: .45, m: .4 });
+  for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, b = box(3.55, .14, .1, rib, cx + Math.cos(a) * 2.1, 6.52, Math.sin(a) * 2.1); b.rotation.y = -a; P.add(b); }
+  P.add(cyl(.42, .42, .16, rib, cx, 6.5, 0, 24)); P.add(cyl(.3, .3, .04, mat('hubCap', '#8c9396', { m: .4, r: .4 }), cx, 6.41, 0, 24));
+  const duct = new THREE.Mesh(new THREE.TorusGeometry(2.7, .11, 10, 64), mat('duct', '#d4d1c8', { r: .55, m: .2 })); duct.rotation.x = Math.PI / 2; duct.position.set(cx, 6.2, 0); P.add(duct);
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + .2, d = box(.24, .03, .14, mat('diffSlot', '#7c8388', { r: .6 }), cx + Math.cos(a) * 2.7, 6.08, Math.sin(a) * 2.7); d.rotation.y = -a; P.add(d); }
+  for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; P.add(cyl(.01, .01, .3, steel, cx + Math.cos(a) * 2.7, 6.4, Math.sin(a) * 2.7, 6)); }
+  // acoustic clouds
+  [['#c7d6cf', -1.25], ['#e3c9b8', 0], ['#d9cbb0', 1.25]].forEach(([c, z], k) => {
+    const cl = rbox(2.4 - Math.abs(z) * .5, 1.0, .06, .12, mat('cloud' + k, c, { r: 1, e: c, ei: .45 }), cx, 5.35 + (k % 2) * .15, z); cl.rotation.x = Math.PI / 2; P.add(cl);
+    for (const dx of [-.9, .9]) for (const dz of [-.4, .4]) P.add(cyl(.004, .004, 1.2 - (k % 2) * .15, wire, cx + dx * (1 - Math.abs(z) * .2), 6.0 - (k % 2) * .07, z + dz, 4));
+  });
+  // ring pendant: dark housing band, glowing inner band and a bottom diffuser ring
+  const RR = 1.45, Y = 3.95;
+  P.add(at(new THREE.Mesh(new THREE.CylinderGeometry(RR + .04, RR + .04, .14, 64, 1, true), Object.assign(dark.clone(), { side: THREE.DoubleSide })), cx, Y, 0));
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(RR - .02, RR - .02, .1, 64, 1, true), panelMat.clone()); inner.material.side = THREE.BackSide; inner.position.set(cx, Y, 0); inner.userData.keep = true; P.add(inner);
+  const lip = new THREE.Mesh(new THREE.RingGeometry(RR - .08, RR + .04, 64), panelMat); lip.rotation.x = Math.PI / 2; lip.position.set(cx, Y - .071, 0); lip.userData.keep = true; P.add(lip);
+  const top = new THREE.Mesh(new THREE.RingGeometry(RR - .08, RR + .04, 64), dark); top.rotation.x = -Math.PI / 2; top.position.set(cx, Y + .071, 0); P.add(top);
+  for (let k = 0; k < 3; k++) { const a = k * 2.094 + .5, x = cx + Math.cos(a) * RR, z = Math.sin(a) * RR; P.add(cyl(.004, .004, 6.3 - Y, wire, x, (6.3 + Y) / 2, z, 4)); P.add(cyl(.05, .05, .04, steel, x, 6.28, z, 12)); }
+  P.add(cyl(.004, .004, 6.2 - Y - .08, mat('cableBlack', '#1d1d1d'), cx + RR, (6.2 + Y) / 2, 0, 4));   // power lead
+  // fairy lights along the galley wall, sagging between little hooks
+  const bulbs = [], warm = mat('fairy', '#ffd9a0', { e: '#ffcf80', ei: 2.2 }), pts = [];
+  for (let k = 0; k <= 40; k++) { const t = k / 40, a = .28 + t * 1.15, seg = (t * 4) % 1, sag = Math.sin(seg * Math.PI) * .18; pts.push(new THREE.Vector3(cx + Math.sin(a) * (R - .12), 2.95 - sag, Math.cos(a) * (R - .12))); }
+  P.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, .004, 4, false), mat('cableBlack', '#1d1d1d')));
+  for (let k = 1; k < 40; k += 2) { const b = new THREE.Mesh(new THREE.SphereGeometry(.018, 8, 6), warm); b.position.copy(pts[k]).y -= .02; b.userData.keep = true; P.add(b); bulbs.push(b); }
+  const glow = new THREE.PointLight('#ffcf80', 1.2, 3.5, 2); glow.position.set(cx + Math.sin(.85) * 3.4, 2.7, Math.cos(.85) * 3.4); P.add(glow);
+}
+// A crew-quarters sliding door: pale composite leaf with two raised panels, the owner's colour band, a frosted
+// vision strip, a recessed pull, a louvred vent at the bottom (air must flow even with the door shut) and a status light.
+function doorLeaf(colour, id) {
+  const g = new THREE.Group(), leaf = mat('doorLeaf', '#d9dcd8', { r: .5 }), panel = mat('doorPanel', '#cfd3d0', { r: .55 }), band = mat('door' + id, colour, { r: .6 }), dark = mat('pDark', '#2f353b');
+  g.add(rbox(1.02, 2.2, .05, .03, leaf, 0, 1.12, .03));
+  for (const [y, h] of [[.62, .7], [1.62, .62]]) g.add(rbox(.82, h, .012, .02, panel, 0, y, .062));
+  g.add(box(1.0, .12, .03, band, 0, 1.04, .065)); for (const x of [-.5, .5]) g.add(box(.03, 2.18, .03, band, x, 1.12, .062));
+  g.add(rbox(.6, .1, .012, .03, mat('frost', '#cfe3ea', { r: .15, m: .1 }), 0, 2.03, .063));
+  g.add(pic(.7, .14, tex(256, 52, (c, w, h) => { c.fillStyle = '#9aa1a7'; c.fillRect(0, 0, w, h); c.fillStyle = '#3a4046'; for (let y = 6; y < h - 4; y += 8) c.fillRect(8, y, w - 16, 4); }), 0, .17, .057));
+  g.add(box(.03, .32, .02, dark, .42, 1.12, .065)); g.add(box(.06, .36, .006, mat('pullRecess', '#3a4046'), .42, 1.12, .058));
+  g.add(cyl(.012, .012, .01, mat('doorLed', '#7dffb2', { e: '#7dffb2', ei: 1.5 }), .42, 1.36, .062, 10).rotateX(Math.PI / 2));
+  return g;
+}
 function cabin(person) {
   const W = 1.9, D = 2.2, H = 2.4, g = new THREE.Group(), lived = new THREE.Group(), stow = new THREE.Group();
   const wall = mat('cabinWall', '#e8e2d6', { r: .9, side: THREE.DoubleSide }), floor = mat('cabinFloor', '#6a6f72', { r: .95 }), foam = mat('foam', '#cfd6dc', { r: 1 });
@@ -297,13 +340,17 @@ function cabin(person) {
   // lived-in: the door is slid open into the wall with the owner's name plate; spare: shut, labelled for stowage
   const openDoor = new THREE.Group(), sleepDoor = new THREE.Group(); openDoor.userData.noBake = sleepDoor.userData.noBake = true; g.add(openDoor); g.add(sleepDoor); sleepDoor.visible = false;
   // pocket door: slid into the wall, only its coloured edge and pull show; the name plate sits on the header above
-  openDoor.add(box(.06, 2.2, .05, mat('door' + person.id, person.colour, { r: .6 }), -.52, 1.12, .03));
+  openDoor.add(box(.06, 2.2, .05, mat('doorLeaf', '#d9dcd8', { r: .5 }), -.52, 1.12, .03)); openDoor.add(box(.065, .12, .055, mat('door' + person.id, person.colour, { r: .6 }), -.52, 1.0, .03));
+  openDoor.add(box(.02, .3, .03, mat('pDark', '#2f353b'), -.48, 1.1, .05));   // the pull, the only bit you see of a door slid into the wall
   openDoor.add(pic(.5, .1, label(person.name, { w: 512, h: 100, bg: '#f7f5ef', fg: '#1d2a33', font: 'bold 44px system-ui' }), 0, 2.62, .08));
-  sleepDoor.add(rbox(1.02, 2.2, .04, .03, mat('door' + person.id, person.colour, { r: .6 }), 0, 1.12, .03));
-  sleepDoor.add(pic(.5, .1, label(person.name, { w: 512, h: 100, bg: '#f7f5ef', fg: '#1d2a33', font: 'bold 44px system-ui' }), 0, 1.75, .055));
-  sleepDoor.add(pic(.36, .16, label('Zzz · sleeping', { w: 384, h: 170, bg: '#2b3a67', fg: '#ffe9a8', font: 'bold 48px "Comic Sans MS", cursive' }), 0, 1.45, .055));
-  stow.add(rbox(1.02, 2.2, .04, .03, mat('doorSpare', '#b9bec2', { r: .6 }), 0, 1.12, .03));
-  stow.add(pic(.5, .1, label('SPARE · STOWAGE', { w: 512, h: 100, bg: '#5a6168', fg: '#fff', font: 'bold 44px system-ui' }), 0, 1.75, .055));
+  sleepDoor.add(doorLeaf(person.colour, person.id));
+  sleepDoor.add(pic(.5, .1, label(person.name, { w: 512, h: 100, bg: '#f7f5ef', fg: '#1d2a33', font: 'bold 44px system-ui' }), 0, 1.76, .07));
+  sleepDoor.add(pic(.36, .16, label('Zzz · sleeping', { w: 384, h: 170, bg: '#2b3a67', fg: '#ffe9a8', font: 'bold 48px "Comic Sans MS", cursive' }), -.15, 1.3, .07));
+  if (person.id === 'amara' || person.id === 'freya') sleepDoor.add(pic(.22, .17, kidDrawing('MAMMA!', '#2d5fa8'), .24, 1.32, .07));   // her kids' drawing taped to the door
+  else if (person.id === 'mateo') sleepDoor.add(pic(.12, .12, sticky('Knock!\nloud\nguitar', '#9fe0b0'), .26, 1.3, .07));
+  else if (person.id === 'meilin') sleepDoor.add(pic(.16, .12, postcard('Singapore', 'skyline'), .26, 1.3, .07));
+  stow.add(doorLeaf('#8e979b', 'spare'));
+  stow.add(pic(.5, .1, label('SPARE · STOWAGE', { w: 512, h: 100, bg: '#5a6168', fg: '#fff', font: 'bold 44px system-ui' }), 0, 1.76, .07));
   g.add(lived); g.add(stow); lived.userData.noBake = stow.userData.noBake = true;
   // bunk (bed on a storage plinth) along the left wall
   const bed = new THREE.Group(); bed.position.set(-W / 2 + .45, 0, -D / 2 - .05); g.add(bed);
@@ -476,9 +523,7 @@ export function dressHab(I) {
       const tray = box(6.0, .06, .22, mat('tray', '#9aa1a7', { m: .4, r: .5 }), cx, CEIL - .12, -2.3); P.add(tray);
       for (let k = 0; k < 3; k++) P.add(cyl(.018, .018, 5.9, mat('cable' + k, ['#2b2b2b', '#c23b2f', '#2d5fa8'][k], { r: .6 }), cx, CEIL - .08, -2.36 + k * .05, 8).rotateZ(Math.PI / 2));
     } else {   // the Wardroom keeps its full height: a hanging light ring and fabric baffles soften the tall space
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, .05, 8, 48), panelMat); ring.rotation.x = Math.PI / 2; ring.position.set(cx, 4.2, 0); ring.userData.keep = true; P.add(ring);
-      for (let k = 0; k < 3; k++) P.add(cyl(.006, .006, 2.4, mat('cableHang', '#333'), cx + Math.cos(k * 2.1) * 1.6, 5.4, Math.sin(k * 2.1) * 1.6, 4));
-      for (let k = 0; k < 6; k++) { const b = box(2.6, .9, .02, mat('baffle' + (k % 3), ['#d9cbb0', '#c7d6cf', '#e3c9b8'][k % 3], { r: 1 }), cx, 5.6, 0); b.rotation.y = k * Math.PI / 6; P.add(b); }
+      wardroomCeiling(P, cx, panelMat);
     }
   }
 
@@ -489,7 +534,7 @@ export function dressHab(I) {
   }
   // mission patch decals round the hatches into the Wardroom (the ISS crews do this in the Unity node)
   const patchNames = [['GUSEV OUTPOST', 'EXP 1'], ['SPIRIT', 'MER-A 2004'], ['FIRST HARVEST', 'GREENHOUSE'], ['ROVER TEAM', 'R-1'], ['STORM SURVIVORS', 'SOL 22'], ['ZHETALIS', 'MARS CREW']];
-  patchNames.forEach(([a, b], k) => { const side = k < 3 ? -1 : 1, g = new THREE.Group(); onWall(4, side * Math.PI / 2 + side * (k % 3 - 1) * .3 + side * .55, R - .045, g); g.add(patchDisc(.24, missionPatch(a, b, ['#2b3a67', '#8a2d2d', '#3f7a52'][k % 3], k % 3), ['#2b3a67', '#8a2d2d', '#3f7a52'][k % 3], 0, 2.15 + (k % 2) * .18, 0)); pods[4].add(g); });
+  patchNames.forEach(([a, b], k) => { const side = k < 3 ? -1 : 1, g = new THREE.Group(); onWall(4, side * Math.PI / 2 + [.56, .72, .88][k % 3], R - .06, g); g.add(patchDisc(.24, missionPatch(a, b, ['#2b3a67', '#8a2d2d', '#3f7a52'][k % 3], k % 3), ['#2b3a67', '#8a2d2d', '#3f7a52'][k % 3], 0, 2.12 + (k % 2) * .2, 0)); pods[4].add(g); });
 
   // ---------- pod 0: airlock & power ----------
   {
@@ -640,9 +685,11 @@ export function dressHab(I) {
       tr.add(box(.16, .02, .06, mat('pSteel', '#b8bec4', { m: .7, r: .32 }), 0, .03, .28)); tr.add(pic(.3, .08, label('TRASH · COMPACT', { w: 384, h: 96, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 36px system-ui' }), 0, .45, .262)); }
     block(G); spots.galley = { group: G, local: new THREE.Vector3(.1, 0, .75), yaw: Math.PI, pose: 'drink' };
     // whiteboard with the chore rota, tonight's menu and a countdown
-    const WB = new THREE.Group(); onWall(4, -.95, R - .05, WB); P.add(WB);
+    const WB = new THREE.Group(); onWall(4, -.95, R - .2, WB); P.add(WB);
     const wbTex = tex(768, 512, () => {}); I.whiteboard = { texture: wbTex, canvas: wbTex.image, key: '' };
     WB.add(box(1.5, 1.0, .03, mat('wbFrame', '#b9bec2', { m: .5 }), 0, 1.55, .015)); WB.add(pic(1.44, .94, wbTex, 0, 1.55, .035));
+    for (const x of [-.6, .6]) WB.add(box(.06, .9, .16, mat('wbFrame', '#b9bec2'), x, 1.55, -.08));   // stand-offs to the wall
+    WB.add(box(1.4, .04, .08, mat('wbFrame', '#b9bec2'), 0, 1.03, .04));   // marker tray
     for (let k = 0; k < 3; k++) WB.add(cyl(.012, .012, .12, mat('marker' + k, ['#c23b2f', '#2d5fa8', '#2d8a4a'][k], { r: .4 }), -.3 + k * .15, 1.03, .06, 8).rotateZ(Math.PI / 2));
     // window nook under the real window: a bench with cushions, a blanket, a plush toy and hanging herbs
     const NK = new THREE.Group(); onWall(4, Math.PI, R - .55, NK); P.add(NK);
@@ -704,11 +751,20 @@ export function dressHab(I) {
     door.add(at(new THREE.Mesh(new THREE.CircleGeometry(.12, 20), mat("hatchWin", "#9fd0e8", { r: .1, m: .2 })), side * 1.2, 2.0, .045));
     door.add(box(.5, .06, .06, mat("hatchHandle", "#2b2f33", { r: .4 }), side * 1.2, 1.4, .07));
   }
+  { // the hatch at the back of Life support into the greenhouse tunnel
+    const H = new THREE.Group(); H.userData.walk = true; onWall(2, Math.PI, R - .02, H); pods[2].add(H);
+    H.add(at(ring(3.0, 3.0, 2.6, 2.7, .3, hatchM), 0, 1.47, 0)); H.add(at(ring(2.7, 2.8, 2.54, 2.64, .34, seal), 0, 1.47, 0));
+    H.add(pic(1.4, .2, label('GREENHOUSE · DOME 1 →', { w: 768, h: 110, bg: '#2d5a2a', fg: '#e9f7e4', font: 'bold 50px system-ui' }), 0, 3.08, .16));
+    H.add(pic(.34, .09, label('NODE 2-G', { w: 256, h: 68, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 36px monospace' }), 1.15, 2.55, .16));
+    for (const off of [-1.4, 1.4]) { const h = handrail(1.0, true); h.position.set(off, 1.2, .05); H.add(h); }
+  }
   for (let i = 0; i < 5; i++) {   // the short tunnels: ribs, a handrail each side, a cable bundle
     const cx = i * SPACING + SPACING / 2, T = new THREE.Group(); T.userData.walk = true; pods[i].add(T);
     for (const dx of [-1.0, 1.0]) { const rib = ring(2.8, 2.9, 2.64, 2.78, .12, hatchM); rib.rotation.y = Math.PI / 2; rib.position.set(cx + dx, 1.5, 0); rib.position.y = 1.5 - .04; T.add(rib); }
     for (const z of [-1.38, 1.38]) { const hr = handrail(2.6); hr.rotation.y = z > 0 ? Math.PI : 0; hr.position.set(cx, 1.05, z > 0 ? 1.42 : -1.42); T.add(hr); }
-    for (let k = 0; k < 3; k++) { const c = cyl(.02, .02, 3.2, mat('cable' + k, ['#2b2b2b', '#c23b2f', '#2d5fa8'][k], { r: .6 }), cx, 2.82 - k * .045, -1.3, 8); c.rotation.z = Math.PI / 2; T.add(c); }
+    T.add(box(1.9, .03, .16, mat('tray', '#9aa1a7', { m: .4, r: .5 }), cx, 2.38, -1.24)); T.add(box(1.9, .07, .01, mat('tray', '#9aa1a7'), cx, 2.41, -1.32));
+    for (let k = 0; k < 3; k++) { const c = cyl(.018, .018, 1.9, mat('cable' + k, ['#2b2b2b', '#c23b2f', '#2d5fa8'][k], { r: .6 }), cx, 2.415, -1.29 + k * .042, 8); c.rotation.z = Math.PI / 2; T.add(c); }
+    for (const dx of [-.6, .6]) T.add(box(.03, .12, .2, mat('pSteel', '#b8bec4', { m: .7, r: .32 }), cx + dx, 2.44, -1.24));
     T.add(box(3.2, .01, 1.2, mat('tunnelMat', '#3a3f45', { r: 1 }), cx, .045, 0));
   }
 
@@ -722,14 +778,17 @@ export function dressHab(I) {
   }
   // ---------- filling the sparse spots ----------
   { // Wardroom: crew photo board and a herb shelf
-    const P = pods[4], PB = new THREE.Group(); onWall(4, -.4, R - .05, PB); P.add(PB);
-    PB.add(box(1.3, .9, .03, mat('cork', '#b78a5a', { r: 1 }), 0, 1.6, .015));
+    const P = pods[4], PB = new THREE.Group(); onWall(4, -.4, R - .2, PB); P.add(PB);
+    PB.add(box(1.36, .96, .04, mat('wbFrame', '#b9bec2', { m: .5 }), 0, 1.6, .0)); PB.add(box(1.3, .9, .03, mat('cork', '#b78a5a', { r: 1 }), 0, 1.6, .015));
+    for (const x of [-.55, .55]) PB.add(box(.06, .8, .16, mat('wbFrame', '#b9bec2'), x, 1.6, -.09));
     PB.add(pic(.5, .34, tex(384, 260, (g, w, h) => { const s2 = g.createLinearGradient(0, 0, 0, h); s2.addColorStop(0, '#9fc3e0'); s2.addColorStop(1, '#e8dcc6'); g.fillStyle = '#fbfaf6'; g.fillRect(0, 0, w, h); g.fillStyle = s2; g.fillRect(10, 10, w - 20, h - 60);
       CREW.forEach((c, k) => { g.fillStyle = '#f0f0ea'; g.beginPath(); g.ellipse(70 + k * 82, 150, 30, 58, 0, 0, 7); g.fill(); g.fillStyle = c.colour; g.fillRect(48 + k * 82, 120, 44, 10); g.fillStyle = '#d9c3a0'; g.beginPath(); g.arc(70 + k * 82, 82, 20, 0, 7); g.fill(); });
-      g.fillStyle = '#333'; g.font = 'italic 24px "Comic Sans MS", cursive'; g.textAlign = 'center'; g.fillText('Crew 1 · launch day!', w / 2, h - 20); }), -.25, 1.72, .035));
-    [['rocket', .3, 1.38, -.06], ['hills', .42, 1.82, .05], ['coast', .42, 1.4, -.04], ['family', -.48, 1.32, .06]].forEach(([k, x, y, rz]) => { const ph = pic(.24, .18, photo(k, 256, 192), x, y, .035); ph.rotation.z = rz; PB.add(ph); });
-    PB.add(pic(.12, .12, sticky('Movie\nnight Fri\n7pm!', '#ffc2d1'), .48, 1.95, .036));
-    for (let k = 0; k < 6; k++) PB.add(cyl(.012, .012, .01, mat('pin' + (k % 3), ['#c23b2f', '#2d5fa8', '#f2c230'][k % 3], { r: .4 }), -.55 + k * .22, 1.98 - (k % 2) * .5, .04, 8).rotateX(Math.PI / 2));
+      g.fillStyle = '#333'; g.font = 'italic 24px "Comic Sans MS", cursive'; g.textAlign = 'center'; g.fillText('Crew 1 · launch day!', w / 2, h - 20); }), -.3, 1.79, .035));
+    // a tidy grid so nothing overlaps: crew photo top left, four snapshots on the right, a postcard and a note below
+    const snaps = [['hills', .2, 1.86, .04], ['coast', .47, 1.84, -.05], ['dog', .2, 1.42, -.03], ['skyline', .47, 1.44, .05], ['family', -.45, 1.36, .05]];
+    snaps.forEach(([k, x, y, rz], i) => { const ph = pic(.24, .18, photo(k, 256, 192), x, y, .034 + i * .0015); ph.rotation.z = rz; PB.add(ph); PB.add(cyl(.012, .012, .012, mat('pin' + (i % 3), ['#c23b2f', '#2d5fa8', '#f2c230'][i % 3], { r: .4 }), x, y + .08, .045, 8).rotateX(Math.PI / 2)); });
+    PB.add(pic(.13, .13, sticky('Movie\nnight Fri\n7pm!', '#ffc2d1'), -.13, 1.36, .036)); PB.add(cyl(.012, .012, .012, mat('pin1', '#2d5fa8', { r: .4 }), -.13, 1.42, .045, 8).rotateX(Math.PI / 2));
+    PB.add(cyl(.012, .012, .012, mat('pin0', '#c23b2f', { r: .4 }), -.3, 1.95, .045, 8).rotateX(Math.PI / 2));
     const HS = new THREE.Group(); onWall(4, 2.4, R - .25, HS); P.add(HS);
     HS.add(box(1.0, .04, .35, mat('ply', '#c49a6c'), 0, .9, 0)); for (const x of [-.45, .45]) HS.add(box(.04, .9, .3, mat('ply', '#c49a6c'), x, .45, 0));
     [['#5aa04a', -.3], ['#4f8f3a', 0], ['#7fbf4a', .3]].forEach(([c, x]) => { const pl = plant(1.0, c, '#e9e4da', x > .2 ? 'chives' : 'herb'); pl.position.set(x, .92, 0); HS.add(pl); });
@@ -763,7 +822,7 @@ export function dressHab(I) {
     html: () => k >= (I.habCrew ?? 3) ? '<p>Nobody sleeps here on this mission, so it is full of spare supplies and a water reserve.</p>' : CABIN_NOTES[person.id] + fact('Every crew member gets a private room: NASA studies found shared sleeping spaces hurt sleep on long missions.') }); });
   note(3, 0, 3.3, 'read the crew calendar', '📅 Crew calendar', () => `<p>Sol ${Math.max(1, I.calendar.sol)}. Past sols are crossed off. Mei Lin's birthday and a call home are marked.</p>` + fact('A sol (a Mars day) is 24 hours 39 minutes long.'));
   note(3, slotA(8.4), 3.3, 'knock on the hygiene stall', '🚿 Hygiene stall', '<p>Toilet, wash basin and a water-saving shower. Each crewmate has a towel in their own colour.</p>' + fact('NASA put bathrooms both near the crew quarters and near the work area in its CHAPEA Mars habitat.'));
-  note(4, -.95, 3.2, 'read the whiteboard', '📝 Wardroom whiteboard', () => { const ppl = CREW.slice(0, I.habCrew ?? 3), sol = Math.max(1, I.calendar.sol); return `<p><b>Chores today:</b><br>${['Galley & dishes', 'Filters & vacuum', 'Greenhouse check', 'Trash compactor'].map((j, i) => `${j} — ${ppl[(i + sol) % ppl.length].first ?? 'You'}`).join('<br>')}</p><p><b>Dinner:</b> ${MENUS[sol % MENUS.length]}</p>` + fact('Sharing chores and meals helps crews get along on long missions.'); });
+  note(4, -.95, 3.2, 'read the whiteboard', '📝 Wardroom whiteboard', () => { const ppl = CREW.slice(0, I.habCrew ?? 3), sol = Math.max(1, I.calendar.sol); return `<p><b>Chores today:</b><br>${['Galley & dishes', 'Filters & vacuum', 'Greenhouse check', 'Trash compactor'].map((j, i) => `${j}: ${ppl[(i + sol) % ppl.length].first ?? 'You'}`).join('<br>')}</p><p><b>Dinner:</b> ${MENUS[sol % MENUS.length]}</p>` + fact('Sharing chores and meals helps crews get along on long missions.'); });
   note(4, .82, 2.9, 'use the galley', '☕ Gusev Café', '<p>Hot water for drinks and dried food, a warmer for pouches, and a pantry of labelled food.</p>' + fact('On the ISS, salt and pepper are liquids — salt dissolved in water, pepper in oil — so the grains do not float into the air.'));
   note(4, Math.PI + .45, 2.9, 'pick up the plush toy', '🧸 The plush toy', '<p>It rode along to Mars in someone\'s kit. Now it guards the window seat.</p>' + fact('Crews often bring a small plush toy on launch day: when it starts floating, everyone knows they have reached space.'));
   note(4, 2.15, 3.2, 'look at the mission patches', '🎖 Patch wall', '<p>Each team and big moment gets a patch: the first harvest, the rover team, surviving the first dust storm.</p>' + fact('ISS crews stick their mission patches on the walls of the Unity node, where they eat together.'));
@@ -869,7 +928,7 @@ function drawWhiteboard(wb, sol, crew) {
   g.font = '30px "Comic Sans MS", cursive';
   const jobs = ['Galley & dishes', 'Filters & vacuum', 'Greenhouse check', 'Trash compactor'];
   g.fillStyle = '#2d5fa8'; g.fillText('Chores:', 24, 104);
-  jobs.forEach((j, i) => { const p = people[(i + sol) % people.length]; g.fillStyle = '#333'; g.fillText(`${j} — ${p.first ?? 'You'}`, 40, 148 + i * 42); });
+  jobs.forEach((j, i) => { const p = people[(i + sol) % people.length]; g.fillStyle = '#333'; g.fillText(`${j}: ${p.first ?? 'You'}`, 40, 148 + i * 42); });
   const menus = MENUS;
   g.fillStyle = '#c23b2f'; g.fillText('Dinner:', 24, 340); g.fillStyle = '#333'; g.fillText(menus[sol % menus.length], 40, 384);
   g.fillStyle = '#2d8a4a'; g.font = '26px "Comic Sans MS", cursive'; g.fillText('Movie night: Fri ✓   Quiet hrs 22:00', 24, 460);

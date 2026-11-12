@@ -47,3 +47,26 @@ The calendar crosses off sols, and the whiteboard rotates chores and dinner each
 - ISS dynamic lighting schedule: https://ntrs.nasa.gov/api/citations/20160006727/downloads/20160006727.pdf
 - ISS crew patch decals: https://www.collectspace.com/news/news-110225a-25-years-continuous-humans-iss-crew-decals.html
 - MDRS layout: https://en.wikipedia.org/wiki/Mars_Desert_Research_Station
+
+## Round 3 (12 Nov): greenhouse rebuilt, hab fixes
+**Greenhouse (`src/greenhouse.js`), all built in code now:**
+- Four NFT hydroponic racks: aluminium frames, two white channels with net pots and rock-wool plugs, a catch tray, feed and return lines, a nutrient tote with pump under each rack, a five-bar LED light and an e-ink tag. Studied from NASA Veggie and the University of Arizona Lunar/Mars greenhouse.
+- Better plants: red romaine rosettes, wheat tufts that grow ears and go gold, bushy potatoes with flowers and tubers. Each rack's plants are merged into a few meshes.
+- Round the edge: germination shelf with seed trays and a humidity lid, potting bench (coir, perlite, pots, watering can, harvest log, Mei Lin's orchid, Mateo's chillies), harvest crates and a scale, tomatoes on strings, strawberry towers, two spinning fans, a climate panel, a nutrient mixing tank with pH/EC readout and hose reel, overhead water and nutrient pipes.
+- Airlock is a real hatch now (frame, window, wheel, sign, hazard mat).
+- Floor: epoxy with steel grating aisles and a drain.
+- The tunnel to the hab replaces `greenhouse-walkway.glb`: ribs every 1.5 m, insulated walls with real rounded pressure windows, ceiling lights, cable tray, labelled water and nutrient pipes, handrails, hatch frames at both ends, a herb shelf.
+- Six new things to look at with E (seed trays, potting bench, harvest crates, tomatoes, climate panel, fan).
+- About 260 draw calls in the greenhouse.
+
+**Hab fixes (`src/hab-dressing.js`):**
+- Mission patches sat in the Wardroom doorways and floated; they are on the wall now.
+- Tunnel cables ran through the hatch frames into the pods; now a short bundle in a tray inside the tunnel.
+- Wardroom ceiling: the star of baffles is gone. Roof ribs and hub, a ring air duct, three felt acoustic clouds on wires, a proper ring pendant, fairy lights along the galley wall.
+- Whiteboard and photo board stand off the curved wall, so their edges are no longer buried. Board text uses colons, not dashes. Photo board laid out so nothing overlaps.
+- Cabin doors are modelled: raised panels, the owner's colour band, frosted strip, pull, louvred vent, status light, and something personal on each closed door.
+- A matching hatch frame and sign at the back of Life support into the greenhouse tunnel.
+
+**Lander (`src/world.js`):** ladder stand-offs and feet, grab bars by the hatch, hatch frame with hinges and handle, round port over the flat window, a grated step at the sill.
+
+Preview: `hab-preview.html` (serve the game folder, then open it). Buttons jump to each room.
