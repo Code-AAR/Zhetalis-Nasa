@@ -563,7 +563,7 @@ export class World {
     this.facts = facts;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1800);
-    this.scene.fog = new THREE.Fog('#dcb08a', 24, 360);
+    this.scene.fog = new THREE.Fog('#dcb08a', 2, 280);
     this.sky = makeSky(this.scene);
     this.skyLights = makeSkyLights(this.scene);
     this.hemi = new THREE.HemisphereLight('#ffe2c4', '#6b3a22', 1.15); this.scene.add(this.hemi);
@@ -796,14 +796,15 @@ export class World {
     u.cloudCol.value.copy(C('#efe9e2')).multiplyScalar(.35 + .65 * day).lerp(C('#a9c4f0'), glowAfter * .8).multiplyScalar(Math.max(day, glowAfter * .9, .06));
     u.cloudAmt.value = this.dustOn ? 0 : 1;
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
-    u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0.16 * day;
+    u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0.20 * day;
     this.skyLights.motes.material.opacity = (0.10 * day * day) * (this.dustOn ? 2 : 1);
     this.skyLights.motes.material.size = this.dustOn ? 0.007 : 0.003;
     this.nightness = 1 - day;
     // Suspended dust gives Mars its warm haze (NASA Mars Facts). Distances are art tuning, not measured visibility.
     const fogDay = new THREE.Color(this.dustOn ? '#b5744c' : '#dcb08a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
-    this.scene.fog.near = this.dustOn ? 12 : 24; this.scene.fog.far = this.dustOn ? 120 : 360 - 80 * (1 - day);
+    // Built-in smoothstep fog starts gently beside the player and thickens into the distance.
+    this.scene.fog.near = 2; this.scene.fog.far = this.dustOn ? 120 : 280 - 60 * (1 - day);
     this.skyLights.stars.setOpacity((1 - day) * (this.dustOn ? 0.2 : 1));
     this.skyLights.planets.userData.setOpacity((1 - day) * (this.dustOn ? 0.15 : 0.9));
     this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset
@@ -899,9 +900,26 @@ export class World {
   groundHeightAt(x,z){const ground=heightAt(x,z),surface=this.settlement?.crossings.height(x,z,ground)??ground;return this.settlement?.walkHeight(x,z,surface)??surface;}
 
   // Simple circle collisions so you can't walk through the base or big boulders.
-  collide(pos) {
+  oreHeight(x,z,ceiling) {
+    let top=-Infinity;
+    for(const c of this.colliders){
+      if(!c.oreContact || Math.hypot(x-c.x,z-c.z)>c.r)continue;
+      c.object.updateWorldMatrix(true,false);
+      top=Math.max(top,c.oreContact.height(x,z,ceiling));
+    }
+    return top;
+  }
+
+  collide(pos, previous=pos, grounded=false) {
     for (const c of this.colliders) {
       if (c.rock) continue;
+      if(c.oreContact){
+        if(Math.hypot(pos.x-c.x,pos.z-c.z)<=c.r+0.5){
+          c.object.updateWorldMatrix(true,false);
+          c.oreContact.block(pos,previous,grounded);
+        }
+        continue;
+      }
       if(c.object && !c.object.visible)continue;
       if(c.solar){const x=Math.max(c.x-c.halfX+.12,Math.min(c.x+c.halfX-.12,pos.x)),z=Math.max(c.z-.7,Math.min(c.z+.7,pos.z));const top=this.panelHeight?.(x,z)??Infinity;if(pos.y>=top-.25)continue;}
       if(c.halfX !== undefined){if(c.minY===undefined||(pos.y<c.maxY&&pos.y+1.85>c.minY))blockPanel(pos,c,0.45);continue;}
@@ -965,10 +983,10 @@ export class World {
       p.y += this.vel.y * dt;
     }
     this.rockContact.block(p, previous, this.onGround);
-    this.collide(p);
+    this.collide(p, previous, this.onGround);
     this.settlement?.blockEquipment(p);
     const ceiling = Math.max(previous.y, p.y) + (this.onGround ? 0.45 : 0.02);
-    const ground = Math.max(this.groundHeightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling),this.panelHeight?.(p.x,p.z,ceiling)??-Infinity);
+    const ground = Math.max(this.groundHeightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling),this.oreHeight(p.x,p.z,ceiling),this.panelHeight?.(p.x,p.z,ceiling)??-Infinity);
     if ((this.onGround && Math.abs(p.y - ground) <= 0.45) || (this.vel.y <= 0 && p.y <= ground)) {
       if (!this.onGround && this.vel.y < -1.5) this.squash = Math.min(0.6, -this.vel.y / 8);
       p.y = ground; this.vel.y = 0; this.onGround = true;

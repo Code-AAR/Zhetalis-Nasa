@@ -7,6 +7,7 @@ import { placeDeposits, ID_BASE } from './resource-zones.js';
 import { heightAt } from './world.js';
 import { loadModel } from './nasamodels.js';
 import { mergeStatic } from './static-merge.js';
+import { createRockContact } from './rock-contact.js';
 
 // Five real Mars minerals that Spirit found in Gusev Crater (the 'gypsum' key is sulfate salt; kept for old saves).
 export const ORES = {
@@ -267,7 +268,7 @@ export class Colony {
       }
       group.position.y=support-.08;
       group.updateMatrixWorld(true);
-      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:.85, driveOver:true, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
+      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:1.9, object:stone, oreContact:createRockContact(stone), driveOver:true, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
       world.driveProps?.add({ x, z, r: 1.9, object: group.children[0], alive: () => !!group.parent });   // the rover can drive onto and over unmined deposits
     });
     for(const d of this.deposits){d.startPosition=d.group.position.clone();d.startQuaternion=d.group.quaternion.clone();d.startTop=d.collider.top;}
