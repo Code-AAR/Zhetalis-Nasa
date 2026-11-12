@@ -563,7 +563,7 @@ export class World {
     this.facts = facts;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1800);
-    this.scene.fog = new THREE.Fog('#d9a27a', 45, 520);
+    this.scene.fog = new THREE.Fog('#dcb08a', 24, 360);
     this.sky = makeSky(this.scene);
     this.skyLights = makeSkyLights(this.scene);
     this.hemi = new THREE.HemisphereLight('#ffe2c4', '#6b3a22', 1.15); this.scene.add(this.hemi);
@@ -796,13 +796,14 @@ export class World {
     u.cloudCol.value.copy(C('#efe9e2')).multiplyScalar(.35 + .65 * day).lerp(C('#a9c4f0'), glowAfter * .8).multiplyScalar(Math.max(day, glowAfter * .9, .06));
     u.cloudAmt.value = this.dustOn ? 0 : 1;
     u.haloPower.value = (0.6 + dusk * 1.6) * THREE.MathUtils.clamp((elev + 0.25) / 0.2, 0, 1) * (this.dustOn ? 0.35 : 1);
-    u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0;
+    u.sunDir.value.copy(dir); u.haze.value = this.dustOn ? 1 : 0.16 * day;
     this.skyLights.motes.material.opacity = (0.10 * day * day) * (this.dustOn ? 2 : 1);
     this.skyLights.motes.material.size = this.dustOn ? 0.007 : 0.003;
     this.nightness = 1 - day;
-    const fogDay = new THREE.Color(this.dustOn ? '#b06a43' : '#d9a27a');
+    // Suspended dust gives Mars its warm haze (NASA Mars Facts). Distances are art tuning, not measured visibility.
+    const fogDay = new THREE.Color(this.dustOn ? '#b5744c' : '#dcb08a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
-    this.scene.fog.near = this.dustOn ? 18 : 45; this.scene.fog.far = this.dustOn ? 140 : 520 - 200 * (1 - day);
+    this.scene.fog.near = this.dustOn ? 12 : 24; this.scene.fog.far = this.dustOn ? 120 : 360 - 80 * (1 - day);
     this.skyLights.stars.setOpacity((1 - day) * (this.dustOn ? 0.2 : 1));
     this.skyLights.planets.userData.setOpacity((1 - day) * (this.dustOn ? 0.15 : 0.9));
     this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset

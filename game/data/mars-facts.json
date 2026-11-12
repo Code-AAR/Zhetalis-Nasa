@@ -422,6 +422,12 @@
       "source": "Arizona State University",
       "url": "https://news.asu.edu/content/asu-instrument-helps-identify-rare-rock-mars",
       "short": "Comanche's carbonate points to gentle, neutral water."
+    },
+    "dustHaze": {
+      "kid": "Tiny dust grains float in Mars air and make its sky look hazy and reddish. Dust storms can hide distant hills and reduce the sunlight reaching solar panels. Our haze strength is an illustration, not a live weather measurement.",
+      "short": "Dust in the air makes faraway hills look hazy.",
+      "source": "NASA Science — Mars Facts",
+      "url": "https://science.nasa.gov/mars/facts/"
     }
   },
   "tuned": {

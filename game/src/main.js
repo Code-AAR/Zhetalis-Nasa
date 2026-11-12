@@ -83,7 +83,7 @@ const adaptiveRes = createAdaptiveRes(renderer, targetRatio, { enabled: () => !l
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
 
-const F = (await (await fetch('data/mars-facts.json?v=settings-library-35')).json()).facts;
+const F = (await (await fetch('data/mars-facts.json?v=dust-haze-1')).json()).facts;
 await artReady;   // team illustrations (assets/art/art.json) - empty slots simply show nothing
 for (const [id, f] of Object.entries(F)) f.id = id;   // so the logbook and quiz can refer to each fact
 onLog(n => { $('#log-btn').textContent = `Logbook ${n} (L)`; if (n >= 15) earn('scholar'); });

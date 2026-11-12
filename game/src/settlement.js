@@ -1,4 +1,5 @@
 import { loadAssetWithRetry } from './asset-loading.js';
+import { drapeGroundPositions, groundDecalSegments } from './ground-decal.js';
 import * as THREE from 'three';
 import {regolithFinish} from './regolith-finish.js';
 import { layServiceCables, cableCrossings } from './cable-crossings.js';
@@ -290,6 +291,14 @@ function plantFeet(model,scene){
   const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,4,32,32,32);
   r.addColorStop(0,'rgba(60,35,22,.55)');r.addColorStop(1,'rgba(60,35,22,0)');g.fillStyle=r;g.fillRect(0,0,64,64);
   const dm=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4});
-  const geos=discs.map(([x,y,z,s])=>{const q=new THREE.PlaneGeometry(s*2.6,s*2.6);q.rotateX(-Math.PI/2);q.translate(x,y+.03,z);return q;});
+  // A centre-height quad floats above downhill edges. Drape a small grid instead.
+  const geos=discs.map(([x,,z,s])=>{
+    const span=s*2.6,n=groundDecalSegments(span),q=new THREE.PlaneGeometry(span,span,n,n);
+    q.rotateX(-Math.PI/2);q.translate(x,0,z);
+    drapeGroundPositions(q.attributes.position.array,heightAt);
+    q.attributes.position.needsUpdate=true;q.computeVertexNormals();
+    return q;
+  });
   const dust=new THREE.Mesh(mergeGeometries(geos,false),dm);dust.name='module-footing-dust';dust.renderOrder=1;scene.add(dust);
+  for(const geo of geos)geo.dispose();
 }

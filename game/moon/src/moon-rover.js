@@ -1,4 +1,4 @@
-import {roverSupport,suspensionPose} from '../../src/rover-support.js';
+import {roverSupport,sampledSuspensionPose} from '../../src/rover-support.js';
 // The pressurised rover: NASA's Space Exploration Vehicle 3D model (assets/sev.glb, NASA 3D Resources). The SEV
 // began life as NASA's Lunar Electric Rover concept, so it fits the Moon. Wheels are cut out of the solid model
 // (same approach as the Mars rover, using the shared splitGeometry helper, read-only) so they spin and steer.
@@ -13,6 +13,8 @@ const MAX = 8, REVERSE = 3, ACCEL = 2.6, BRAKE = 3.2, STEER = 0.55;   // m/s, m/
 
 export class MoonRover {
   constructor(scene) {
+    this.scene=scene;
+    this.rockSupport=createLunarRockSupport(scene,heightAt);
     this.group = new THREE.Group(); this.group.name = 'Rover'; scene.add(this.group);
     this.body = new THREE.Group(); this.group.add(this.body);
     this.pos = new THREE.Vector3(-12, 0, -14); this.yaw = Math.PI + 0.6; this.speed = 0; this.vy = 0; this.steer = 0; this.air = false;
@@ -69,7 +71,6 @@ export class MoonRover {
   // input: throttle -1..1, steer -1..1. Returns { driving 0..1, bump 0..1 }
   update(dt, input, colliders, prints, dust) {
     if(dt>1/60+1e-6){const n=Math.ceil(Math.min(dt,.25)*60);let result;for(let i=0;i<n;i++)result=this.update(Math.min(dt,.25)/n,input,colliders,prints,dust);return result;}
-    this.nearRocks=colliders.filter(c=>c.rock&&c.height<.9);
     const want = input.throttle > 0 ? MAX * input.throttle : input.throttle < 0 ? -REVERSE * -input.throttle : 0;
     const grip = this.air ? 0.1 : 1;
     if (input.throttle === 0) this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), BRAKE * 0.5 * dt * grip);
@@ -124,17 +125,15 @@ export class MoonRover {
     return { driving: Math.min(1, Math.abs(this.speed) / MAX), bump, blocked };
   }
 
-  support(x,z){
-    let h=heightAt(x,z);
-    for(const r of this.nearRocks||[]){const d=Math.hypot(x-r.x,z-r.z);if(d<r.r)h=Math.max(h,heightAt(r.x,r.z)+r.height*Math.sqrt(Math.max(0,1-(d/r.r)**2)));}return h;
-  }
+  support(x,z){return this.rockSupport(x,z);}
   groundSupport(){return roverSupport(this.pos,this.yaw,(x,z)=>this.support(x,z),this.wheels);}
   place(dt) {
+    for(const w of this.wheels)w.steer.rotation.y=this.steer*w.steers;
     const support=this.groundSupport(),k=dt?1-Math.exp(-dt*8):1;
     if(!this.air){
       this.body.rotation.x+=(support.pitch-this.body.rotation.x)*k;
       this.body.rotation.z+=(support.roll-this.body.rotation.z)*k;
-      const pose=suspensionPose(support.contacts,this.body.rotation.x,this.body.rotation.z,this.pos.y,dt,this.r);
+      const pose=sampledSuspensionPose(this.pos,this.yaw,(x,z)=>this.support(x,z),support.contacts,this.body.rotation.x,this.body.rotation.z,this.pos.y,dt,this.r);
       this.pos.y=pose.y;
       this.wheels.forEach((w,i)=>w.steer.position.y=this.r+pose.travel[i]);
     }
@@ -142,4 +141,57 @@ export class MoonRover {
   }
 
   setLights(on) { for (const l of this.lights) l.intensity = on ? 60 : 0; }
+}
+
+// MoonWorld builds static Boulders before the rover. Index the *rendered* instance
+// transforms once, including batch/parent transforms; visibility culling is irrelevant
+// to physics. Rebuild this sampler if a future world moves/replaces its rocks.
+export function createLunarRockSupport(scene,groundAt){
+ const cells=new Map(),memo=new Map(),cellSize=4;
+ const ray=new THREE.Raycaster(),origin=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0),hits=[];
+ let initialized=false;
+ function initialize(){
+  initialized=true;
+  const rocks=scene.getObjectByName('Boulders');
+  if(!rocks)return;
+  rocks.updateWorldMatrix(true,true);
+  const local=new THREE.Matrix4();
+  rocks.traverse(batch=>{
+   if(!batch.isInstancedMesh)return;
+   if(!batch.geometry.boundingBox)batch.geometry.computeBoundingBox();
+   // One reusable raycast mesh per batch: never invoke InstancedMesh.raycast,
+   // which would iterate every instance for every wheel correction.
+   const proxy=new THREE.Mesh(batch.geometry,batch.material);
+   proxy.matrixAutoUpdate=false;
+   for(let i=0;i<batch.count;i++){
+    batch.getMatrixAt(i,local);
+    const matrix=new THREE.Matrix4().multiplyMatrices(batch.matrixWorld,local);
+    const bounds=batch.geometry.boundingBox.clone().applyMatrix4(matrix);
+    const entry={matrix,bounds,proxy};
+    for(let x=Math.floor(bounds.min.x/cellSize);x<=Math.floor(bounds.max.x/cellSize);x++)
+     for(let z=Math.floor(bounds.min.z/cellSize);z<=Math.floor(bounds.max.z/cellSize);z++){
+      const key=x+','+z;
+      if(!cells.has(key))cells.set(key,[]);
+      cells.get(key).push(entry);
+     }
+   }
+  });
+ }
+ return (x,z)=>{
+  if(!initialized)initialize();
+  const key=x+','+z;
+  if(memo.has(key))return memo.get(key);
+  let h=groundAt(x,z);
+  for(const {matrix,bounds,proxy} of cells.get(Math.floor(x/cellSize)+','+Math.floor(z/cellSize))||[]){
+   if(x<bounds.min.x||x>bounds.max.x||z<bounds.min.z||z>bounds.max.z||bounds.max.y<=h)continue;
+   origin.set(x,bounds.max.y+.01,z);ray.set(origin,down);ray.far=bounds.max.y-h+.02;
+   proxy.matrixWorld.copy(matrix);hits.length=0;
+   ray.intersectObject(proxy,false,hits);
+   if(hits.length)h=Math.max(h,hits[0].point.y);
+  }
+  // Static terrain/rocks permit cross-frame reuse; cap memory during long drives.
+  if(memo.size>=256)memo.clear();
+  memo.set(key,h);
+  return h;
+ };
 }

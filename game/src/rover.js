@@ -1,4 +1,4 @@
-import {roverSupport,suspensionPose} from './rover-support.js';
+import {roverSupport,sampledSuspensionPose} from './rover-support.js';
 // The crew rover you can drive: NASA's Space Exploration Vehicle (MMSEV) 3D model, from NASA 3D Resources.
 // It is a real NASA design for a small pressurised rover: the crew ride inside in normal clothes and climb
 // into their spacesuits through suitports at the back. The model is one solid mesh, so when it loads we cut out
@@ -141,16 +141,17 @@ export class Rover {
 
   // Sit on the ground: tilt to follow the slope under the wheels, smoothly (the suspension soaks up small bumps).
   place(dt, step = 0) {
+    for(const w of this.wheels)w.steer.rotation.y=(this.steer??0)*.32*w.steers;
     const support=roverSupport(this.pos,this.yaw,this.surfaceAt,this.wheels);
     const k=dt?1-Math.exp(-dt*8):1;
     this.tilt.pitch+=(support.pitch-this.tilt.pitch)*k;
     this.tilt.roll+=(support.roll-this.tilt.roll)*k;
-    const pose=suspensionPose(support.contacts,this.tilt.pitch,this.tilt.roll,this.tilt.y,dt,this.r);
+    const pose=sampledSuspensionPose(this.pos,this.yaw,this.surfaceAt,support.contacts,this.tilt.pitch,this.tilt.roll,this.tilt.y,dt,this.r);
     this.tilt.y=pose.y;this.pos.y=pose.y;
     this.group.position.copy(this.pos);this.group.rotation.set(0,this.yaw,0);
     this.body.rotation.set(this.tilt.pitch,0,this.tilt.roll);this.body.position.y=0;
     for(let i=0;i<this.wheels.length;i++){
-      const w=this.wheels[i];w.ground=support.contacts[i].ground;w.travel=pose.travel[i];
+      const w=this.wheels[i];w.ground=pose.contacts[i].ground;w.travel=pose.travel[i];
       w.steer.position.y=this.r+w.travel;
       w.spin.rotation.x+=step/this.r;
       w.steer.rotation.y=(this.steer??0)*.32*w.steers;
