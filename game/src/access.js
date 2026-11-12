@@ -1,6 +1,7 @@
 // Human-scale pressure links and stair access, shared by rendering and movement.
 import * as THREE from 'three';
 import { pressureHatch } from './pressure-hatch.js';
+import { blockAccessRails } from './access-rails.js';
 
 export function installHabitatAccess(world, model, layout) {
   model.getObjectByName('Object_15')?.removeFromParent(); // replace decorative stairs
@@ -88,6 +89,7 @@ export function installHabitatAccess(world, model, layout) {
   }
   return {
     group,entrances,
+    blockRails(position,previous){blockAccessRails(position,previous,entrances);},
     onAccessRamp(p,index){const e=entrances[index];return Math.abs(p.x-e.x)<1.03&&p.z>=e.doorZ-.1&&p.z<=e.bottom+.25;},
     walkHeight(x,z,ground){
       for(const e of entrances)if(Math.abs(x-e.x)<=1.08&&z>=e.doorZ-.15&&z<=e.bottom+.2){

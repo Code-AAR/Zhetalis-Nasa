@@ -984,6 +984,7 @@ export class World {
     }
     this.rockContact.block(p, previous, this.onGround);
     this.collide(p, previous, this.onGround);
+    this.settlement?.blockRails(p,previous);
     this.settlement?.blockEquipment(p);
     const ceiling = Math.max(previous.y, p.y) + (this.onGround ? 0.45 : 0.02);
     const ground = Math.max(this.groundHeightAt(p.x, p.z), this.rockContact.height(p.x, p.z, ceiling),this.oreHeight(p.x,p.z,ceiling),this.panelHeight?.(p.x,p.z,ceiling)??-Infinity);
