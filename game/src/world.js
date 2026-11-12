@@ -15,6 +15,7 @@ import { Rover } from './rover.js';
 import { createRockContact } from './rock-contact.js';
 import { createDriveProps } from './drive-props.js';
 import { addMarsRockField } from './mars-rock-field.js';
+import { mergeStatic } from './static-merge.js';
 import { SURFACE_DETAIL, GRAPHICS_MODE, regolithMaps, rockMaterial, makeGroundDust } from './surface-detail.js';
 import { effectiveQuality } from './device-profile.js';
 import { solarPanel, makeCellMat } from './models.js';
@@ -500,6 +501,7 @@ function makeSolarField() {
     const px = (i % 4) * 4.6, pz = Math.floor(i / 4) * 3.4, p = solarPanel(cellMat, { w: 3.2, d: 2, tilt: .5, low: .6 });
     p.position.set(px, heightAt(g.position.x + px, g.position.z + pz), pz);
     p.visible = false; g.add(p); panels.push(p);
+    mergeStatic(p);   // ~20 parts -> a few draw calls
   }
   return { group: g, panels };
 }

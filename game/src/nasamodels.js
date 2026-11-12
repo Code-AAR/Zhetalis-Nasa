@@ -19,6 +19,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const draco = new DRACOLoader();
+// Leave CPU capacity for rendering; worker count does not change model quality.
+draco.setWorkerLimit(2);
 draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
 export const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
@@ -44,14 +46,19 @@ export async function replaceLogos(tex, spots) {
   return t;
 }
 
-const cache = {};
+// Cache parsed models, not raw buffers as well. Callers clone shared scenes.
+const cache = new Map();
 // Resolves to the loaded glTF, or null if it couldn't load (the game then keeps its simple shapes).
 export function loadModel(file, { required = false } = {}) {
-  cache[file] ??= loadAssetWithRetry(loader, 'assets/' + file).catch(error => {
-    delete cache[file]; // A failed download must not poison later attempts.
-    throw error;
-  });
-  return required ? cache[file] : cache[file].catch(error => {
+  if (!cache.has(file)) {
+    const pending = loadAssetWithRetry(loader, 'assets/' + file).catch(error => {
+      cache.delete(file); // A failed download must not poison later attempts.
+      throw error;
+    });
+    cache.set(file, pending);
+  }
+  const pending = cache.get(file);
+  return required ? pending : pending.catch(error => {
     console.warn('NASA model failed to load:', file, error); return null;
   });
 }

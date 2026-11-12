@@ -8,6 +8,7 @@ import { MAT, tube, solarPanel, makeCellMat, dishAssembly } from './models.js';
 import { revealCircles, REVEAL } from './mapstate.js';
 import { revealModal } from './reveal.js';
 import { playScanCinematic } from './scancine.js';
+import { mergeStatic } from './static-merge.js';
 
 export const REVEAL_R = REVEAL.tower;
 const NAMES = ['North ridge', 'East rim', 'South ridge', 'West rim'];
@@ -77,6 +78,7 @@ export class Lookouts {
       t.add(tube([1.05, H + .1, 0], [1.05, H + 1.2, 0], .02, MAT.steel, 4)); t.add(beacon);
       const halo = new THREE.Mesh(new THREE.SphereGeometry(.8, 14, 10), new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: .2, depthWrite: false })); halo.position.copy(beacon.position); t.add(halo); beacon.userData.halo = halo;
       t.traverse(o => { if (o.isMesh && !o.material.transparent) { o.castShadow = true; o.receiveShadow = true; } });
+      mergeStatic(t, { exclude: [d.group, beacon, halo] });   // ~120 struts and parts -> ~10 draw calls (static-merge.js)
       this.beacons.push(beacon); this.dishes.push({ az: d.az, el: d.el, ph: Math.random() * 6 });
       t.position.set(sp.x, base, sp.z); this.group.add(t);
       world.colliders.push({ x: sp.x, z: sp.z, r: 1.9 }, { x: sp.x - 2.5, z: sp.z + .2, r: .8 });

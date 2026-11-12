@@ -131,8 +131,8 @@ function plate(seed, { r = .3, t = .03, top = '#8b6c55', under = '#e5d9c0', side
 
 // ---- soft ground marks ---------------------------------------------------------------------------------------------
 // Marks are thin sheets draped on the exact ground, with colour and see-through edges (RGBA per vertex).
-function ribbon(points, surface, { width = .2, lift = .03, colour, alpha = .6, tread = 0, fadeStart = .1, fadeEnd = .06, edgeSoft = .35 }) {
-  const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z))), L = curve.getLength(), N = Math.max(8, Math.ceil(L / .07));
+function ribbon(points, surface, { width = .2, lift = .03, colour, alpha = .6, tread = 0, fadeStart = .1, fadeEnd = .06, edgeSoft = .35, step = .07 }) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z))), L = curve.getLength(), N = Math.max(8, Math.ceil(L / step));
   const across = 5, pos = [], c = [], idx = [], fixed = typeof colour === 'function' ? null : arr(col(colour));
   for (let i = 0; i <= N; i++) {
     const u = i / N, pt = curve.getPointAt(u), tg = curve.getTangentAt(u), nx = -tg.z, nz = tg.x, along = u * L;
@@ -416,7 +416,7 @@ export function buildDustDevilTracks(surface, cx, cz, { n = 14, spread = 70 } = 
   for (let k = 0; k < n; k++) {
     const sx = cx + (hash(k, 1) - .5) * spread * 1.6, sz = cz + (hash(k, 2) - .5) * spread * 1.2, L = 50 + hash(k, 3) * 90, dir = Math.PI / 4 + (hash(k, 4) - .5) * .5;
     const pts = []; for (let i = 0; i <= 8; i++) { const t = i / 8 - .5, w = Math.sin(t * 5 + k) * 6 * hash(k, 5); pts.push([sx + Math.cos(dir) * L * t - Math.sin(dir) * w, sz + Math.sin(dir) * L * t + Math.cos(dir) * w]); }
-    list.push(ribbon(pts, surface, { width: 1.6 + hash(k, 6) * 3.2, lift: .05, colour: () => dark, alpha: .28 + hash(k, 7) * .14, fadeStart: .15, fadeEnd: .15, edgeSoft: .7 }));
+    list.push(ribbon(pts, surface, { width: 1.6 + hash(k, 6) * 3.2, lift: .08, step: .5, colour: () => dark, alpha: .28 + hash(k, 7) * .14, fadeStart: .15, fadeEnd: .15, edgeSoft: .7 }));   // 0.5 m steps: ~7x fewer triangles
   }
   const mesh = new THREE.Mesh(mergeGeometries(list, false), MARKS.clone()); mesh.name = 'dust devil tracks';   // own material, so storms can fade it mesh.receiveShadow = true; mesh.renderOrder = 1;
   return mesh;

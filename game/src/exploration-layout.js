@@ -32,21 +32,34 @@ export async function createOpenLayout(world, habitat) {
   }
   // The NASA-supplied meteorite is only high detail up close. Distant copies
   // use a cheap silhouette so exploration does not render 143k triangles each.
-  const rockGeo=await loadAssetWithRetry(new STLLoader(), 'assets/block-island.stl');
-  rockGeo.rotateX(-Math.PI/2);rockGeo.computeBoundingBox();
-  const box=rockGeo.boundingBox,size=box.getSize(new THREE.Vector3()),mid=box.getCenter(new THREE.Vector3());
-  rockGeo.translate(-mid.x,-box.min.y,-mid.z);rockGeo.scale(.7/Math.max(size.x,size.y,size.z),.7/Math.max(size.x,size.y,size.z),.7/Math.max(size.x,size.y,size.z));rockGeo.computeVertexNormals();
   const rockMat=new THREE.MeshStandardMaterial({color:'#625b56',roughness:.95});
-  const rock=new THREE.LOD();const high=new THREE.Mesh(rockGeo,rockMat);high.castShadow=true;high.receiveShadow=true;rock.addLevel(high,0);
-  const low=new THREE.Mesh(new THREE.IcosahedronGeometry(.33,1),rockMat);low.position.y=.23;low.scale.set(1,.7,.85);rock.addLevel(low,18);
+  const rock=new THREE.LOD();
+  const low=new THREE.Mesh(new THREE.IcosahedronGeometry(.33,1),rockMat);low.position.y=.23;low.scale.set(1,.7,.85);rock.addLevel(low,0);
   rock.position.set(-65,heightAt(-65,35),35);group.add(rock);
+  let meteoriteReady=false,meteoritePending=null,selectedSite='gusev';
+  // Optional survey scenery must never hold up the habitat, doors or collision setup.
+  function loadMeteorite() {
+    if(meteoritePending)return meteoritePending;
+    meteoritePending=loadAssetWithRetry(new STLLoader(),'assets/block-island.stl').then(geo=>{
+      geo.rotateX(-Math.PI/2);geo.computeBoundingBox();
+      const box=geo.boundingBox,size=box.getSize(new THREE.Vector3()),mid=box.getCenter(new THREE.Vector3());
+      const scale=.7/Math.max(size.x,size.y,size.z);
+      geo.translate(-mid.x,-box.min.y,-mid.z);geo.scale(scale,scale,scale);geo.computeVertexNormals();
+      const high=new THREE.Mesh(geo,rockMat);high.castShadow=high.receiveShadow=true;
+      rock.remove(low);rock.levels.length=0;rock.addLevel(high,0);rock.addLevel(low,18);
+      meteoriteReady=true;refreshSite();return true;
+    }).catch(error=>{console.warn('Optional meteorite unavailable; survey remains playable',error);meteoritePending=null;return false;});
+    return meteoritePending;
+  }
   // Block Island (the NASA model above) is a real iron meteorite that Opportunity found at Meridiani Planum.
   // It only appears when you land somewhere other than the two crater sites (Gusev, Jezero); at those, the
   // meteorite field shows a plain iron meteorite instead. setSite() switches between them once the site is known.
   const plain=new THREE.Mesh(new THREE.DodecahedronGeometry(.32,1),new THREE.MeshStandardMaterial({color:'#4a4038',roughness:.55,metalness:.5}));
   plain.scale.set(1.15,.75,.9);plain.position.set(-65,heightAt(-65,35)+.18,35);plain.rotation.y=.8;plain.castShadow=true;plain.visible=false;group.add(plain);
   const CRATER_SITES=['gusev','jezero'];
-  const setSite=site=>{const crater=CRATER_SITES.includes(site);rock.visible=!crater;plain.visible=crater;names.meteorite=crater?'Meteorite field':'Block Island meteorite';paintSign('meteorite');return !crater;};
+  function refreshSite(){const crater=CRATER_SITES.includes(selectedSite);rock.visible=!crater&&meteoriteReady;plain.visible=crater||!meteoriteReady;names.meteorite=!crater&&meteoriteReady?'Block Island meteorite':'Meteorite field';paintSign('meteorite');}
+  const setSite=site=>{selectedSite=site;refreshSite();if(!CRATER_SITES.includes(site))loadMeteorite();return !CRATER_SITES.includes(site);};
+  refreshSite();
   // A remote communications instrument, separated from the pressure modules.
   const relay=new THREE.Group();relay.position.set(110,heightAt(110,65),65);
   const mast=new THREE.Mesh(new THREE.CylinderGeometry(.10,.16,3.8,10),grey);mast.position.y=1.9;relay.add(mast);
@@ -69,7 +82,7 @@ export async function createOpenLayout(world, habitat) {
     spawn=[door.x,door.z+8];
     route=[[-24,-12],[-24,16],[door.x,16],[door.x,door.z]];
     locations.base=[door.x,door.z];
-    colliders=[...sceneryColliders,...moduleColliders,{x:110,z:65,r:.6},{x:111.4,z:65,r:.65},{x:-65,z:35,r:.35,top:rock.position.y+size.y*.7/Math.max(size.x,size.y,size.z)},{x:-125,z:-75,r:.35},{x:-124.1,z:-75,r:.5}];
+    colliders=[...sceneryColliders,...moduleColliders,{x:110,z:65,r:.6},{x:111.4,z:65,r:.65},{x:-65,z:35,r:.35,top:rock.position.y+.7},{x:-125,z:-75,r:.35},{x:-124.1,z:-75,r:.5}];
   }
   refit();
   const targets=p=>['meteorite','relay','ice'].map(key=>({type:'survey-'+key,d:Math.hypot(p.x-locations[key][0],p.z-locations[key][1])}));

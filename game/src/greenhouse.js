@@ -581,10 +581,16 @@ export class Greenhouse {
       const c = gh.crop && CROPS[gh.crop];
       b.led.material.color.set(c && powered ? '#ff6ae0' : '#5a4a60'); b.light.intensity = c && powered ? 3 : 0;
       b.tube.scale.y = Math.max(0.05, gh.tank / tankMax); b.tube.position.y = 0.3 * b.tube.scale.y + .02;
+      const labelKey=`${gh.crop}|${Math.round(gh.grown * 100)}|${gh.ready}`;
+      if(labelKey!==b.labelKey){
+      b.labelKey=labelKey;
       b.sign.material.map?.dispose();
       b.sign.material.map = label([`BED ${i + 1}`, !c ? 'empty · plant seeds' : gh.ready ? `${c.name.split(' ').pop()} READY` : `${c.name.split(' ').pop()} ${Math.round(gh.grown * 100)}%`], gh.ready ? '#ffd27a' : '#7dffb2');
       b.sign.material.needsUpdate = true;
-      growPlants(b.plants, gh.crop, gh.grown, gh.ready);
+      }
+      // Water and power affect gauges/lights, not the plant geometry.
+      const plantKey=`${gh.crop}|${gh.grown.toFixed(2)}|${gh.ready}`;
+      if(plantKey!==b.plantKey){b.plantKey=plantKey;growPlants(b.plants, gh.crop, gh.grown, gh.ready);}
     });
   }
 

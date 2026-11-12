@@ -6,6 +6,7 @@ import {renewDeposits} from './builder-recipes.js';
 import { placeDeposits, ID_BASE } from './resource-zones.js';
 import { heightAt } from './world.js';
 import { loadModel } from './nasamodels.js';
+import { mergeStatic } from './static-merge.js';
 
 // Five real Mars minerals that Spirit found in Gusev Crater (the 'gypsum' key is sulfate salt; kept for old saves).
 export const ORES = {
@@ -255,7 +256,7 @@ export class Colony {
     this.deposits = [];
     const blocked = (x, z) => (x > 38 && x < 61 && z > -24 && z < -5) || (x > -38 && x < 24 && z > 15 && z < 54) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3);
     placeDeposits(heightAt, blocked).forEach(({ id, ore, x, z, zone }) => {
-      const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
+      const group = makeDeposit(ore, rng); mergeStatic(group, { exclude: [group.children[0], group.userData.spark] }); group.position.set(x, heightAt(x, z) - 0.15, z);
       const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
       group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);
       const stone=group.children[0],v=new THREE.Vector3();stone.updateMatrix();let support=Infinity;

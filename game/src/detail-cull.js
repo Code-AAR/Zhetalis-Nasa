@@ -19,6 +19,8 @@ export class DetailCull {
       if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && o.geometry) {
         if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
         if (o.geometry.boundingSphere && o.geometry.boundingSphere.radius < 30) this.list.push(o);
+        // Parts under ~20 cm across cast shadows too small to see, but each one is another draw in the shadow pass.
+        if (o.castShadow && !o.userData.keepShadow) { const e = o.matrixWorld.elements, s = Math.sqrt(Math.max(e[0] * e[0] + e[1] * e[1] + e[2] * e[2], e[4] * e[4] + e[5] * e[5] + e[6] * e[6], e[8] * e[8] + e[9] * e[9] + e[10] * e[10])); if (o.geometry.boundingSphere.radius * s < .2) o.castShadow = false; }
       }
       for (const c of o.children) walk(c);
     };

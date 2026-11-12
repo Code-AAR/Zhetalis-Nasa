@@ -5,6 +5,7 @@ import { layServiceCables, cableCrossings } from './cable-crossings.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createOpenLayout } from './exploration-layout.js';
 import { installHabitatAccess } from './access.js';
+import { mergeStatic } from './static-merge.js';
 import { loadModel } from './nasamodels.js';
 import { GREENHOUSE } from './colony.js';
 import { GH, heightAt } from './world.js';
@@ -154,6 +155,9 @@ export async function installSettlement(world){
   for(const m of hatchMaterials)finishes.push(regolithFinish(m));
   const domeMaterials=new Set();greenhouse.traverse(o=>{if(o.isMesh&&o.material?.color)domeMaterials.add(o.material);});
   for(const material of domeMaterials)finishes.push(regolithFinish(material));
+  // After the finishes are attached (they edit the shared materials): bake the static airlock parts - supports,
+  // rails, collars, gaskets, ramps, rings - into a few meshes. The hatches stay whole (collision and handles use them).
+  mergeStatic(access.group,{exclude:access.group.children.filter(o=>o.name==='Pressure airlock hatch')});
   const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=soilLevel>0;soilCourses.forEach((course,i)=>course.visible=i<soilLevel);finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};
   const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
   pack.position.set(53.4,heightAt(53.4,-17)+.45,-17);world.scene.add(pack);

@@ -28,7 +28,9 @@ export function makeTerrainChunks(heightAt,colourAt,darkAt=()=>0) {
   group.material=material; // shared material also supports team ground artwork
   const coarse=new Map(), loaded=new Map();let queue=[],last='';
   const segments=Math.ceil(SURFACE_DETAIL.segments/10);
-  function tile(ix,iz,n) {
+  // Built as a generator so a detailed tile can be spread over several frames (see update): a 64x64 tile samples the
+  // ground about 21,000 times, which used to freeze one frame for 30-80 ms every few metres of walking.
+  function* tileSteps(ix,iz,n) {
     const geo=new THREE.PlaneGeometry(CHUNK_SIZE,CHUNK_SIZE,n,n);geo.rotateX(-Math.PI/2);
     const pos=geo.attributes.position,uv=geo.attributes.uv,norm=geo.attributes.normal,colour=new Float32Array(pos.count*3),dark=new Float32Array(pos.count),c=new THREE.Color(),normal=new THREE.Vector3();
     const cx=-WORLD_HALF+(ix+.5)*CHUNK_SIZE,cz=-WORLD_HALF+(iz+.5)*CHUNK_SIZE;
@@ -37,6 +39,7 @@ export function makeTerrainChunks(heightAt,colourAt,darkAt=()=>0) {
       uv.setXY(i,(x+WORLD_HALF)/WORLD_EXTENT,(WORLD_HALF-z)/WORLD_EXTENT);
       normal.set(heightAt(x-.25,z)-heightAt(x+.25,z),.5,heightAt(x,z-.25)-heightAt(x,z+.25)).normalize();norm.setXYZ(i,normal.x,normal.y,normal.z);
       colourAt(x,z,y,c);colour.set([c.r,c.g,c.b],i*3);dark[i]=darkAt(x,z);
+      if((i&127)===127)yield;
     }
     geo.setAttribute('color',new THREE.BufferAttribute(colour,3));
     // Vertical edge skirts conceal gaps where coarse and detailed samples meet.
@@ -52,6 +55,8 @@ export function makeTerrainChunks(heightAt,colourAt,darkAt=()=>0) {
     geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(u,2));geo.setAttribute('normal',new THREE.Float32BufferAttribute(no,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(co,3));geo.setAttribute('aDark',new THREE.Float32BufferAttribute(dk,1));geo.setIndex(indices);geo.computeBoundingSphere();
     const mesh=new THREE.Mesh(geo,material);mesh.receiveShadow=true;mesh.name=`Terrain ${ix},${iz} (${n})`;return mesh;
   }
+  function tile(ix,iz,n){const steps=tileSteps(ix,iz,n);let r;do r=steps.next();while(!r.done);return r.value;}
+  const BUDGET_MS=4;let building=null,wanted=new Set();
   // Preserve the hill silhouette on Full; only phone Lite uses the coarse horizon.
   const horizonSegments=SURFACE_DETAIL.texture>=1024?24:4;
   for(let z=0;z<CHUNK_COUNT;z++)for(let x=0;x<CHUNK_COUNT;x++){const mesh=tile(x,z,horizonSegments);coarse.set(`${x},${z}`,mesh);group.add(mesh);}
@@ -61,13 +66,22 @@ export function makeTerrainChunks(heightAt,colourAt,darkAt=()=>0) {
   group.userData.update=(focus)=>{
     const plan=chunkPlan(focus.x,focus.z,WORLD_LIMIT),signature=plan.map(c=>c.key).join(';');
     if(signature!==last){
-      last=signature;const wanted=new Set(plan.map(c=>c.key));
+      last=signature;wanted=new Set(plan.map(c=>c.key));
       for(const [key,mesh] of loaded)if(!wanted.has(key)){group.remove(mesh);mesh.geometry.dispose();loaded.delete(key);coarse.get(key).visible=true;group.userData.revision++;}
-      queue=plan.filter(c=>!loaded.has(c.key));
+      queue=plan.filter(c=>!loaded.has(c.key)&&c.key!==building?.key);
     }
-    // At most one allocation per frame: never generate an entire ring in one hitch.
-    const next=queue.shift();if(next){const mesh=tile(next.x,next.z,segments);loaded.set(next.key,mesh);group.add(mesh);coarse.get(next.key).visible=false;group.userData.revision++;}
-    Object.assign(group.userData.stats,{loaded:loaded.size,queued:queue.length});
+    // One tile at a time, and only ~4 ms of building per frame; the coarse tile shows until the detailed one is done.
+    if(!building&&queue.length){const next=queue.shift();building={key:next.key,steps:tileSteps(next.x,next.z,segments)};}
+    if(building){
+      const until=performance.now()+BUDGET_MS;let r;
+      do r=building.steps.next();while(!r.done&&performance.now()<until);
+      if(r.done){
+        const mesh=r.value,key=building.key;building=null;
+        if(wanted.has(key)&&!loaded.has(key)){loaded.set(key,mesh);group.add(mesh);coarse.get(key).visible=false;group.userData.revision++;}
+        else mesh.geometry.dispose();   // walked away before it finished
+      }
+    }
+    Object.assign(group.userData.stats,{loaded:loaded.size,queued:queue.length+(building?1:0)});
   };
   group.userData.dispose=()=>{for(const m of [...coarse.values(),...loaded.values()])m.geometry.dispose();material.dispose();group.clear();};
   return group;
