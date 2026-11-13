@@ -10,6 +10,10 @@ The launcher serves only this folder at `http://127.0.0.1:8777/`.
 The new `Downloads/UNITY/game` browser build is merged into this game. See
 [INTEGRATION.md](INTEGRATION.md) for features, retained fixes and validation.
 
+## Co-op and sleeping (13 November 2026)
+
+Up to 4 players can share a mission with a room code (**Play together · co-op** on the title screen). Run `node server/coop-relay.mjs` and open `http://localhost:8790/`. The crew cabins are walk-in rooms: use a bunk at night (E) to skip to morning. In co-op the night is skipped when most of the crew is asleep or votes with N. See [COOP.md](COOP.md).
+
 ## Hands-on first base mission
 
 New Mars missions begin in first person (V switches view). Collect the landed kits at the locker, open the workbench and fit the three parts into their matching highlighted slots in order. At the remote power field, equip the pickaxe (1), clear four marked rocks, then place the three panels. Assemble and place the battery, select Solar OUT then Battery IN, and connect Battery OUT to Base IN. Use E, click, or touch Use; R or the Drop button releases a held part/cable without losing fitted parts.

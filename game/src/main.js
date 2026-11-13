@@ -67,6 +67,9 @@ import { initTouch, isTouch } from './touch.js';
 import { earthGlobe, moonGlobe } from './globe.js';
 import { Colony, newColony, ORES, TOOLS, CROPS, SHOP, GREENHOUSE, BAG, JUG_L, priceWords } from './colony.js';
 import { initMissionMenu } from './menu.js';
+import { Coop, CoopHud, openCoopDialog } from './coop.js';
+import { RemotePlayers } from './remote-players.js';
+import { nightVote, canSleepAt, morningClock } from './night-vote.js';
 import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
@@ -101,6 +104,10 @@ keepScreenEmojiFree();   // no emoji on the game screen (team rule)
 $('#map-btn').onclick = () => { modal({title:'Surface operations map',html:fieldMapHTML(world)+farmQuestHTML(colony?.s)}); mountFieldMap(world); };
 let colony, marsNow = null, monitorTipShown = false, toolbarKey = '', visorKey = '';
 let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you are in - the outpost (interior) or your lander's cabin
+// co-op (coop.js) and sleeping (bunks.js): see the "co-op and night skip" section near the end
+const coop = new Coop();
+let remote = null, coopHud = null, guestMission = false, sleepBunk = null, myVote = false, skipTimer = 0, sleepFade = 0, poseT = 0, shareT = 0, hudT = 0;
+const sharedSeen = new Map(), snapshotWaiting = new Set();
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
@@ -198,6 +205,11 @@ function showData() {
 // After a refresh, the title screen offers "Resume" to carry on from the same sol.
 const SAVE_KEY = 'zhetalis-unity-mars-save-v1';
 function saveGame() {
+  if (guestMission) return;   // co-op guests play the host's mission: never overwrite their own saved game with it
+  const data = saveData(); if (!data) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; } catch { return false; }
+}
+function saveData() {
   if (window.__resetting || (airlockRoom && room===airlockRoom)) return;
   if (state.phase !== 'mars' || !outpost || outpost.over || !world) return;
   const o = {};
@@ -210,7 +222,7 @@ function saveGame() {
       pickups: world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]), sev: [s.pos.x, s.pos.z, s.yaw, s.battery] },
     colony: colony?.s, surveys: [...(world.settlement?.surveys || [])], lookouts: [...(world.lookouts?.got || [])], map: world.mapState?.save(),
   };
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; } catch { return false; }
+  return data;
 }
 function readSave() {
   try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d?.v === 1 && DIFFICULTY[d.difficulty] ? d : null; } catch { return null; }
@@ -301,6 +313,8 @@ function buildWorld() {
   world = new World(renderer, F, () => {});
   world.renderer ??= renderer;   // cutscenes pre-build their shaders with it
   interior = new Interior(); capsule = new Capsule(); room = interior;
+  remote?.clear(); remote = new RemotePlayers(world, interior, interior.bunks);   // co-op crewmates (remote-players.js)
+  for (const p of coop.peers.values()) { remote.upsert(p.id, p.name, p.colour); if (p.pose) remote.pose(p.id, p.pose); }
   capsule.onStep = () => footstep(0, true);
   ghRoom = new Greenhouse(); interior.scene.position.set(-20.4,0,23);
   ghRoom.scene.add(interior.scene);
@@ -537,6 +551,7 @@ function goOutside() {
 }
 
 function stationAction(s) {
+  if(s.type==='bunk')return useBunk(s.bunk);
   if(s.type==='hab-note')return modal({ pause: false, title: s.title, html: typeof s.html==='function' ? s.html() : s.html });   // the hab's personal items and crewmates (hab-dressing.js, hab-crew.js)
   if(s.type==='airlock-control')return useAirlock();
   if(s.type==='suit-rack')return suitRack();
@@ -1103,6 +1118,8 @@ function endMission() {
 function pressKey(code) {
   if(world?.cinematic)return;
   if (state.phase !== 'mars' || isModalOpen()) return;
+  if (sleepBunk && ['KeyE','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(code)) { wake(); return; }
+  if (code === 'KeyN' && coop.active) { voteToSkip(); return; }
   if(airlockRoom&&room===airlockRoom){if(code==='KeyE')useAirlock();if(code==='KeyR')cancelAirlock();return;}
   if (code === 'KeyB') { openBuild(); return; }
   if (code === 'KeyX') { construction?.placeBattery(); return; }
@@ -1364,6 +1381,150 @@ devConsole({
 // Testing helper for the team: open the game with #debug in the address, then use
 // game.event('solar-storm-warning'), game.event('dust', {sols: 5}), game.outpost.parts = 50 ...
 if (location.hash === '#debug') window.game = { get eva(){return eva;},get airlock(){return airlockRoom;}, get construction(){return construction;}, mission: { objective:()=>marsObjective(outpost,colony.s), tick:updateMissionPower, target:missionTarget, log:openMissionLog }, get body() { return body; }, patches: () => openPatches(), get colony() { return colony; }, get outpost() { return outpost; }, get launch() { return launch; }, get world() { return world; }, get interior() { return interior; }, get capsule() { return capsule; }, goInShip: () => goInShip(), goInGreenhouse: (f = 'hab') => goInGreenhouse(f), get ghRoom() { return ghRoom; }, get renderer() { return renderer; }, get inside() { return inside; }, event: (type, extra = {}) => queue.push({ type, ...extra }), goInside: () => goInside(), station: t => stationAction({ type: t }), sound: soundDebug, phase: p => (solClock = p * TUNED.solSeconds), discover: (title = 'TEST SITE', eyebrow = 'SITE CONTACT', sub = '+5 science', accent = '#7fd4e8') => showDiscovery({ eyebrow, title, sub, accent }) };
+
+// ---------------- co-op and night skip ----------------
+// Co-op (coop.js, remote-players.js): everyone sends their astronaut's pose ten times a second; the host's pose also
+// carries the mission clock. Twice a second each game sends the parts of the shared outpost it changed (outpost
+// fields, crew stores and greenhouses, supply pods, surveys). Personal things stay personal: your suit air, hunger,
+// tool belt and ore bag. The host runs each new sol; guests take its results from the shared state.
+const SKIP_DELAY = 3, PERSONAL_COLONY = new Set(['belt', 'held', 'bag', 'jug', 'seenOre']), HOST_ONLY = new Set(['o.dose', 'o.chargeReserve', 'o.sol', 'o.nextSupply']);
+const clockText = h => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor(h % 1 * 60)).padStart(2, '0')}`;
+function localPose() {
+  const p = { v: myVote ? 1 : 0 };
+  if (!inside) {
+    if (world.driving) { p.w = 'drive'; p.rv = [world.sev.pos.x, world.sev.pos.z, world.sev.yaw]; }
+    else { const q = world.player.position; Object.assign(p, { w: 'out', x: q.x, y: q.y, z: q.z, ry: world.player.rotation.y, sp: Math.hypot(world.move.x, world.move.z), g: world.onGround ? 1 : 0, vy: world.vel.y, sw: world.toolSwing, cr: world.crouch || 0 }); }
+  } else if (room === interior || room === ghRoom) {
+    const gh = room === ghRoom, q = room.pos;   // greenhouse coordinates -> hab coordinates (the hab scene sits at -20.4, 23 inside it)
+    Object.assign(p, { w: 'hab', hx: gh ? q.x + 20.4 : q.x, hz: gh ? q.z - 23 : q.z, hy: room.yaw, sp: Math.hypot(room.vel?.x || 0, room.vel?.z || 0), sl: sleepBunk?.id || null });
+  } else p.w = 'ship';
+  return p;
+}
+function sharedParts() {
+  const parts = {};
+  for (const [k, v] of Object.entries(outpost)) if (!['d', 'facts', 'today'].includes(k)) parts['o.' + k] = v;
+  for (const [k, v] of Object.entries(colony.s)) if (!PERSONAL_COLONY.has(k)) parts['c.' + k] = v;
+  parts.pk = world.pickups.map(k => [k.kind, k.x, k.z, k.cargo || null]);
+  parts.sv = [...(world.settlement?.surveys || [])];
+  return parts;
+}
+function coopShare() {
+  const prime = !sharedSeen.size, out = {};
+  for (const [k, v] of Object.entries(sharedParts())) {
+    if (coop.guest && HOST_ONLY.has(k)) continue;
+    const j = JSON.stringify(v) ?? 'null';
+    if (sharedSeen.get(k) !== j) { sharedSeen.set(k, j); out[k] = v; }
+  }
+  if (!prime && Object.keys(out).length) coop.send('state', out);
+}
+function applyShared(patch) {
+  if (state.phase !== 'mars' || !outpost || !colony) return;
+  const changed = new Set();
+  for (const [k, v] of Object.entries(patch)) {
+    sharedSeen.set(k, JSON.stringify(v) ?? 'null'); changed.add(k);
+    if (k.startsWith('o.')) outpost[k.slice(2)] = v;
+    else if (k.startsWith('c.')) colony.s[k.slice(2)] = v;
+    else if (k === 'pk') { world.pickups.slice().forEach(p => world.removePickup(p)); v.forEach(([kind, x, z, cargo]) => { world.addPickup(kind, x, z); if (cargo) world.pickups.at(-1).cargo = cargo; }); }
+    else if (k === 'sv' && world.settlement) world.settlement.surveys = new Set(v);
+  }
+  const any = keys => keys.some(k => changed.has(k));
+  if ([...changed].some(k => k.startsWith('o.'))) outpost.today = outpost.forecast();
+  if (any(['o.powerStep', 'o.panels', 'o.chargerStep', 'o.baseConnected'])) syncPowerHardware();
+  if (changed.has('o.upgrades')) { world.setWall(outpost.upgrades.wall); world.setRegolith(outpost.upgrades.regolith); }
+  if (changed.has('o.clean')) { world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97; }
+  if (changed.has('o.dust')) world.setDust(!!outpost.dust);
+  if (any(['o.sol', 'o.relayDown', 'o.storm'])) world.setLink(outpost.today.link);
+  if (any(['c.mined', 'c.greenhouses'])) colony.restore();
+}
+function syncClock(sc, speed) {   // guests follow the host's sol clock
+  const S = TUNED.solSeconds; let d = sc - solClock;
+  if (sc < S && solClock < S && Math.abs(d) > S / 2) d -= Math.sign(d) * S;
+  if (Math.abs(d) > .75 || sc >= S) solClock = sc; else solClock += d * .2;
+  if (speed && speed !== state.speed) { state.speed = speed; $('#speed-btn').textContent = 'Speed ×' + speed; }
+}
+function coopTick(dt) {
+  if (!coop.active || state.phase !== 'mars' || !world) { coopHud?.showRoster(coop); return; }
+  const mine = localPose();
+  if ((poseT -= dt) <= 0) { poseT = .1; if (coop.isHost) { mine.sc = solClock; mine.spd = state.speed; } coop.send('pose', mine); }
+  if ((shareT -= dt) <= 0) { shareT = .5; coopShare(); }
+  if (coop.isHost && snapshotWaiting.size) { const d = saveData(); if (d) { for (const id of snapshotWaiting) coop.send('snapshot', d, id); snapshotWaiting.clear(); } }
+  // a crewmate driving the rover: it moves here too (unless you are the one driving)
+  for (const p of coop.peers.values()) if (p.pose?.w === 'drive' && p.pose.rv && !world.driving) {
+    const s = world.sev, [x, z, yaw] = p.pose.rv, k = 1 - Math.exp(-dt * 10);
+    s.pos.x += (x - s.pos.x) * k; s.pos.z += (z - s.pos.z) * k; s.yaw += Math.atan2(Math.sin(yaw - s.yaw), Math.cos(yaw - s.yaw)) * k; s.speed = 0;
+  }
+  if ((hudT -= dt) <= 0) { hudT = .25; coopHud?.showRoster(coop, mine); }
+}
+coop.on('peer-join', p => { remote?.upsert(p.id, p.name, p.colour); toast(`👩‍🚀 ${p.name} joined the mission (code ${coop.code}).`, 4000); });
+coop.on('peer-leave', (id, p) => { remote?.remove(id); if (p) toast(`${p.name} left the mission.`, 4000); });
+coop.on('host', id => { if (id === coop.id) toast('The host left. Your game now keeps the mission clock.', 5000); else toast(`${coop.peers.get(id)?.name || 'A crewmate'} is now hosting.`, 4000); });
+coop.on('closed', () => { remote?.clear(); coopHud?.showRoster(coop); toast('Lost the co-op connection. You can keep playing on your own.', 6000); });
+coop.on('pose', (from, p) => { remote?.pose(from, p); if (coop.guest && from === coop.hostId && p.sc != null && state.phase === 'mars') syncClock(p.sc, p.spd); });
+coop.on('state', (from, patch) => applyShared(patch));
+coop.on('hello', from => { if (!coop.isHost) return; const d = saveData(); if (d) coop.send('snapshot', d, from); else snapshotWaiting.add(from); });   // not landed yet: sent on arrival
+coop.on('skip', () => { if (state.phase === 'mars') morning(); });
+let guestReady = null;
+coop.on('snapshot', (from, d) => {
+  if (guestMission || !guestReady || state.phase === 'mars') return;
+  guestMission = true; guestReady(); guestReady = null;
+  d.world.player[0] += 1.4; d.world.player[1] += 1.4;   // land beside the host, not inside them
+  resume(d).then(() => toast(`👥 You joined the mission with code ${coop.code}. Your own saved game is untouched.`, 6000));
+});
+$('#coop-btn').onclick = () => openCoopDialog(coop, {
+  onHostStart: () => { sharedSeen.clear(); $('#start').onclick(); },
+  onJoined: (code, close, say) => { sharedSeen.clear(); guestReady = close; coop.send('hello', {}, coop.hostId); say('Joined! Waiting for the host to land on Mars…'); },
+});
+if (new URLSearchParams(location.search).get('join')) $('#coop-btn').click();
+
+// Sleeping (bunks.js): use a bunk at night. Alone, the night is skipped after a short rest. In co-op the night is
+// skipped when most of the crew is ready (asleep in a bunk, or awake and voting with N); everyone in a bunk always counts.
+function useBunk(id) {
+  const b = interior.bunks?.byId(id); if (!b) return;
+  const why = interior.bunks.blocked(b, new Map([...coop.peers].map(([pid, p]) => [pid, { name: p.name, sl: p.pose?.sl }])), coop.id);
+  if (why) return toast(why, 4500);
+  const ph = solClock / TUNED.solSeconds;
+  if (!canSleepAt(ph, TUNED.dayStart, TUNED.dayEnd)) return toast(`🛏 You can only sleep at night. Come back after sunset (about ${clockText((TUNED.dayEnd - .03) * 24)} on the hab clock).`, 5000);
+  sleepBunk = b; interior.sleepIn = b; document.exitPointerLock?.();
+  toast(coop.active ? '🛏 You lie down. The night is skipped when most of the crew is ready.' : '🛏 You lie down in the bunk. Good night!', 4000);
+}
+function wake() {
+  if (!sleepBunk) return;
+  const b = sleepBunk; sleepBunk = null; interior.sleepIn = null;
+  interior.pos.set(b.stand.x, 0, b.stand.z); interior.vel = { x: 0, z: 0 };
+  interior.yaw = Math.atan2(b.stand.x - b.body.pos.x, b.stand.z - b.body.pos.z); interior.pitch = 0;
+}
+function voteToSkip() {
+  if (!canSleepAt(solClock / TUNED.solSeconds, TUNED.dayStart, TUNED.dayEnd)) return toast('Voting to skip opens at night.', 3000);
+  myVote = !myVote; toast(myVote ? '✋ You voted to skip the night.' : 'You took back your vote.', 2500);
+}
+function morning() {   // the night is over for everyone: get up, clear the votes, fade in
+  wake(); myVote = false; skipTimer = 0; sleepFade = 1; coopHud?.setFade(1);
+  toast('☀️ Good morning! The crew slept through the night, and a new sol begins.', 5000);
+}
+function crew() {
+  const me = { name: coop.active ? coop.name : 'You', colour: coop.colour || '#4fc3f7', sleeping: !!sleepBunk, vote: myVote, me: true };
+  if (!coop.active) return [me];
+  return [me, ...[...coop.peers.values()].map(p => ({ name: p.name, colour: p.colour, sleeping: !!p.pose?.sl, vote: !!p.pose?.v }))];
+}
+function sleepTick(dt) {
+  coopHud ??= new CoopHud($('#hud'));
+  if (sleepBunk && !(inside && room === interior)) wake();
+  const ph = solClock / TUNED.solSeconds, night = canSleepAt(ph, TUNED.dayStart, TUNED.dayEnd);
+  if (!night) myVote = false;
+  const players = crew(), vote = nightVote(players), boss = !coop.active || coop.isHost;
+  const ready = night && vote.skip && (coop.active || !!sleepBunk);
+  skipTimer = ready ? skipTimer + dt : 0;
+  if (boss && ready && skipTimer >= (coop.active ? SKIP_DELAY : 2)) {
+    solClock = morningClock(ph, TUNED.solSeconds, TUNED.dayStart);   // past the end of the sol: the loop runs the new sol as usual
+    if (coop.active) coop.send('skip', {});
+    morning();
+  }
+  sleepFade = sleepBunk ? Math.min(.6, sleepFade + dt * .5) : Math.max(0, sleepFade - dt * .7);
+  coopHud.setFade(sleepFade);
+  const hint = sleepBunk ? keyWord('Press E or move to get up.', 'Tap Use to get up.') : keyWord(myVote ? 'Press N to take back your vote.' : 'Press N to vote to skip, or sleep in a bunk (Crew quarters).', 'Sleep in a bunk in the Crew quarters to vote.');
+  coopHud.showNight((coop.active && night) || !!sleepBunk, { players, vote, sleeping: !!sleepBunk, coop: coop.active, countdown: ready ? Math.max(0, (coop.active ? SKIP_DELAY : 2) - skipTimer) : null, voteHint: hint });
+}
+if (window.game) Object.defineProperties(window.game, { coop: { get: () => coop }, remote: { get: () => remote }, sleep: { value: { use: useBunk, wake, vote: voteToSkip, tick: sleepTick, get bunk() { return sleepBunk; }, get clock() { return solClock; } } } });
 let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
 setPatchContext(() => ({ sol: outpost?.sol }));
 setSoundGate(() => !isMuted());
@@ -1428,7 +1589,7 @@ renderer.setAnimationLoop(() => {
     return;
   }
   if (state.phase === 'mars' && world) {
-    const paused = isPaused() || !!world.cinematic || (airlockRoom && room===airlockRoom);
+    const paused = (isPaused() && !coop.active) || !!world.cinematic || (airlockRoom && room===airlockRoom);
     if(interior.rackedSuit)interior.rackedSuit.visible=!eva.equipped;
     setSound({ inside, suit, dust: !!outpost.dust, running: !!(!world.keys.ControlLeft && !world.keys.ControlRight && (world.keys.ShiftLeft || world.keys.ShiftRight)), habPod: inside && room === interior ? Math.round(interior.pos.x / 10.2) : -1, habTread: !!interior?.habTreadmill }); tickSound(dt);
     if (inside && room === interior) interior.setHabClock?.(solClock / TUNED.solSeconds, outpost.sol, outpost.crew);   // hab lights follow the sol; cabins follow crew size
@@ -1484,7 +1645,8 @@ renderer.setAnimationLoop(() => {
       if (world.driving && roverFrom && world.sev.pos.distanceTo(roverFrom) > 200) earn('driver');
       if (wasNight && !world.night) earn('night');   // the Sun is up again
       wasNight = world.night;
-      if (solClock >= TUNED.solSeconds) {
+      if (solClock >= TUNED.solSeconds && coop.guest) solClock -= TUNED.solSeconds;   // the host runs the new sol; its changes arrive as shared state
+      else if (solClock >= TUNED.solSeconds) {
         solClock -= TUNED.solSeconds;
         queue.push(...outpost.tick());
         const renewed=colony.renewOres(outpost.sol);if(renewed)toast(`${renewed} ore deposits replenished · new sol`,3500);
@@ -1508,6 +1670,8 @@ renderer.setAnimationLoop(() => {
     }
     if (!isModalOpen() && !world.cinematic && queue.length && !outpost.over) handle(queue.shift());   // wait until no pop-up is open, so events never replace one
     world.setTime(solClock / TUNED.solSeconds);
+    sleepTick(dt); coopTick(dt);
+    remote?.update(dt, inside ? (room === interior ? interior.sharedCamera : room.camera) : world.camera, inside && (room === interior || room === ghRoom));
     if (!sunsetShown && !inside && solClock / TUNED.solSeconds > 0.72 && solClock / TUNED.solSeconds < 0.78) {
       sunsetShown = true; earn('sunset'); toast('🌅 Look at the sunset - on Mars sunsets are BLUE! Fine dust lets blue light through. (NASA Curiosity photographed one in 2015.)', 7000);
     }

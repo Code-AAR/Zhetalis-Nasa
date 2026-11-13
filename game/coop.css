@@ -1,0 +1,37 @@
+/* Co-op: menu dialog, player roster, night vote panel and the sleep fade (src/coop.js) */
+#coop-dialog { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(6, 9, 14, .72); }
+#coop-dialog .coop-box { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #141b24; color: #eef2f6; border: 1px solid #2c3a4a; border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5); font-family: inherit; }
+#coop-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#coop-dialog h2 { margin: 0; font-size: 1.45rem; }
+#coop-dialog h3 { margin: 0 0 4px; font-size: 1.05rem; }
+#coop-dialog p { margin: 8px 0; line-height: 1.45; }
+#coop-dialog .coop-lead { color: #b9c6d3; }
+#coop-dialog .coop-close { min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: #cfd8e2; font-size: 1.6rem; cursor: pointer; }
+#coop-dialog .coop-field { display: grid; gap: 6px; margin: 14px 0; font-weight: 600; }
+#coop-dialog input { min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #3a4b5e; background: #0d131a; color: #fff; font: inherit; font-size: 1.05rem; }
+#coop-dialog #coop-code { width: 100%; box-sizing: border-box; letter-spacing: .3em; text-transform: uppercase; font-family: ui-monospace, Consolas, monospace; font-size: 1.3rem; text-align: center; margin: 6px 0; }
+#coop-dialog .coop-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#coop-dialog section { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid #2c3a4a; border-radius: 12px; background: #19222d; }
+#coop-dialog section p { flex: 1; margin: 0 0 8px; color: #b9c6d3; font-size: .92rem; }
+#coop-dialog button:not(.coop-close) { min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid #3f5468; background: #233142; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+#coop-dialog button.primary { background: #e2622f; border-color: #e2622f; }
+#coop-dialog button:disabled, #coop-dialog input:disabled { opacity: .55; cursor: default; }
+#coop-dialog .coop-status { min-height: 1.4em; color: #ffd27a; }
+#coop-dialog .coop-code { margin: 14px 0; text-align: center; font: 700 3rem/1 ui-monospace, Consolas, monospace; letter-spacing: .25em; color: #ffd27a; }
+#coop-dialog .coop-link code { word-break: break-all; color: #9fd8ff; }
+#coop-dialog .coop-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+@media (max-width: 520px) { #coop-dialog .coop-cols { grid-template-columns: 1fr; } }
+
+#coop-roster { position: fixed; top: 76px; right: 12px; z-index: 6; min-width: 190px; max-width: 240px; padding: 8px 10px; border-radius: 12px; background: rgba(10, 14, 20, .68); color: #eef2f6; font-size: .82rem; pointer-events: none; }
+#coop-roster .coop-head { margin-bottom: 4px; color: #b9c6d3; }
+#coop-roster .coop-head b { color: #ffd27a; letter-spacing: .12em; font-family: ui-monospace, Consolas, monospace; }
+#coop-roster ul, #coop-night ul { list-style: none; margin: 0; padding: 0; }
+#coop-roster li { display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: center; padding: 2px 0; }
+#coop-roster li small { grid-column: 2; color: #9fb0c0; }
+#coop-roster i, #coop-night i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+
+#coop-night { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 7; width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 14px; background: rgba(16, 22, 48, .84); color: #eef2f6; border: 1px solid #3a4a8a; display: grid; gap: 6px; font-size: .92rem; pointer-events: none; }
+#coop-night li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+#coop-night li span { margin-left: auto; color: #cbd5ff; }
+#coop-night > span { color: #cbd5ff; }
+#sleep-fade { position: fixed; inset: 0; z-index: 4; background: #05070d; opacity: 0; pointer-events: none; transition: opacity .25s linear; }

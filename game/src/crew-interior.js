@@ -1,4 +1,5 @@
 import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
+import { Bunks } from './bunks.js';
 // Reuse the existing working stations inside six linked pressure modules.
 import * as THREE from 'three';
 import { Interior } from './interior.js';
@@ -68,6 +69,7 @@ export class CrewInterior extends Interior {
     this.stations.push({type:'suit-rack',label:'store / wear EVA suit',x:-2.7,z:0});
     rack.updateWorldMatrix(true,true);this.obstacles??=[];this.obstacles.push(new THREE.Box3().setFromObject(rack));
     dressHab(this);   // lived-in fit-out: cabins, wardroom, racks, circadian lighting (hab-dressing.js)
+    this.bunks=new Bunks(this);   // walk-in cabins and bunks to sleep in (bunks.js)
     this.enter();
   }
   enter(){this.pos.set(0,0,1.25);this.yaw=Math.PI;this.pitch=0;this.vel={x:0,z:0};}
@@ -94,8 +96,10 @@ export class CrewInterior extends Interior {
     // crewmates are solid too (only blocks moving closer, so you can never get stuck inside someone)
     if(this.crewBodies?.some(p=>{if(!p.f.root.visible)return false;const q=p.f.root.position,d=Math.hypot(q.x-x,q.z-z);return d<.5&&d<Math.hypot(q.x-this.pos.x,q.z-this.pos.z);}))return false;
     if(this.obstacles?.some(b=>x>b.min.x-.18 && x<b.max.x+.18 && z>b.min.z-.18 && z<b.max.z+.18))return false;
-    return (Math.abs(x-SPACING*2)<1.12 && z>=-5 && z<0)|| (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean);}
+    return (Math.abs(x-SPACING*2)<1.12 && z>=-5 && z<0)|| (x>=0&&x<=SPACING*5&&Math.abs(z)<1.25)||Array.from({length:6},(_,i)=>Math.hypot(x-i*SPACING,z)<3.65).some(Boolean)||!!this.bunks?.walkable(x,z,this.pos);}
   update(dt,keys,active){
+    // lying in a bunk (bunks.js): the camera rests on the pillow until you get up
+    if(this.sleepIn){this.vel={x:0,z:0};this.camera.position.copy(this.sleepIn.eye);this.camera.lookAt(this.sleepIn.look);return;}
     const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     this.vel??={x:0,z:0};let x=0,z=0;
     if(active){const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);x=Math.sin(this.yaw)*f-Math.cos(this.yaw)*s;z=Math.cos(this.yaw)*f+Math.sin(this.yaw)*s;const len=Math.hypot(x,z);if(len){const speed=footSpeed(keys,2.6,3.5);x=x/len*speed;z=z/len*speed;}}

@@ -1098,7 +1098,8 @@ export class World {
     const now = this.shadowNow ??= new Float64Array(12);
     now[0] = s.x; now[1] = s.y; now[2] = s.z; now[3] = p.x; now[4] = p.y; now[5] = p.z;
     now[6] = q.y; now[7] = q.w; now[8] = r.x; now[9] = r.y; now[10] = r.z; now[11] = this.sev.yaw;
-    let moved = this.toolSwing >= 0 || !!this.cinematic || (this.rover?.waking > 0);
+    let moved = this.toolSwing >= 0 || !!this.cinematic || (this.rover?.waking > 0) || !!this.remoteShadowDirty;   // co-op crewmates moving (remote-players.js)
+    this.remoteShadowDirty = false;
     for (let i = 0; i < 12; i++) if (Math.abs(now[i] - v[i]) > 1e-4) { moved = true; v[i] = now[i]; }
     if (moved) { this.shadowWait = .1; return true; }
     if ((this.shadowWait = (this.shadowWait ?? 0) - dt) <= 0) { this.shadowWait = .1; return true; }

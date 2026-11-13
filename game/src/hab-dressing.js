@@ -349,8 +349,10 @@ function cabin(person) {
   if (person.id === 'amara' || person.id === 'freya') sleepDoor.add(pic(.22, .17, kidDrawing('MAMMA!', '#2d5fa8'), .24, 1.32, .07));   // her kids' drawing taped to the door
   else if (person.id === 'mateo') sleepDoor.add(pic(.12, .12, sticky('Knock!\nloud\nguitar', '#9fe0b0'), .26, 1.3, .07));
   else if (person.id === 'meilin') sleepDoor.add(pic(.16, .12, postcard('Singapore', 'skyline'), .26, 1.3, .07));
-  stow.add(doorLeaf('#8e979b', 'spare'));
-  stow.add(pic(.5, .1, label('SPARE · STOWAGE', { w: 512, h: 100, bg: '#5a6168', fg: '#fff', font: 'bold 44px system-ui' }), 0, 1.76, .07));
+  // spare cabins stand open too (any crewmate can sleep in the spare bunk): pocket door slid away, plate on the header
+  stow.add(box(.06, 2.2, .05, mat('doorLeaf', '#d9dcd8', { r: .5 }), -.52, 1.12, .03)); stow.add(box(.065, .12, .055, mat('doorspare', '#8e979b', { r: .6 }), -.52, 1.0, .03));
+  stow.add(box(.02, .3, .03, mat('pDark', '#2f353b'), -.48, 1.1, .05));
+  stow.add(pic(.5, .1, label('SPARE · STOWAGE', { w: 512, h: 100, bg: '#5a6168', fg: '#fff', font: 'bold 44px system-ui' }), 0, 2.62, .08));
   g.add(lived); g.add(stow); lived.userData.noBake = stow.userData.noBake = true;
   // bunk (bed on a storage plinth) along the left wall
   const bed = new THREE.Group(); bed.position.set(-W / 2 + .45, 0, -D / 2 - .05); g.add(bed);
@@ -371,9 +373,12 @@ function cabin(person) {
   g.add(rbox(.6, .3, .02, .04, mat('cabinLED', '#fffaf0', { e: '#fff1dc', ei: .9 }), 0, H - .015, -D / 2).rotateX(Math.PI / 2));
   g.add(rbox(.32, .22, .03, .02, mat('vent', '#9aa1a7', { r: .5, m: .3 }), 0, H - .25, -D + .03));
   g.add(pic(.28, .18, tex(128, 96, (gg, w, h) => { gg.fillStyle = '#c3c8cc'; gg.fillRect(0, 0, w, h); gg.fillStyle = '#3a4046'; for (let y = 10; y < h - 6; y += 9) gg.fillRect(8, y, w - 16, 5); }), 0, H - .25, -D + .05));
-  // a spare cabin is used for stowage: bags strapped on the bunk and floor
-  for (let i = 0; i < 3; i++) stow.add(ctb(.6, .35, .4, `SPARE-${i + 1}`).translateX(-W / 2 + .45).translateY(.58 + i * .36).translateZ(-.7 - i * .3));
-  stow.add(ctb(.5, .5, .45, 'H2O-RSV').translateX(.3).translateZ(-D + .5));
+  // a spare cabin is used for stowage: bags strapped on the desk and shelf, the water reserve under the desk (the bunk stays free)
+  stow.add(ctb(.42, .3, .6, 'SPARE-1').translateX(W / 2 - .27).translateY(.78).translateZ(-D + .55));
+  stow.add(ctb(.42, .28, .6, 'SPARE-2').translateX(W / 2 - .27).translateY(1.645).translateZ(-D + .55));
+  stow.add(ctb(.45, .45, .45, 'H2O-RSV').translateX(W / 2 - .3).translateZ(-D + .45));
+  stow.add(rbox(.5, .1, .3, .05, mat('pillow', '#f2f2ee', { r: 1 }), -W / 2 + .45, .64, -D + .3));
+  stow.add(rbox(.78, .06, 1.3, .03, mat('duvetSpare', '#a9b4bf', { r: 1 }), -W / 2 + .45, .615, -D / 2 + .3));
   // bedding: pillow, sleeping bag/duvet, and (for some) a hand-made blanket
   lived.add(rbox(.5, .1, .3, .05, mat('pillow', '#f2f2ee', { r: 1 }), -W / 2 + .45, .64, -D + .3));
   const bag = rbox(.78, .07, 1.3, .03, mat('duvet' + person.id, person.id === 'amara' ? '#3d5a80' : person.id === 'meilin' ? '#8fb3a6' : person.id === 'mateo' ? '#5a5f69' : '#c7d0db', { r: 1 }), -W / 2 + .45, .62, -D / 2 + .3); lived.add(bag);
@@ -612,8 +617,9 @@ export function dressHab(I) {
     const P = pods[3];
     cabinSlots.forEach((j, k) => {
       const a = slotA(j), person = CREW[k];
-      const c = cabin(person); c.group.userData.noBake = true; onWall(3, a, R - .02, c.group); P.add(c.group);
-      cabins.push({ person, lived: c.lived, spare: c.stow, openDoor: c.openDoor, sleepDoor: c.sleepDoor, group: c.group });
+      const c = cabin(person); c.group.userData.noBake = true; c.group.userData.walk = true; onWall(3, a, R - .02, c.group); P.add(c.group);   // walk-in room: its floor is mapped in bunks.js, not one solid box
+      c.group.updateMatrix();   // remember where the cabin stands: baking the pod later flattens this transform (bunks.js needs it)
+      cabins.push({ person, lived: c.lived, spare: c.stow, openDoor: c.openDoor, sleepDoor: c.sleepDoor, group: c.group, frame: c.group.matrix.clone() });
       if (person.id !== 'you') spots['bed-' + person.id] = { group: c.group, local: new THREE.Vector3(-.5, .71, -.21), realLocal: new THREE.Vector3(-.5, 0, -1.2), pose: 'sleep' };
     });
     // hygiene stall (CHAPEA puts one near the quarters and one near the airlock work area) with towels in crew colours
