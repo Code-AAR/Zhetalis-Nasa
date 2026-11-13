@@ -7,5 +7,8 @@ assert.equal(tutorialLessons(o,s).filter(x=>x.done).length,2);
 const saved=JSON.parse(JSON.stringify(s));assert.equal(tutorialLessons(o,saved)[1].done,true);
 assert.match(questHelp({id:'base'}),/OUT socket/);
 assert.match(questHelp({target:'build-ore'}),/pickaxe/);
-assert.equal(tutorialLessons({powerStep:6,baseConnected:true},{buildHistory:{battery:1}})[6].done,true);
+assert.equal(tutorialLessons({powerStep:6,baseConnected:true},{buildHistory:{battery:1}}).find(l=>l.title==='Build an expansion').done,true);
 console.log('Tutorial action tracking, save persistence and contextual instructions passed.');
+
+assert.equal(tutorialLessons({powerStep:5},{}).find(l=>l.title==='Connect solar to battery').done,false);
+assert.equal(tutorialLessons({powerStep:6,baseConnected:true,roverCharged:true},{farmQuest:{rewarded:true}}).filter(l=>['Power the base','Charge the rover','Grow your first meal'].includes(l.title)).every(l=>l.done),true);

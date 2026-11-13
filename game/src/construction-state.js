@@ -13,3 +13,28 @@ export function firstMissionReport(o,c){return [
 ];}
 
 export function circuitConnected(o,index){return index===0?o.powerStep>=6:index===1?!!o.baseConnected:index===2?o.chargerStep>=3:false;}
+
+// Shared by world highlights, interaction feedback and navigation.
+export const SOCKET_LABELS={'solar-out':'Solar array OUT','battery-in':'Battery controller IN','battery-out':'Battery protected OUT','base-in':'Base IN','base-out':'Base charger OUT','charger-in':'Rover charger IN'};
+export function socketPartner(id){return CIRCUITS.find(pair=>pair.includes(id))?.find(other=>other!==id)||null;}
+export function circuitRequirement(o,index){
+ if(index===0)return 'Assemble and place the solar panels and battery first.';
+ if(index===1)return 'Connect Solar array OUT to Battery controller IN first.';
+ if(index===2)return !o.baseConnected?'Connect Battery protected OUT to Base IN first.':o.chargerStep<1?'Assemble the rover charger at the workbench first.':'Place the charging post at the parking bay first.';
+ return 'Choose a marked power socket.';
+}
+export function socketFeedback(o,id,held=null){
+ const index=CIRCUITS.findIndex(pair=>pair.includes(id));
+ if(held&&held!==id&&socketPartner(held)!==id)return `Wrong socket. Take this cable to ${SOCKET_LABELS[socketPartner(held)]}. R / Drop cancels.`;
+ if(circuitConnected(o,index))return `${SOCKET_LABELS[id]} is already connected.`;
+ if(!circuitReady(o,index))return circuitRequirement(o,index);
+ if(held===id)return 'E / Use to release this cable.';
+ return held?`E / Use to connect ${SOCKET_LABELS[id]}.`:`E / Use to pick up cable. Next: ${SOCKET_LABELS[socketPartner(id)]}.`;
+}
+export function nextWiringSocket(o,kind,held=null){
+ if(held)return socketPartner(held);
+ if(kind==='power'&&o.powerStep===5)return 'solar-out';
+ if(kind==='base'&&!o.baseConnected&&o.powerStep>=6)return 'battery-out';
+ if(kind==='charger'&&o.chargerStep===2&&o.baseConnected)return 'base-out';
+ return null;
+}

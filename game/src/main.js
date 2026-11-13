@@ -5,7 +5,7 @@ let eva={equipped:true,checked:true},airlockRoom=null,airlockFinish=null,airlock
 import {recordLesson,tutorialLessons,questHelp} from './player-tutorial.js';
 import {RECIPES,builderQuest} from './builder-recipes.js';
 import { Construction } from './construction.js';
-import { firstMissionReport } from './construction-state.js';
+import { firstMissionReport, nextWiringSocket } from './construction-state.js';
 import { zhetela, finishZhetelaStep, zhetelaPortraitHTML } from './zhetela.js';
 const suitGuideStep = Symbol('EVA suit checks');
 let construction;
@@ -1566,9 +1566,10 @@ function activeMissionObjective(){
 }
 function missionTarget(kind){
   const m=world?.settlement;if(!m)return null;
+  const socketId=nextWiringSocket(outpost,kind,construction?.wire);const socket=construction?.sockets.find(p=>p.userData.id===socketId);if(socket)return socket.position;
   if(['workbench','greenhouse','locker','water','console','safety-shelter','monitor'].includes(kind))return null; // The objective is the indoor station, never the stairs.
   if(kind==='ice'||kind==='seed-pod')return world.pickups.filter(p=>kind==='ice'?p.kind==='ice':p.kind==='pod'&&p.cargo?.seeds).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
-  if(construction?.wire){const destination={'solar-out':'battery-in','battery-in':'solar-out','battery-out':'base-in','base-in':'battery-out','base-out':'charger-in','charger-in':'base-out'}[construction.wire];const socket=construction.sockets.find(p=>p.userData.id===destination);if(socket)return socket.position;}
+
   if(kind==='build-ore'){const ore=builderQuest(outpost,colony.s)?.ore;return colony.deposits.filter(d=>d.ore===ore&&d.group.parent).sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;}
   if(kind==='build-parts')return world.pickups.filter(p=>p.kind==='pod'||p.kind==='parts').sort((a,b)=>Math.hypot(a.x-world.player.position.x,a.z-world.player.position.z)-Math.hypot(b.x-world.player.position.x,b.z-world.player.position.z))[0]||null;
   if(kind==='power')return outpost.powerStep===4?m.pack.position:{x:47,z:-17};
