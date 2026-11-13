@@ -11,7 +11,7 @@ test('branding policy hides isolated NASA decals, preserving hull and ESA materi
  assert.deepEqual(nodes.map(n=>n.material.visible),[false,false,true,true,true,true]);
 });
 test('NASA geometry and texture bytes survive GLB packaging unchanged',async()=>{
- const base=new URL('../assets/nasa/orion/',import.meta.url);
+ const base=new URL('../../assets/nasa/orion/',import.meta.url);
  const [bytes,sourceBytes,manifestBytes]=await Promise.all(['orion-eyes.glb','source.gltf.json','source-manifest.json'].map(f=>readFile(new URL(f,base))));
  const source=JSON.parse(sourceBytes),manifest=JSON.parse(manifestBytes);
  assert.equal(bytes.length,ORION_SOURCE.bytes);assert.equal(hash(bytes),manifest.output.sha256);

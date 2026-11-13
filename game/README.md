@@ -121,7 +121,7 @@ Choose **Explore the Moon** from the Mars title, or open `moon/`. Artemis I and 
 The Moon uses 1.62 m/s² gravity and no wind. Dust follows ballistic paths. Its five-minute game cycle represents a 29.53-Earth-day lunar day. NASA LRO/LOLA elevation informs the distant horizon; local traversable craters are procedural. See `moon/README.md` for data provenance, controls and tests. Settings and the information library are shared across both destinations.
 
 
-Auto graphics now uses full quality on computers/tablets and phone-only Lite. A narrow desktop window still stays full quality. Choose Full quality in Settings to override Lite on a phone. The Moon flyby uses NASA LRO topographic geometry and an 8K texture (unchanged original for full quality), plus NASA Orion capsule geometry. Sources: [NASA Moon model](https://svs.gsfc.nasa.gov/14959/) and [NASA Orion capsule](https://science.nasa.gov/3d-resources/orion-capsule/). See moon/assets/nasa/MODELS.md for original and Lite asset details.
+Auto graphics now uses full quality on computers/tablets and phone-only Lite. A narrow desktop window still stays full quality. Choose Full quality in Settings to override Lite on a phone. The Moon flyby uses NASA LRO topographic geometry and an 8K texture (unchanged original for full quality), plus NASA Orion capsule geometry. Sources: [NASA Moon model](https://svs.gsfc.nasa.gov/14959/) and [NASA Orion capsule](https://science.nasa.gov/3d-resources/orion-capsule/). See assets/nasa/MODELS.md for original and Lite asset details.
 
 ## Builder recipes and renewable ore
 

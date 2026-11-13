@@ -1,6 +1,6 @@
 # Mission model integration
 
-- Artemis I/II flybys and the Moon-orbit briefing load the NASA/JPL Eyes Orion asset on demand. This is the Artemis II visualization model, used as a visual proxy for Artemis I; it is not a Mars transit spacecraft. See `moon/assets/nasa/orion/source-manifest.json` for exact inputs and hashes.
+- Artemis I/II flybys and the Moon-orbit briefing load the NASA/JPL Eyes Orion asset on demand. This is the Artemis II visualization model, used as a visual proxy for Artemis I; it is not a Mars transit spacecraft. See `assets/nasa/orion/source-manifest.json` for exact inputs and hashes.
 - Lunar survey & history now offers **Fly Apollo mission**: the supplied Saturn V and NASA Apollo Lunar Module in a 38-second historical illustration. Launch, a labelled time jump and powered lunar descent are shown. Staging, docking and the multi-day journey are omitted, not claimed as simulated. Saturn V remains the unchanged Stanley Creative CC BY-ND 4.0 asset, not a NASA-authored model.
 - The Moon surface training lander and lunar briefing share a detailed white HLS-inspired concept. Elevator, hatch, feet and existing interaction coordinates remain compatible.
 - Mars landing uses the corresponding stainless/heat-shield concept with four animated flaps, six engine bells and landing legs. No parachute is shown. The generic Mars transit habitat remains an explicitly illustrative future vehicle.

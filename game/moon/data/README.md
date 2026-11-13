@@ -72,7 +72,7 @@ python game/moon/tools/fetch-regional-terrain.py --out game/moon/data
 python game/moon/tools/fetch-apollo-sample.py --out /tmp/apollo-sample
 ```
 
-For the Apollo result, put the GLB in `game/moon/assets/nasa` and its provenance
+For the Apollo result, put the GLB in `game/assets/nasa` and its provenance
 JSON in `game/moon/data`. The generator does not update runtime files itself.
 The DEM tool uses HTTP byte ranges rather than downloading the 3.3 GB mosaic;
 it rejects nonfinite source windows instead of filling gaps.

@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const base = 'https://eyes.nasa.gov/assets/static/models/sc_artemis/';
-const out = new URL('../assets/nasa/orion/', import.meta.url);
+const out = new URL('../../assets/nasa/orion/', import.meta.url);
 await mkdir(out, {recursive:true});
 const manifest = { source:'https://eyes.nasa.gov/apps/solar-system/#/sc_artemis_2', retrieved:new Date().toISOString(), files:[] };
 async function download(url) {

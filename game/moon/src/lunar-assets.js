@@ -185,10 +185,10 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
         current.mission=createApolloMission({THREE,scene:current.scene,camera:current.camera,renderer:current.renderer,reducedMotion:reduce,
           disposeTree:disposeExhibit,
           loadModel:async(id,signal)=>{
-            const item=LUNAR_EXHIBITS.find(x=>x.id===id),url=new URL(`../assets/nasa/${item.file}`,import.meta.url);
+            const item=LUNAR_EXHIBITS.find(x=>x.id===id),url=new URL(`../../assets/nasa/${item.file}`,import.meta.url);
             const response=await fetch(url,{signal});if(!response.ok)throw new Error(`HTTP ${response.status}`);
             const bytes=await response.arrayBuffer();signal.throwIfAborted();
-            const draco=new DRACOLoader().setDecoderPath(new URL('../assets/nasa/draco/',import.meta.url).href).setWorkerLimit(1);
+            const draco=new DRACOLoader().setDecoderPath(new URL('../../assets/nasa/draco/',import.meta.url).href).setWorkerLimit(1);
             try{return (await abortableParse(new GLTFLoader().setDRACOLoader(draco).parseAsync(bytes,new URL('.',url).href),signal)).scene;}
             finally{draco.dispose();}
           },
@@ -221,13 +221,13 @@ export function mountLunarExhibit(host = document.querySelector('#menu .menu-row
       dialog.querySelector('[data-tools]').hidden = true; draw();
       const timer = setTimeout(() => controller.abort(), 45000);
       try {
-        const url = new URL(`../assets/nasa/${item.file}`, import.meta.url);
+        const url = new URL(`../../assets/nasa/${item.file}`, import.meta.url);
         const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const bytes = await response.arrayBuffer();
         if (session !== current) return;
         controller.signal.throwIfAborted();
-        const draco = new DRACOLoader().setDecoderPath(new URL('../assets/nasa/draco/', import.meta.url).href).setWorkerLimit(1);
+        const draco = new DRACOLoader().setDecoderPath(new URL('../../assets/nasa/draco/', import.meta.url).href).setWorkerLimit(1);
         let gltf;
         try { gltf = await abortableParse(new GLTFLoader().setDRACOLoader(draco).parseAsync(bytes, new URL('.', url).href), controller.signal); }
         finally { draco.dispose(); }

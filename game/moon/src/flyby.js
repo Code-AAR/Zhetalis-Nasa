@@ -47,7 +47,7 @@ export class Flyby {
     let choice; try { choice = new URLSearchParams(location.search).get('graphics') || localStorage.getItem('mars-graphics'); } catch {}
     const lite = effectiveQuality(choice) === 'low';
     this.moonModelReady = import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) =>
-      new GLTFLoader().loadAsync(new URL(`../assets/nasa/moon-lro${lite ? '-lite' : ''}.glb`, import.meta.url).href)
+      new GLTFLoader().loadAsync(new URL(`../../assets/nasa/moon-lro${lite ? '-lite' : ''}.glb`, import.meta.url).href)
     ).then(gltf => {
       const model = gltf.scene, box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());

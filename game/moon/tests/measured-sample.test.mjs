@@ -31,7 +31,7 @@ function reference(x,z){const out=[],r=120,S=WORLD.chunk;for(let iz=0;iz<CHUNKS_
   if(dx*dx+dz*dz<=r*r)out.push({x:ix,z:iz,key:ix+','+iz,d:(left+40-x)**2+(top+40-z)**2});
 }return out.sort((a,b)=>a.d-b.d||a.z-b.z||a.x-b.x).slice(0,16);}
 for(let z=-480;z<=480;z+=20)for(let x=-480;x<=480;x+=20)assert.deepEqual(chunkPlan(x,z,'map'),reference(x,z));
-const sample=JSON.parse(read('../data/apollo-10017-15.json')),glb=read('../assets/nasa/apollo-10017-15.glb');
+const sample=JSON.parse(read('../data/apollo-10017-15.json')),glb=read('../../assets/nasa/apollo-10017-15.glb');
 assert.equal(hash(glb),sample.glbSha256);assert.equal(glb.readUInt32LE(0),0x46546c67);assert.equal(glb.readUInt32LE(8),glb.length);
 const n=glb.readUInt32LE(12),gltf=JSON.parse(glb.subarray(20,20+n)),prim=gltf.meshes[0].primitives[0];
 assert.equal(gltf.accessors[prim.indices].count,600000);assert.equal(sample.triangles,200000);

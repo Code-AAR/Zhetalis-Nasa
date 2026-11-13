@@ -2,7 +2,7 @@
 export const ORION_SOURCE = Object.freeze({
   name: 'Orion — NASA/JPL Eyes on the Solar System',
   url: 'https://eyes.nasa.gov/apps/solar-system/#/sc_artemis_2',
-  asset: new URL('../assets/nasa/orion/orion-eyes.glb', import.meta.url).href,
+  asset: new URL('../../assets/nasa/orion/orion-eyes.glb', import.meta.url).href,
   bytes: 24336596,
   note: 'NASA Artemis II visualization model; also used as a visual proxy for Artemis I. Not a Mars transit craft or engineering/trajectory model.',
 });
@@ -62,8 +62,8 @@ export async function loadNasaOrion(renderer,{signal,timeoutMs=45000}={}) {
       import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/DRACOLoader.js'),import('three/addons/loaders/KTX2Loader.js'),
     ]);
     controller.signal.throwIfAborted();
-    draco=new DRACOLoader().setDecoderPath(new URL('../assets/nasa/draco/',import.meta.url).href).setWorkerLimit(1);
-    ktx2=new KTX2Loader().setTranscoderPath(new URL('../assets/nasa/orion/basis/',import.meta.url).href).setWorkerLimit(1).detectSupport(renderer);
+    draco=new DRACOLoader().setDecoderPath(new URL('../../assets/nasa/draco/',import.meta.url).href).setWorkerLimit(1);
+    ktx2=new KTX2Loader().setTranscoderPath(new URL('../../assets/nasa/orion/basis/',import.meta.url).href).setWorkerLimit(1).detectSupport(renderer);
     try {
       const gltf=await new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2).parseAsync(bytes,'');
       gltf.scene.name=ORION_SOURCE.name;gltf.scene.userData.source=ORION_SOURCE;

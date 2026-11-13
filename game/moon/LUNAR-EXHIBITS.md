@@ -29,7 +29,7 @@ b9547bc7c8c37c44675a80c3c3e27b647a9ff1293cf40030ef36f806b9c616b1  lro-orbiter.gl
 2122e5618e3cf5820b81eb7f1e26e978e2943c7ef4cd39f189cdf762749c24db  saturn-v-history.glb
 ```
 
-`tools/fetch-lunar-exhibits.mjs` records the exact official download URLs and restores the two NASA files plus Draco runtime binaries from pinned Three.js 0.160.0 distribution URLs. It validates GLB headers, standalone buffers/images and supported required extensions before writing. `--verify` checks the two packaged NASA files without downloading. Saturn V is local and intentionally not automatically downloaded. Draco files are Google Draco, Apache-2.0; upstream license is included in `assets/nasa/draco/LICENSE` (https://github.com/google/draco/blob/1.5.6/LICENSE). Keep the license when regenerating runtime files.
+`tools/fetch-lunar-exhibits.mjs` records the exact official download URLs and restores the two NASA files plus Draco runtime binaries from pinned Three.js 0.160.0 distribution URLs. It validates GLB headers, standalone buffers/images and supported required extensions before writing. `--verify` checks the two packaged NASA files without downloading. Saturn V is local and intentionally not automatically downloaded. Draco files are Google Draco, Apache-2.0; upstream license is included in `../assets/nasa/draco/LICENSE` (https://github.com/google/draco/blob/1.5.6/LICENSE). Keep the license when regenerating runtime files.
 
 ## Terrain provenance in main.js
 

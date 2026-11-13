@@ -20,7 +20,7 @@ Desktop and phone-sized browser layouts have been checked. Physical-phone perfor
 
 ## Full quality and phone Lite
 
-Auto detects phones using browser mobile hints, user agent, touch input and physical screen dimensions. A small desktop window is not classified as a phone; tablets use full quality. Settings → Display & world allows a phone to select Full quality. Full uses the unchanged NASA LRO topographic GLB (81.5 MB, 2,021,340 vertices, original 8192×4096 texture); phone Lite uses a separate 2.37 MB derivative. NASA's detailed Orion capsule replaces the simple capsule mesh. Source and adaptation notes are in assets/nasa/MODELS.md.
+Auto detects phones using browser mobile hints, user agent, touch input and physical screen dimensions. A small desktop window is not classified as a phone; tablets use full quality. Settings → Display & world allows a phone to select Full quality. Full uses the unchanged NASA LRO topographic GLB (81.5 MB, 2,021,340 vertices, original 8192×4096 texture); phone Lite uses a separate 2.37 MB derivative. NASA's detailed Orion capsule replaces the simple capsule mesh. Source and adaptation notes are in ../assets/nasa/MODELS.md.
 
 Walking is 2 m/s and Shift sprint is 4 m/s. A jump launches at 2.9 m/s with real 1.62 m/s² gravity, rising approximately 2.6 m on level ground. Those movement speeds are tuned game choices, not measured spacesuit performance. Lunar dust particles are 89% smaller in diameter and remain ballistic.
 

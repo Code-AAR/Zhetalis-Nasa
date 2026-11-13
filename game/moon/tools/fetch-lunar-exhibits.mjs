@@ -2,7 +2,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-const destination = new URL('../assets/nasa/', import.meta.url);
+const destination = new URL('../../assets/nasa/', import.meta.url);
 const models = [
   ['lro-orbiter.glb', 'https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/model/lunar-reconnaissance-orbiter-%28a%29/Lunar%20Reconnaissance%20Orbiter%20%28A%29.glb'],
   ['apollo-lunar-module.glb', 'https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/model/apollo-lunar-module/Apollo%20Lunar%20Module.glb'],

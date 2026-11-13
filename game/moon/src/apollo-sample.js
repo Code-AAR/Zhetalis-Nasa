@@ -43,7 +43,7 @@ export function createApolloSample(scene) {
       const loader=new GLTFLoader();
       // Dispose late results after timeout/unmount: loadAsync itself is not cancellable.
       const bounded={loadAsync:async url=>{const gltf=await loader.loadAsync(url);if(disposed||group.userData.status==='failed'){disposeObject(gltf.scene);throw new Error('Apollo request expired');}return gltf;}};
-      return loadAssetWithRetry(bounded,new URL('../assets/nasa/apollo-10017-15.glb',import.meta.url).href,{critical:false,attempts:2,timeout:30000});
+      return loadAssetWithRetry(bounded,new URL('../../assets/nasa/apollo-10017-15.glb',import.meta.url).href,{critical:false,attempts:2,timeout:30000});
     }).then(gltf=>{
       if(disposed){disposeObject(gltf.scene);return false;}
       const rock=gltf.scene;rock.scale.setScalar(APOLLO_SAMPLE.scale);

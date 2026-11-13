@@ -6,7 +6,7 @@ Retrieved 13 November 2026. The complete craft is from NASA/JPL's **Eyes on the 
 - NASA product page: https://science.nasa.gov/eyes/
 - Original glTF: https://eyes.nasa.gov/assets/static/models/sc_artemis/artemis_ii.gltf
 - The official app's public `app.js` maps `sc_artemis_2` to that glTF; `config.js` provides `https://eyes.nasa.gov/assets/static` as its asset root.
-- Packaged file: `assets/nasa/orion/orion-eyes.glb`, **24,336,596 bytes**.
+- Packaged file: `../assets/nasa/orion/orion-eyes.glb`, **24,336,596 bytes**.
 - SHA-256: `e2a568ea8f5b5e6dbc2756080a683f5a5e9769a06dc0185cee87f68cc886cb5b`.
 
 Credit NASA/JPL-Caltech (Eyes on the Solar System). This is their Artemis II visualization asset, also used as an explicitly documented visual proxy for Artemis I; it does not certify mission-specific hardware configuration or camera calibration. It is **not** a Mars transit craft or Starship/HLS model. No NASA endorsement is implied.
