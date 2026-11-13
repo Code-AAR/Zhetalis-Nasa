@@ -1,5 +1,6 @@
 // Human-scale pressure links and stair access, shared by rendering and movement.
 import * as THREE from 'three';
+import { mergeStatic } from './static-merge.js';
 import { pressureHatch } from './pressure-hatch.js';
 import { blockAccessRails } from './access-rails.js';
 
@@ -36,6 +37,7 @@ export function installHabitatAccess(world, model, layout) {
     const hatch=pressureHatch({entry:true});hatch.scale.setScalar(.9);
     hatch.position.set(c.x,height,doorZ+.12);
     hatch.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    mergeStatic(hatch,{exclude:[hatch.userData.handle]});   // ~16 bolts, panels and rims -> a few draws; the lit handle stays its own mesh
     group.add(hatch);entrance.handle=hatch.userData.handle;
     // Fit the entire rounded perimeter to the imported curved shell, rather
     // than extending a rectangular box by one centre-ray measurement.

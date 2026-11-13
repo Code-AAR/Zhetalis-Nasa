@@ -571,7 +571,9 @@ export class World {
     this.scene.add(this.headlamp, this.headlamp.target);
     this.phase = 0.3; this.dustOn = false;
     this.sun = new THREE.DirectionalLight('#fff1dc', 1.9);
-    this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
+    // 2048 only on an explicit High setting; 1024 with PCF filtering keeps soft-enough edges at a quarter of the fill cost.
+    const shadowRes = GRAPHICS_MODE === 'high' ? 2048 : 1024;
+    this.sun.castShadow = true; this.sun.shadow.mapSize.set(shadowRes, shadowRes);
     // a tighter, sharper shadow area around you, so the suit and rover shade themselves
     Object.assign(this.sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 260 });
     this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.03;
@@ -1013,10 +1015,12 @@ export class World {
     const dist = 7.5, eye = new THREE.Vector3(p.x - Math.sin(this.yaw) * dist * Math.cos(this.pitch), p.y + 2 + Math.sin(this.pitch) * dist, p.z - Math.cos(this.yaw) * dist * Math.cos(this.pitch));
     // Retract along the viewing ray; never push the camera sideways across the player.
     const anchor=new THREE.Vector3(p.x,p.y+1.6-crouchDrop,p.z),boom=eye.clone().sub(anchor),length=boom.length();
+    // Camera-blocking test: the obstacle list is rebuilt twice a second and the ray is cast every other frame
+    // (the camera eases toward its spot anyway), instead of allocating and recursing through every collider each frame.
     this.cameraRay??=new THREE.Raycaster();this.cameraRay.set(anchor,boom.normalize());this.cameraRay.far=length;
-    const objects=[this.rocks,...this.colliders.filter(c=>c.object?.visible).map(c=>c.object)];
-    const hit=this.cameraRay.intersectObjects(objects,true)[0];
-    if(hit)eye.copy(anchor).addScaledVector(boom,Math.max(.65,hit.distance-.25));
+    if((this.cameraListAge=(this.cameraListAge??0)-dt)<=0||!this.cameraObjects){this.cameraListAge=.5;this.cameraObjects=[this.rocks,...this.colliders.filter(c=>c.object?.visible).map(c=>c.object)];}
+    if((this.cameraRayFrame=((this.cameraRayFrame??0)+1)&1)===0||this.cameraHit===undefined){const h=this.cameraRay.intersectObjects(this.cameraObjects,true)[0];this.cameraHit=h?h.distance:null;}
+    if(this.cameraHit!=null&&this.cameraHit<length)eye.copy(anchor).addScaledVector(boom,Math.max(.65,this.cameraHit-.25));
     eye.y = Math.max(eye.y, heightAt(eye.x, eye.z) + 0.6);
     this.camera.position.lerp(eye, 1 - Math.exp(-dt * 10));
     this.cameraTarget??=new THREE.Vector3(p.x,p.y+1.6-crouchDrop,p.z);
@@ -1062,7 +1066,7 @@ export class World {
     const focus=this.cinematic?this.camera.position:p;
     this.terrain.userData.update(focus);this.rockDisplay.userData.update(focus);
     const cam = this.camera.position, dir = this.sunDir || new THREE.Vector3(0.5, 0.8, 0.3);
-    this.sun.position.set(p.x + dir.x * 120, p.y + Math.max(dir.y, 0.05) * 120, p.z + dir.z * 120); this.sun.target.position.copy(p);
+    this.placeSun(p, dir);
     this.sky.position.copy(cam);
     this.skyLights.glow.position.copy(cam).addScaledVector(this.glowDir || dir, 800);
     this.skyLights.disc.position.copy(cam).addScaledVector(dir, 820);
@@ -1072,6 +1076,33 @@ export class World {
     this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);
     const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
     this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);
+  }
+
+  // The shadow box follows you, but only in whole shadow-map texels across the light's view. That stops shadow edges
+  // crawling as you walk, and means a standing player leaves the shadow map unchanged so it need not be redrawn.
+  placeSun(p, dir) {
+    const d = this.sunAim ??= new THREE.Vector3(), r = this.sunRight ??= new THREE.Vector3(), u = this.sunUp ??= new THREE.Vector3();
+    d.set(dir.x, Math.max(dir.y, 0.05), dir.z).normalize();
+    r.set(0, 1, 0).cross(d); if (r.lengthSq() < 1e-6) r.set(1, 0, 0); r.normalize(); u.crossVectors(d, r);
+    const sc = this.sun.shadow.camera, texel = (sc.right - sc.left) / this.sun.shadow.mapSize.x;
+    const a = Math.round(p.dot(r) / texel) * texel, b = Math.round(p.dot(u) / texel) * texel, c = p.dot(d);
+    const t = this.sun.target.position.set(0, 0, 0).addScaledVector(r, a).addScaledVector(u, b).addScaledVector(d, c);
+    this.sun.position.copy(t).addScaledVector(d, 120);
+  }
+  // Called once per frame after update(): true when the shadow map must be redrawn. Anything that casts a moving
+  // shadow (you, the rover, a tool swing, the sun box) forces a redraw; otherwise it refreshes ten times a second
+  // for slow things such as the turning dish and the sun creeping across the sky.
+  shadowDirty(dt) {
+    const s = this.sun.position, p = this.player.position, q = this.player.quaternion, r = this.sev.pos;
+    const v = this.shadowSig ??= new Float64Array(12);
+    const now = this.shadowNow ??= new Float64Array(12);
+    now[0] = s.x; now[1] = s.y; now[2] = s.z; now[3] = p.x; now[4] = p.y; now[5] = p.z;
+    now[6] = q.y; now[7] = q.w; now[8] = r.x; now[9] = r.y; now[10] = r.z; now[11] = this.sev.yaw;
+    let moved = this.toolSwing >= 0 || !!this.cinematic || (this.rover?.waking > 0);
+    for (let i = 0; i < 12; i++) if (Math.abs(now[i] - v[i]) > 1e-4) { moved = true; v[i] = now[i]; }
+    if (moved) { this.shadowWait = .1; return true; }
+    if ((this.shadowWait = (this.shadowWait ?? 0) - dt) <= 0) { this.shadowWait = .1; return true; }
+    return false;
   }
 
   // What the player is close enough to use with E.

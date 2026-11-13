@@ -176,17 +176,30 @@ export function createCrew(I, CREW) {
     person.f.root.position.copy(tmpV); person.f.root.rotation.y = s.group.rotation.y + (s.yaw ?? 0) + (s.group.parent?.rotation?.y ?? 0);
     person.kind = s.pose; person.spot = spotName; person.f.root.visible = true;
   };
+  const crewFrustum = new THREE.Frustum(), viewProj = new THREE.Matrix4(), sphere = new THREE.Sphere();
   const talk = [];   // live 'talk to' stations
   let last = performance.now(), t = 0;
   I.updateCrew = (frac, crewCount) => {
     const now = performance.now(), dt = Math.min(.1, (now - last) / 1000); last = now; t += dt;
+    let frustum = null;
+    if (I.camera && I.scene) {   // crew stand in the room scene's own space, the same space as the room camera
+      I.camera.updateMatrixWorld();
+      viewProj.multiplyMatrices(I.camera.projectionMatrix, I.camera.matrixWorldInverse);
+      frustum = crewFrustum.setFromProjectionMatrix(viewProj);
+    }
     for (const person of people) {
       const here = CREW.indexOf(person.p) < crewCount;
       if (!here) { person.f.root.visible = false; continue; }
       let want = ROUTINE[person.p.id](frac);
       if (want === 'bed') want = 'bed-' + person.p.id;
       if (want !== person.spot) place(person, want);
-      if (person.f.root.visible) { const near = Math.abs(person.f.root.position.x - I.pos.x) < 16; person.f.root.children[0].visible = near; if (near) person.f.real ? playReal(person, person.kind, dt, t, I) : pose(person.f, person.kind, t, person.k * 1.7); }
+      if (person.f.root.visible) {
+        // Each real crewmate is ~60 skinned parts with frustum culling off (their bind-pose bounds are wrong once
+        // animated), so test one generous sphere around the whole person ourselves: off-screen people are neither
+        // drawn nor animated. Their animation simply resumes when they come back into view.
+        const near = Math.abs(person.f.root.position.x - I.pos.x) < 16 && (!frustum || frustum.intersectsSphere(sphere.set(sphere.center.copy(person.f.root.position).setY(person.f.root.position.y + .9), 1.6)));
+        person.f.root.children[0].visible = near; if (near) person.f.real ? playReal(person, person.kind, dt, t, I) : pose(person.f, person.kind, t, person.k * 1.7);
+      }
     }
     // doors shut while someone sleeps inside; treadmill hum only while it is in use
     for (const c of I.habCabins ?? []) { const id = c.person.id, sleeping = people.some(pp => pp.p.id === id && pp.spot === 'bed-' + id && pp.f.root.visible); c.openDoor.visible = c.lived.visible && !sleeping; c.sleepDoor.visible = c.lived.visible && sleeping; }

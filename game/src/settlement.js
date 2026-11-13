@@ -198,12 +198,19 @@ export async function installSettlement(world){
   const objectiveBeacon=new THREE.Mesh(new THREE.RingGeometry(.8,1,64),new THREE.MeshBasicMaterial({color:'#c78aff',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));objectiveBeacon.rotation.x=-Math.PI/2;world.scene.add(objectiveBeacon);
   const inlet=new THREE.Mesh(new THREE.BoxGeometry(.42,.7,.22),cyan);inlet.position.set(access.entrances[0].x+2.7,.65,access.entrances[0].doorZ+1);world.scene.add(inlet);
   const mission={objectiveBeacon,charging,chargerCable,chargerSite:{x:-30.8,z:26},chargingBay:{x:-34,z:26},shelterSite,soilSite,crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;room.setRegolith(soilLevel);},updateGreenhouse:(beds,powered=true)=>{
+    // The racks seen through the dome are a few pixels from beyond 40 m: skip their ~100 draws out there.
+    if(mission.visibleFurnishings){const c=world.camera.position;mission.visibleFurnishings.visible=Math.hypot(c.x-greenhouse.position.x,c.z-greenhouse.position.z)<40;}
     const room=mission.greenhouseRoom;if(!room)return;
     room.draw(beds,GREENHOUSE.tank,powered);
-    const key=room.beds.map(b=>b.key).join(';');if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;
+    // The copy seen through the dome only needs rebuilding when the view changes visibly (crop, growth in 10% steps,
+    // harvest-ready, power), not on every hundredth of growth or litre of tank water.
+    const key=(beds||[]).map(b=>`${b?.crop}|${(+b?.grown||0).toFixed(1)}|${b?.ready}`).join(';')+'|'+powered;if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;
     if(mission.visibleFurnishings)greenhouse.remove(mission.visibleFurnishings);
-    // Share the actual interior geometry and materials; draw() owns their lifecycle.
-    mission.visibleFurnishings=room.furnishings.clone(true);greenhouse.add(mission.visibleFurnishings);
+    // Share the actual interior geometry and materials; draw() owns their lifecycle. The copy drops the grow lights
+    // (four point lights in the outdoor scene made every lit pixel outside, terrain included, pay for them; the LED
+    // bars are emissive and still glow) and bakes its ~120 parts into a handful of draw calls.
+    const copy=room.furnishings.clone(true),lights=[];copy.traverse(o=>{if(o.isLight)lights.push(o);});lights.forEach(l=>l.removeFromParent());
+    mergeStatic(copy);mission.visibleFurnishings=copy;greenhouse.add(copy);
   },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:applySoil};
   world.settlement=mission;return mission;
 }
@@ -226,6 +233,7 @@ function makeBaseGreenhouse(world){
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.4, 0.1), dark), 0, 1.25, 1.52));
   ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, 0.15), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.6, 1.55));
 
+ mergeStatic(ghG);   // dome ribs, rings and airlock: one draw per material (the furnishings copy is added later)
  ghG.name="base-greenhouse";return ghG;
 }
 

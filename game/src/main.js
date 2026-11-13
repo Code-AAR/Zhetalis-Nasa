@@ -73,12 +73,13 @@ loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models st
 // Phones and tablets: draw fewer pixels, and skip shadows on small screens, so the game stays smooth
 const coarse = matchMedia('(pointer: coarse)').matches, smallScreen = Math.min(screen.width, screen.height) < 600;
 const renderer = new THREE.WebGLRenderer({ canvas: $('#view'), antialias: effectiveQuality(GRAPHICS_MODE) !== 'low' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE) === 'low' ? 1 : effectiveQuality(GRAPHICS_MODE) === 'high' ? devicePixelRatio : 1.5));
+// Pixel count is the biggest cost: only an explicit High setting goes past 1.5x, and never past 2x (4K/retina screens).
+const targetRatio = () => Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE) === 'low' ? 1 : GRAPHICS_MODE === 'high' ? 2 : 1.5);
+renderer.setPixelRatio(targetRatio());
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.shadowMap.enabled = effectiveQuality(GRAPHICS_MODE) !== 'low';
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-const targetRatio = () => Math.min(devicePixelRatio, effectiveQuality(GRAPHICS_MODE) === 'low' ? 1 : effectiveQuality(GRAPHICS_MODE) === 'high' ? devicePixelRatio : 1.5);
-renderer.shadowMap.autoUpdate = false; let shadowFrame = 0;
+renderer.shadowMap.type = THREE.PCFShadowMap;   // filtered edges at a fraction of PCFSoft's per-pixel sampling cost
+renderer.shadowMap.autoUpdate = false; let shadowFrame = 0, insideShadowWait = 0;
 const adaptiveRes = createAdaptiveRes(renderer, targetRatio, { enabled: () => !location.search.includes('fixedres') });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;   // softer, film-like light and colour
@@ -1405,9 +1406,13 @@ function showStory() {
 $('#loading').classList.add('hidden');
 renderer.setAnimationLoop(() => {
   adaptiveRes.tick();
-  // Shadows refresh every frame normally. Only when the game is already struggling (resolution lowered) do they refresh every second frame.
-  renderer.shadowMap.needsUpdate = adaptiveRes.scale >= 1 || (++shadowFrame & 1) === 0 || !renderer.shadowMap.enabled;
   const dt = Math.min(clock.getDelta(), 0.05);
+  // Shadows are redrawn only when something that casts them moved (you, the rover, the sun) and about ten times a
+  // second otherwise. When the game is already struggling (resolution lowered) moving shadows refresh every second frame.
+  renderer.shadowMap.needsUpdate = true;
+  // Indoors the sun's shadows only show through windows and greenhouse glass, and nothing out there moves (you are
+  // inside), so the outdoor shadow map is refreshed twice a second instead of every frame.
+  if (state.phase === 'mars' && inside) { insideShadowWait -= dt; renderer.shadowMap.needsUpdate = insideShadowWait <= 0; if (insideShadowWait <= 0) insideShadowWait = .5; }
   if (state.phase === 'launch') {
     const { left, lifted, title, caption, km, karman } = launch.update(dt);
     const lift = -left;   // seconds since lift-off: engines start at T-1.5, full power after lift-off, quieter once the core stage is gone
@@ -1439,7 +1444,7 @@ renderer.setAnimationLoop(() => {
       interior.yaw=ghRoom.yaw;interior.pitch=ghRoom.pitch;interior.vel={...ghRoom.vel};interior.update(0,world.keys,false);
     }
     if (inside && room === ghRoom) ghRoom.draw(colony.s.base, GREENHOUSE.tank, outpost.today.total*outpost.split.life>=1);
-    if (!inside) { world.stormDust = outpost?.dustCover || 0; world.update(dt, !isModalOpen()); }
+    if (!inside) { world.stormDust = outpost?.dustCover || 0; world.update(dt, !isModalOpen()); renderer.shadowMap.needsUpdate = world.shadowDirty(dt) && (adaptiveRes.scale >= 1 || (++shadowFrame & 1) === 0); }
     construction?.update(inside,room,isModalOpen()||world.cinematic);
     if(!isModalOpen()&&room!==airlockRoom)updateMissionPower(dt);
     if (!paused && !outpost.over) {
