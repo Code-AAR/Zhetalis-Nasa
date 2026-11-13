@@ -22,16 +22,30 @@
 #coop-dialog .coop-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 520px) { #coop-dialog .coop-cols { grid-template-columns: 1fr; } }
 
-#coop-roster { position: fixed; top: 76px; right: 12px; z-index: 6; min-width: 190px; max-width: 240px; padding: 8px 10px; border-radius: 12px; background: rgba(10, 14, 20, .68); color: #eef2f6; font-size: .82rem; pointer-events: none; }
-#coop-roster .coop-head { margin-bottom: 4px; color: #b9c6d3; }
-#coop-roster .coop-head b { color: #ffd27a; letter-spacing: .12em; font-family: ui-monospace, Consolas, monospace; }
-#coop-roster ul, #coop-night ul { list-style: none; margin: 0; padding: 0; }
-#coop-roster li { display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: center; padding: 2px 0; }
-#coop-roster li small { grid-column: 2; color: #9fb0c0; }
-#coop-roster i, #coop-night i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+/* in-game crew chip: lives inside the Sol panel (src/coop.js CoopHud) */
+#coop-chip { margin-top: 6px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.14); text-align: left; min-width: 112px; }
+#coop-chip .cc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: #cdbdb1; }
+#coop-chip .cc-head b { font: 700 .74rem/1 ui-monospace, Consolas, monospace; letter-spacing: .16em; color: #ffd27a; text-transform: none; }
+#coop-chip .cc-crew { list-style: none; display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0 0; padding: 0; }
+#coop-chip .cc-crew li { position: relative; }
+#coop-chip .cc-av { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #11151b; font: 700 .72rem/1 Poppins, system-ui, sans-serif; box-shadow: 0 0 0 2px rgba(0,0,0,.35); }
+#coop-chip .cc-av.me { box-shadow: 0 0 0 2px #fff; }
+#coop-chip .cc-badge { position: absolute; right: -6px; bottom: -5px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: #1d2440; color: #ffd27a; box-shadow: 0 0 0 1.5px rgba(0,0,0,.5); }
+#coop-chip .cc-badge.ok { background: #2e6b4a; color: #fff; }
+#coop-chip .cc-badge svg { width: 10px; height: 10px; }
+#coop-chip .cc-night svg, #sleep-caption b svg { width: 1em; height: 1em; vertical-align: -.12em; margin-right: .3em; }
+#coop-chip .cc-night { margin: 7px 0 0; font-size: .74rem; color: #e3e8ff; }
+#coop-chip .cc-night small { color: #aeb7d8; font-size: .66rem; }
+#coop-chip .cc-night.soon { color: #ffd27a; font-weight: 700; }
+#coop-chip .cc-key { margin: 2px 0 0; font-size: .64rem; color: #aeb7d8; }
+#coop-chip .cc-vote { display: block; width: 100%; margin-top: 6px; min-height: 40px; padding: 6px 8px; border-radius: 10px; font-size: .78rem; background: rgba(40,52,110,.85); border: 1px solid #5a6cc0; color: #fff; }
+#coop-chip .cc-vote[aria-pressed="true"] { background: #2e6b4a; border-color: #6fd29a; }
+#coop-chip .cc-vote:active { transform: scale(.97); }
 
-#coop-night { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 7; width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 14px; background: rgba(16, 22, 48, .84); color: #eef2f6; border: 1px solid #3a4a8a; display: grid; gap: 6px; font-size: .92rem; pointer-events: none; }
-#coop-night li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-#coop-night li span { margin-left: auto; color: #cbd5ff; }
-#coop-night > span { color: #cbd5ff; }
+/* asleep: the screen dims, one calm caption in the middle (src/coop.js) */
 #sleep-fade { position: fixed; inset: 0; z-index: 4; background: #05070d; opacity: 0; pointer-events: none; transition: opacity .25s linear; }
+#sleep-caption { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; display: grid; gap: 6px; width: min(340px, calc(100vw - 32px)); text-align: center; color: #eef2ff; pointer-events: none; text-shadow: 0 2px 10px rgba(0,0,0,.7); }
+#sleep-caption b { font-size: 1.7rem; font-weight: 800; }
+#sleep-caption span { font-size: 1rem; }
+#sleep-caption small { font-size: .8rem; opacity: .75; }
+#sleep-caption[hidden] { display: none; }

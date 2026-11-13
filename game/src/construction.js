@@ -46,7 +46,7 @@ export class Construction {
    else geometry=new THREE.BoxGeometry(.38,/Battery/.test(name)?.27:.10,.32);
    const mesh=new THREE.Mesh(geometry,mat);
    if(!isSlot&&/Solar module|controller/.test(name)){for(let j=0;j<4;j++){const rib=new THREE.Mesh(new THREE.BoxGeometry(.012,.025,.28),new THREE.MeshStandardMaterial({color:/Solar/.test(name)?'#a5c9db':'#616f72'}));rib.position.set(-.14+j*.09,.065,0);mesh.add(rib);}}mesh.position.set((i-1)*.52,isSlot?.3:.08,isSlot?-.3:.35);mesh.userData={kind:isSlot?'slot':'part',name,label:(isSlot?'Fit into slot: ':'Pick up: ')+name};this.bench.add(mesh);this.slots.push(mesh);}
-  });this.guide('Pick up a part from the front row, then select its matching highlighted slot. E / Use places it.');
+  });this.guide('Pick up a part from the front row, then select its matching highlighted slot. E / Action places it.');
  }
  placeBattery(){
   if(this.state().powerStep!==4||this.inside||this.blocked||this.world.driving)return false;
@@ -83,10 +83,10 @@ export class Construction {
   if(!inside&&this.colony().tool==='pickaxe'){const player=this.world.player.position;for(const sample of this.rockSamples){if(this.removedApplied.has(sample.id)||Math.hypot(sample.position.x-player.x,sample.position.z-player.z)>sample.radius+3.3)continue;this.rockProxy.matrixWorld.copy(sample.matrix);const rock=this.ray.intersectObject(this.rockProxy,false)[0];if(rock&&(!hit||rock.distance<hit.distance)){rock.object=this.world.rocks;rock.instanceId=sample.id;hit=rock;}}}
   if(hit&&hit.object!==this.world.rocks){while(!hit.object.userData.kind&&hit.object.parent)hit.object=hit.object.parent;}
   const player=inside?room.pos.clone().add(room.scene.position):this.world.player.position;
-  if(hit&&hit.point.distanceTo(player.clone().add(new THREE.Vector3(0,1,0)))<3.3){this.hit=hit;this.hint=hit.object===this.world.rocks?'E / Use · break surface rock with pickaxe':`E / Use · ${hit.object.userData.label}`;}
+  if(hit&&hit.point.distanceTo(player.clone().add(new THREE.Vector3(0,1,0)))<3.3){this.hit=hit;this.hint=hit.object===this.world.rocks?'E / Action · break surface rock with pickaxe':`E / Action · ${hit.object.userData.label}`;}
   if(this.hit?.object.userData.kind==='socket')this.hint=this.hit.object.userData.label+' - '+socketFeedback(o,this.hit.object.userData.id,this.wire);
   if(this.held)this.hint=`Holding ${this.held} · `+this.hint+' · R to cancel';
-  if(this.wire){const target=this.sockets.find(p=>p.userData.id===partner);this.hint=`Cable → ${target.userData.label} · ${Math.round(target.position.distanceTo(player))} m · E / Use · R to drop. `+this.hint;}
+  if(this.wire){const target=this.sockets.find(p=>p.userData.id===partner);this.hint=`Cable → ${target.userData.label} · ${Math.round(target.position.distanceTo(player))} m · E / Action · R to drop. `+this.hint;}
   if(this.noticeUntil>performance.now())this.hint=this.notice+' · '+this.hint;
   this.heldDisplay.visible=!!this.held&&inside&&!blocked;
   if(this.heldDisplay.visible){if(this.heldDisplay.userData.name!==this.held){this.heldDisplay.clear();const source=this.slots.find(m=>m.userData.kind==='part'&&m.userData.name===this.held);const copy=source.clone();copy.position.set(0,0,0);copy.visible=true;this.heldDisplay.add(copy);this.heldDisplay.userData.name=this.held;}this.heldDisplay.position.set(.35,-.3,-.8).applyMatrix4(camera.matrixWorld);this.heldDisplay.quaternion.copy(camera.quaternion);}
@@ -121,7 +121,7 @@ export class Construction {
    }
    if(this.wire===d.id){this.cancel();this.notify('Cable released.');return true;}
    if(!this.wire&&!circuitReady(o,socketCircuit)){this.guide(socketFeedback(o,d.id));return true;}
-   if(!this.wire){this.wire=d.id;this.guide(`Cable selected. Follow the marker to ${SOCKET_LABELS[socketPartner(d.id)]}, then press E / Use. R cancels.`);return true;}
+   if(!this.wire){this.wire=d.id;this.guide(`Cable selected. Follow the marker to ${SOCKET_LABELS[socketPartner(d.id)]}, then press E / Action. R cancels.`);return true;}
    const index=circuitFor(this.wire,d.id);
    if(index<0){const pair=CIRCUITS.find(pair=>pair.includes(this.wire));const partner=this.sockets.find(p=>p.userData.id===pair?.find(id=>id!==this.wire));this.guide(`Wrong socket. Connect this cable to ${partner?.userData.label||'its matching socket'}. R / Drop cancels.`);return true;}
    if(!circuitReady(o,index)){this.cancel();this.guide(socketFeedback(o,d.id));return true;}

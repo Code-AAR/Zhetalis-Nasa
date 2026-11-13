@@ -16,14 +16,14 @@ Then open `http://localhost:8790/` in two or more tabs or computers on the same 
 2. **Create game** gives a 5-letter code (and a `?join=CODE` link). Press **Start the mission**: you host your saved game, or a new one.
 3. Friends choose **Join with code**. They arrive next to the host as soon as the host is on Mars.
 
-Each player sees the other astronauts walk, run, jump, mine and lie in bunks. Each crewmate has a coloured beacon and a name tag. The roster at the top right shows the code and where everyone is. The shared mission includes power, storage, greenhouses, mined deposits, supply pods, surveys and the sol clock. Suit air, hunger, the tool belt and the ore bag are personal. A guest's own saved game is never overwritten. If the host leaves, the longest-connected player takes over the mission clock.
+Each player sees the other astronauts walk, run, jump, mine and lie in bunks. Each crewmate has a coloured beacon and a name tag. The crew chip in the Sol panel (top right) shows the code and a coloured initial per player; hover or long-press an initial to see where they are. The shared mission includes power, storage, greenhouses, mined deposits, supply pods, surveys and the sol clock. Suit air, hunger, the tool belt and the ore bag are personal. A guest's own saved game is never overwritten. If the host leaves, the longest-connected player takes over the mission clock.
 
 ## Sleeping and skipping the night
 
-The four crew cabins in **Crew quarters** (pod 4 from the airlock) are walk-in rooms. Walk through the door to the bunk and press **E** (or tap **Use**). You can sleep in your own cabin, a spare cabin or the two storm-shelter bunks. Crewmates' bunks are taken, and a door with a "Zzz" sign is closed. You can sleep from just before sunset until sunrise. Press **E** or move to get up.
+The four crew cabins in **Crew quarters** (pod 4 from the airlock) are walk-in rooms. Walk through the door to the bunk and press **E** (or tap the **Action** button, which shows what it will do, such as **Sleep**). You can sleep in your own cabin, a spare cabin or the two storm-shelter bunks. Crewmates' bunks are taken, and a door with a "Zzz" sign is closed. You can sleep from just before sunset until sunrise. Press **E** or move to get up.
 
 - **On your own:** after a moment in the bunk, the night is skipped to about 06:15 the next sol. The new sol runs as normal: supplies, crops and power.
-- **Co-op:** the night is skipped when more than half the crew is ready. A player is ready when asleep in a bunk, or awake and voting with **N**. With 2 players both must be ready; with 3, two; with 4, three. The night panel lists who is sleeping, who voted and who is awake, and counts down 3 seconds before the skip.
+- **Co-op:** the night is skipped when more than half the crew is ready. A player is ready when asleep in a bunk, or awake and voting with **N** (on touch screens, the **Skip night** button in the crew chip). With 2 players both must be ready; with 3, two; with 4, three. In the crew chip a moon marks who is asleep and a tick who voted, a line counts how many are ready, and it counts down 3 seconds before the skip. While you sleep the screen dims and shows a single caption; on touch screens the Action button becomes **Get up**.
 
 ## Hosting it online later
 

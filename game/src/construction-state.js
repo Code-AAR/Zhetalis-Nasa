@@ -28,8 +28,8 @@ export function socketFeedback(o,id,held=null){
  if(held&&held!==id&&socketPartner(held)!==id)return `Wrong socket. Take this cable to ${SOCKET_LABELS[socketPartner(held)]}. R / Drop cancels.`;
  if(circuitConnected(o,index))return `${SOCKET_LABELS[id]} is already connected.`;
  if(!circuitReady(o,index))return circuitRequirement(o,index);
- if(held===id)return 'E / Use to release this cable.';
- return held?`E / Use to connect ${SOCKET_LABELS[id]}.`:`E / Use to pick up cable. Next: ${SOCKET_LABELS[socketPartner(id)]}.`;
+ if(held===id)return 'E / Action to release this cable.';
+ return held?`E / Action to connect ${SOCKET_LABELS[id]}.`:`E / Action to pick up cable. Next: ${SOCKET_LABELS[socketPartner(id)]}.`;
 }
 export function nextWiringSocket(o,kind,held=null){
  if(held)return socketPartner(held);

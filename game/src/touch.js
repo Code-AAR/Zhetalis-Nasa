@@ -14,7 +14,7 @@ export function initTouch({ keys, look, press }) {
   root.innerHTML = `
     <div class="t-stick" id="t-stick"><i></i></div>
     <div class="t-buttons">
-      <button id="t-use" class="t-big">✋<span>Use</span></button>
+      <button id="t-use" class="t-big" aria-label="Action">✋<span>Action</span></button>
       <button id="t-jump">⤒<span>Jump</span></button>
       <button id="t-view">👁<span>View</span></button>
       <button id="t-power">⚡<span>Power</span></button>
@@ -92,14 +92,17 @@ export function initTouch({ keys, look, press }) {
 
   let shown = false;
   return {
-    // main.js calls this every frame: hide the controls while a pop-up is open, light up Use when something is near
-    sync({ active, canUse, inside, canEat }) {
+    // main.js calls this every frame: hide the controls while a pop-up is open, light up the action button when
+    // something is near and name what it will do (Sleep, Open, Mine...), so the button reads like the hint
+    sync({ active, canUse, inside, canEat, useLabel }) {
       const show = on && active;
       if (show !== shown) {
         shown = show; root.classList.toggle('hidden', !show);
         if (!show) { releaseStick(); lookId = null; const k = keys(); if (k) k.Space = false; }   // don't keep walking behind a pop-up
       }
-      root.querySelector('#t-use').classList.toggle('ready', !!canUse);
+      const use = root.querySelector('#t-use'), label = (canUse && useLabel) || 'Action';
+      use.classList.toggle('ready', !!canUse);
+      if (use.lastChild.textContent !== label) { use.lastChild.textContent = label; use.setAttribute('aria-label', label); use.classList.toggle('long', label.length > 6); }
       root.querySelector('#t-view').classList.toggle('hidden', !!inside);
       root.querySelector('#t-eat').classList.toggle('hidden', !canEat);
     },

@@ -121,35 +121,56 @@ export function openCoopDialog(coop, { onHostStart, onJoined }) {
   (preset ? $('#coop-code') : $('#coop-name')).focus();
 }
 
-// ---------- in-game panels: who is here, and the night vote ----------
+// ---------- in-game: one small crew chip, and a caption while you sleep ----------
+// The chip lives inside the Sol panel (top right), so it never covers the mission card, alerts or hints, and the
+// phone layout (phone-layout.js) already measures it. Each crewmate is a coloured initial; a badge shows who is
+// asleep (💤) or voting to skip (✋). At night one short line says how close the crew is to skipping it.
 const WHERE = { out: 'outside', hab: 'in the hab', drive: 'driving the rover', ship: 'in the lander' };
+// small drawn icons (the HUD keeps emoji off the screen; ui.js keepScreenEmojiFree)
+const ICON = {
+  moon: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 1.5a6.5 6.5 0 1 0 4 11.6A5.5 5.5 0 0 1 10.5 1.5Z" fill="currentColor"/></svg>',
+  hand: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  sun: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+};
 export class CoopHud {
-  constructor(parent) {
-    this.roster = document.createElement('div'); this.roster.id = 'coop-roster'; this.roster.hidden = true; parent.appendChild(this.roster);
-    this.night = document.createElement('div'); this.night.id = 'coop-night'; this.night.hidden = true; this.night.setAttribute('role', 'status'); parent.appendChild(this.night);
-    this.fade = document.createElement('div'); this.fade.id = 'sleep-fade'; parent.appendChild(this.fade);
-    this.lastRoster = this.lastNight = '';
+  constructor(hud) {
+    const status = hud.querySelector('.status') || hud;
+    this.chip = document.createElement('div'); this.chip.id = 'coop-chip'; this.chip.hidden = true;
+    const menu = status.querySelector('#menu-btn'); status.insertBefore(this.chip, menu || null);
+    this.chip.addEventListener('click', e => { if (e.target.closest('.cc-vote')) this.onVote?.(); });
+    this.caption = document.createElement('div'); this.caption.id = 'sleep-caption'; this.caption.hidden = true; this.caption.setAttribute('role', 'status'); hud.appendChild(this.caption);
+    this.fade = document.createElement('div'); this.fade.id = 'sleep-fade'; hud.appendChild(this.fade);
+    this.lastChip = this.lastCaption = ''; this.onVote = null;
   }
-  showRoster(coop, myPose) {
-    if (!coop.active) { this.roster.hidden = true; this.lastRoster = ''; return; }
-    const rows = coop.roster(myPose).map(p => `<li><i style="background:${p.colour}"></i><b>${esc(p.name)}${p.me ? ' (you)' : ''}${p.id === coop.hostId ? ' · host' : ''}</b><small>${p.pose?.sl ? 'sleeping 💤' : WHERE[p.pose?.w] || 'landing…'}</small></li>`).join('');
-    const html = `<div class="coop-head">Co-op · code <b>${coop.code}</b></div><ul>${rows}</ul>`;
-    if (html !== this.lastRoster) { this.roster.innerHTML = html; this.lastRoster = html; }
-    this.roster.hidden = false;
-  }
-  // players: [{ name, colour, sleeping, vote, me }], vote: nightVote() result
-  showNight(show, { players, vote, sleeping, coop, countdown, voteHint }) {
-    if (!show) { this.night.hidden = true; this.lastNight = ''; return; }
-    let html;
-    if (!coop) html = `<b>💤 Sleeping…</b><span>${countdown != null ? 'Skipping to morning' : 'Resting'}. ${voteHint}</span>`;
-    else {
-      const rows = players.map(p => `<li><i style="background:${p.colour}"></i>${esc(p.name)}${p.me ? ' (you)' : ''}<span>${p.sleeping ? '🛏 in a bunk' : p.vote ? '✋ voted to skip' : '👀 awake'}</span></li>`).join('');
-      html = `<b>${sleeping ? '💤 Sleeping' : '🌙 Night on Mars'} · skip the night?</b><ul>${rows}</ul>
-        <span>${vote.ready} of ${vote.total} ready. The night is skipped when ${vote.need === vote.total ? 'everyone is' : `${vote.need} of ${vote.total} are`} asleep in a bunk or voting.</span>
-        <span>${countdown != null ? `<b>Skipping to morning in ${Math.ceil(countdown)}…</b>` : voteHint}</span>`;
+  // s: { coop, players: [{ name, colour, sleeping, vote, me, where }], vote, night, sleeping, countdown, touch }
+  render(s) {
+    const { coop, players, vote, night, sleeping, countdown, touch } = s;
+    document.body.classList.toggle('is-sleeping', !!sleeping);
+    // crew chip (co-op only)
+    let chip = '';
+    if (coop?.active) {
+      const crew = players.map(p => {
+        const badge = p.sleeping ? ICON.moon : night && p.vote ? ICON.hand : '';
+        const what = p.sleeping ? 'asleep in a bunk' : night && p.vote ? 'voted to skip the night' : WHERE[p.where] || 'landing';
+        return `<li style="--c:${p.colour}" title="${esc(p.name)}${p.me ? ' (you)' : ''}${p.host ? ' · host' : ''} · ${what}"><span class="cc-av${p.me ? ' me' : ''}">${esc(p.name.trim()[0] || '?').toUpperCase()}</span>${badge ? `<i class="cc-badge${p.sleeping ? ' zz' : ' ok'}">${badge}</i>` : ''}<span class="sr-only">${esc(p.name)}${p.me ? ' (you)' : ''}: ${what}.</span></li>`;
+      }).join('');
+      let line = '';
+      if (night) {
+        line = countdown != null ? `<p class="cc-night soon">${ICON.sun}Morning in ${Math.ceil(countdown)}</p>`
+          : `<p class="cc-night" title="The night is skipped when ${vote.need} of ${vote.total} are asleep or voting">${ICON.moon}${vote.ready}/${vote.need} to skip night</p>`;
+        const me = players.find(p => p.me);
+        if (!sleeping && countdown == null) line += touch ? `<button type="button" class="cc-vote" aria-pressed="${!!me?.vote}">${me?.vote ? 'Voted to skip' : 'Skip night'}</button>` : `<p class="cc-key">${me?.vote ? 'Voted · N to undo' : 'N to vote skip'}</p>`;
+      }
+      chip = `<div class="cc-head"><span>Crew</span><b title="Game code">${coop.code}</b></div><ul class="cc-crew" aria-label="Crew">${crew}</ul>${line}`;
     }
-    if (html !== this.lastNight) { this.night.innerHTML = html; this.lastNight = html; }
-    this.night.hidden = false;
+    if (chip !== this.lastChip) { this.chip.innerHTML = chip; this.lastChip = chip; this.chip.hidden = !chip; }
+    // caption while you sleep: what is happening and how to get up
+    let cap = '';
+    if (sleeping) {
+      const sub = countdown != null ? `Morning in ${Math.ceil(countdown)}…` : coop?.active ? `${vote.ready} of ${vote.total} ready · the night skips at ${vote.need}` : 'Resting until morning…';
+      cap = `<b>${ICON.moon}Sleeping</b><span>${sub}</span><small>${touch ? 'Tap Get up to leave the bunk' : 'Press E or move to get up'}</small>`;
+    }
+    if (cap !== this.lastCaption) { this.caption.innerHTML = cap; this.lastCaption = cap; this.caption.hidden = !cap; }
   }
   setFade(v) { this.fade.style.opacity = String(v); }
 }

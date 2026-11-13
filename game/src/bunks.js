@@ -1,6 +1,6 @@
 // Sleeping places in the habitat: the four crew cabins (hab-dressing.js) and the two storm-shelter bunks.
 // Adds the cabin floors to the walkable area (you step through the doorway and stand beside the bunk),
-// a "bunk" station per bed for E / Use, and the poses for lying down: your camera on the pillow, and a
+// a "bunk" station per bed for E / Action, and the poses for lying down: your camera on the pillow, and a
 // crewmate's astronaut stretched out on the mattress (remote-players.js). Everything is in the
 // interior scene's own frame, measured once when the hab is built.
 import * as THREE from 'three';

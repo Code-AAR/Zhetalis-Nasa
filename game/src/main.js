@@ -149,17 +149,17 @@ function showSun() {
     : `${tag}Couldn't reach the space-weather satellites right now - the game will use saved real data.`;
 }
 
-// "Press E" on a keyboard, "tap Use" on a phone or tablet
+// "Press E" on a keyboard, "tap Action" on a phone or tablet
 const keyWord = (key, tap) => (isTouch() ? tap : key);
 
 $('#howto').onclick = () => modal({ title: 'How to play', html: `
   ${isTouch() ? `<p><b>Move</b>: put your left thumb on the screen and slide it - push all the way to <b>run</b>. <b>Look around</b>: drag with your right thumb. <b>Jump</b>: the Jump button - Mars gravity is weak, so you float!</p>
   <p><b>View</b> switches between first-person (through your helmet) and third-person view.</p>
-  <p><b>Use</b> (it lights up when something is close): collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`
+  <p><b>Action</b> (✋) (it lights up when something is close): collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`
   : `<p><b>Move</b> with WASD or the arrow keys. <b>Look around</b>: click the game, then move the mouse (Esc frees the mouse). <b>Run</b>: Shift. <b>Crouch</b>: hold Ctrl. <b>Jump</b>: Space - Mars gravity is weak, so you float!</p>
   <p><b>V</b> switches between first-person (through your helmet) and third-person view.</p>
   <p><b>E</b> uses things: collect ice and metal parts, salvage the old rover, open supply pods, and go through the outpost door.</p>`}
-  <p>At an airlock, aim at the green handle and ${keyWord('press E','tap Use')}. With your pickaxe equipped, aim at a sparkling ore deposit and ${keyWord('click to strike','tap Use to strike')}.</p>
+  <p>At an airlock, aim at the green handle and ${keyWord('press E','tap Action')}. With your pickaxe equipped, aim at a sparkling ore deposit and ${keyWord('click to strike','tap Action to strike')}.</p>
   <p>Inside the outpost, walk to the <b>power console</b> to split your power between:</p>
   <p>🫁 <b>Life support</b> - makes oxygen and powers the grow lights.<br>📡 <b>Talk to Earth</b> - sends your science home and brings supply pods.<br>🔬 <b>Science</b> - when Earth receives enough, its engineers radio you new <b>upgrade designs</b>.<br>🛡 <b>Shelter systems</b> - power ventilation and monitoring. Thick walls and shielding materials reduce radiation without electricity.</p>
   <p>📍 <b>Where you land matters.</b> Gusev Crater is where Spirit landed, and the ground in this game is built from it. The ice plains are the easy start. The pole has lots of ice but weak sunlight and cold nights. Jezero Crater is best for science but has little ice. A lava tube blocks radiation but is hard to build in.</p>
@@ -428,7 +428,7 @@ async function arrive() {
   say('welcome');
   modal({ title: 'Welcome to Mars, junior astronaut!', html: `
     <p><b>First job: get the power on.</b> Take the power kits from the habitat locker, then follow the arrow.</p>
-    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Use')}.</p>
+    <p>At an airlock, aim at the lit handle and ${keyWord('press E','tap Action')}.</p>
     <p>You landed at <b>${outpost.s.name}</b>. ${outpost.s.why}${outpost.site === 'gusev' ? '' : ' The ground you walk on is Gusev Crater, used for training.'}</p>`,
     choices: [{ label: "Let's go!", primary: true }] });
 }
@@ -444,7 +444,7 @@ function goInside(entrance=world?.activeEntrance||world?.settlement?.entrances[0
 // Your lander: climb the ladder into its crew cabin (capsule.js)
 function goInShip() {
   inside = true; room = capsule; capsule.enter(); document.exitPointerLock?.();
-  toast(`🚀 You climbed the ladder into your lander. 4 astronauts rode down to Mars in this cabin! ${keyWord('Press E', 'Tap Use')} at the seats, screens and window.`, 6000);
+  toast(`🚀 You climbed the ladder into your lander. 4 astronauts rode down to Mars in this cabin! ${keyWord('Press E', 'Tap Action')} at the seats, screens and window.`, 6000);
 }
 // The base greenhouse (greenhouse.js): from the outpost through the tunnel ('hab'), or from outside through its airlock ('out')
 
@@ -469,7 +469,7 @@ function goInGreenhouse(from) {
   if (wasOut) document.exitPointerLock?.();
   if (!ghTipShown) {
     ghTipShown = true;
-    toast(`🌱 The greenhouse! Its grow beds supplement packaged meals using prepared growing media, nutrients, clean water, light and controlled air. ${keyWord('Press E', 'Tap Use')} at the end of a bed to plant seeds, fill it from the water pipe and harvest food.`, 7000);
+    toast(`🌱 The greenhouse! Its grow beds supplement packaged meals using prepared growing media, nutrients, clean water, light and controlled air. ${keyWord('Press E', 'Tap Action')} at the end of a bed to plant seeds, fill it from the water pipe and harvest food.`, 7000);
   }
 }
 function startAirlock(direction,complete){
@@ -488,7 +488,7 @@ function updateAirlockGuide(){
   const phase = cycle.ready ? 'ready' : returning ? 'returning' : 'cycling';
   if (phase === chamber.guidePhase) return;
   chamber.guidePhase = phase;
-  const use = keyWord('Press E', 'Tap Use');
+  const use = keyWord('Press E', 'Tap Action');
   const hatch = cycle.direction === 'out' ? 'outer hatch' : 'inner hatch';
   const message = cycle.ready
     ? `Pressure matched. ${use} to open the ${hatch}${returning ? ' and return to where you started' : ''}.`
@@ -1030,7 +1030,7 @@ function handle(ev) {
 
 function collect(n) {
   if(n.type==='mission-work')return performMissionWork(n.task);
-  if(n.type==='power-site') return zhetela('Aim at a highlighted placement slot or cable socket and press E / Use.');
+  if(n.type==='power-site') return zhetela('Aim at a highlighted placement slot or cable socket and press E / Action.');
   if (n.type === 'lookout') return world.lookouts?.use(n.i);
   if (n.type === 'site') return world.sites?.use(n.id);
   if (n.type === 'find') return world.mapState?.collect(n.id);
@@ -1050,8 +1050,8 @@ function collect(n) {
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
   if (n.type === 'sev') {
     world.enterRover(); roverFrom = world.sev.pos.clone();
-    if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Use')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it in your connected charging bay to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
-    else toast(`🚙 In the rover - battery ${Math.round(world.sev.battery * 100)}%. ${keyWord('E', 'Use')} to get out.`);
+    if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Action')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it in your connected charging bay to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
+    else toast(`🚙 In the rover - battery ${Math.round(world.sev.battery * 100)}%. ${keyWord('E', 'Action')} to get out.`);
     return;
   }
   if (n.type === 'sev-exit') { world.exitRover(); toast('🧑‍🚀 Out through the suitport at the back of the rover.'); return; }
@@ -1325,7 +1325,7 @@ function drawHUD() {
   drawToolbar();
   $('#crosshair').classList.toggle('hidden', (!inside && !world.firstPerson && !mouseLocked() && !isTouch()) || isModalOpen());
   let hint = '', near = null;
-  const useWord = keyWord('Press E', 'Tap Use');
+  const useWord = keyWord('Press E', 'Tap Action');
   if (!isModalOpen()) {
     if (inside) {
       near = room.nearest();
@@ -1344,19 +1344,24 @@ function drawHUD() {
   }
   if(!near && !isModalOpen() && !world.driving){
     const atDoor=!inside && world.settlement.entrances.some(e=>world.player.position.distanceTo(e.handle.getWorldPosition(new THREE.Vector3()))<2.1);
-    if(atDoor)hint=keyWord('Aim at the green handle · E to open','Tap the green handle, then Use');
+    if(atDoor)hint=keyWord('Aim at the green handle · E to open','Tap the green handle, then Action');
     else if(marsObjective(outpost,colony.s).target)hint=questBearing();
   }
   const hintEl = $('#hint');                       // a hint that is no longer needed fades away slowly
   if(world.driving&&outpost.chargerStep>=3&&world.settlement){
-    if(world.chargingStatus?.inBay)hint=`Charging bay · ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus.status} · E / Use to exit`;
+    if(world.chargingStatus?.inBay)hint=`Charging bay · ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus.status} · E / Action to exit`;
   }
   if(construction?.hint&&!isModalOpen())hint=construction.hint;
+  // touch: the action button itself names the verb ("Sleep", "Open"...), so the hint drops "Tap Action to" and
+  // just says what will happen; while you sleep the button gets you up
+  let useLabel = '';
+  if (isTouch() && hint.startsWith('Tap Action to ')) { hint = hint.slice(14); hint = hint[0].toUpperCase() + hint.slice(1); useLabel = hint.split(/[\s,(]/)[0]; }
+  if (sleepBunk) { useLabel = 'Get up'; hint = ''; }
   hint = noEmoji(hint);
   if (hint) { if (hintEl.textContent !== hint) hintEl.textContent = hint; hintEl.classList.remove('gone'); }
   else hintEl.classList.add('gone');
   drawMouseNote();
-  touch.sync({ active: !isModalOpen() && !o.over && !$('#hud').classList.contains('menu-open'), canUse: !!near || (!inside && colony.tool === 'builder'), inside, canEat: !!body.canEat });
+  touch.sync({ active: !isModalOpen() && !o.over && !$('#hud').classList.contains('menu-open'), canUse: !!near || !!sleepBunk || (!inside && colony.tool === 'builder'), inside, canEat: !!body.canEat, useLabel });
   // rations row and the suit-air ring next to your astronaut
   let sx = null, sy = null;
   if (!inside && !world.driving) {
@@ -1443,7 +1448,7 @@ function syncClock(sc, speed) {   // guests follow the host's sol clock
   if (speed && speed !== state.speed) { state.speed = speed; $('#speed-btn').textContent = 'Speed ×' + speed; }
 }
 function coopTick(dt) {
-  if (!coop.active || state.phase !== 'mars' || !world) { coopHud?.showRoster(coop); return; }
+  if (!coop.active || state.phase !== 'mars' || !world) return;
   const mine = localPose();
   if ((poseT -= dt) <= 0) { poseT = .1; if (coop.isHost) { mine.sc = solClock; mine.spd = state.speed; } coop.send('pose', mine); }
   if ((shareT -= dt) <= 0) { shareT = .5; coopShare(); }
@@ -1453,12 +1458,11 @@ function coopTick(dt) {
     const s = world.sev, [x, z, yaw] = p.pose.rv, k = 1 - Math.exp(-dt * 10);
     s.pos.x += (x - s.pos.x) * k; s.pos.z += (z - s.pos.z) * k; s.yaw += Math.atan2(Math.sin(yaw - s.yaw), Math.cos(yaw - s.yaw)) * k; s.speed = 0;
   }
-  if ((hudT -= dt) <= 0) { hudT = .25; coopHud?.showRoster(coop, mine); }
 }
 coop.on('peer-join', p => { remote?.upsert(p.id, p.name, p.colour); toast(`👩‍🚀 ${p.name} joined the mission (code ${coop.code}).`, 4000); });
 coop.on('peer-leave', (id, p) => { remote?.remove(id); if (p) toast(`${p.name} left the mission.`, 4000); });
 coop.on('host', id => { if (id === coop.id) toast('The host left. Your game now keeps the mission clock.', 5000); else toast(`${coop.peers.get(id)?.name || 'A crewmate'} is now hosting.`, 4000); });
-coop.on('closed', () => { remote?.clear(); coopHud?.showRoster(coop); toast('Lost the co-op connection. You can keep playing on your own.', 6000); });
+coop.on('closed', () => { remote?.clear(); toast('Lost the co-op connection. You can keep playing on your own.', 6000); });
 coop.on('pose', (from, p) => { remote?.pose(from, p); if (coop.guest && from === coop.hostId && p.sc != null && state.phase === 'mars') syncClock(p.sc, p.spd); });
 coop.on('state', (from, patch) => applyShared(patch));
 coop.on('hello', from => { if (!coop.isHost) return; const d = saveData(); if (d) coop.send('snapshot', d, from); else snapshotWaiting.add(from); });   // not landed yet: sent on arrival
@@ -1502,12 +1506,12 @@ function morning() {   // the night is over for everyone: get up, clear the vote
   toast('☀️ Good morning! The crew slept through the night, and a new sol begins.', 5000);
 }
 function crew() {
-  const me = { name: coop.active ? coop.name : 'You', colour: coop.colour || '#4fc3f7', sleeping: !!sleepBunk, vote: myVote, me: true };
+  const me = { name: coop.active ? coop.name : 'You', colour: coop.colour || '#4fc3f7', sleeping: !!sleepBunk, vote: myVote, me: true, host: coop.isHost, where: !inside ? (world.driving ? 'drive' : 'out') : room === interior || room === ghRoom ? 'hab' : 'ship' };
   if (!coop.active) return [me];
-  return [me, ...[...coop.peers.values()].map(p => ({ name: p.name, colour: p.colour, sleeping: !!p.pose?.sl, vote: !!p.pose?.v }))];
+  return [me, ...[...coop.peers.values()].map(p => ({ name: p.name, colour: p.colour, sleeping: !!p.pose?.sl, vote: !!p.pose?.v, host: p.id === coop.hostId, where: p.pose?.w }))];
 }
 function sleepTick(dt) {
-  coopHud ??= new CoopHud($('#hud'));
+  if (!coopHud) { coopHud = new CoopHud($('#hud')); coopHud.onVote = voteToSkip; }
   if (sleepBunk && !(inside && room === interior)) wake();
   const ph = solClock / TUNED.solSeconds, night = canSleepAt(ph, TUNED.dayStart, TUNED.dayEnd);
   if (!night) myVote = false;
@@ -1521,8 +1525,7 @@ function sleepTick(dt) {
   }
   sleepFade = sleepBunk ? Math.min(.6, sleepFade + dt * .5) : Math.max(0, sleepFade - dt * .7);
   coopHud.setFade(sleepFade);
-  const hint = sleepBunk ? keyWord('Press E or move to get up.', 'Tap Use to get up.') : keyWord(myVote ? 'Press N to take back your vote.' : 'Press N to vote to skip, or sleep in a bunk (Crew quarters).', 'Sleep in a bunk in the Crew quarters to vote.');
-  coopHud.showNight((coop.active && night) || !!sleepBunk, { players, vote, sleeping: !!sleepBunk, coop: coop.active, countdown: ready ? Math.max(0, (coop.active ? SKIP_DELAY : 2) - skipTimer) : null, voteHint: hint });
+  if ((hudT -= dt) <= 0 || ready) { hudT = .2; coopHud.render({ coop, players, vote, night, sleeping: !!sleepBunk, countdown: ready ? Math.max(0, (coop.active ? SKIP_DELAY : 2) - skipTimer) : null, touch: isTouch() }); }
 }
 if (window.game) Object.defineProperties(window.game, { coop: { get: () => coop }, remote: { get: () => remote }, sleep: { value: { use: useBunk, wake, vote: voteToSkip, tick: sleepTick, get bunk() { return sleepBunk; }, get clock() { return solClock; } } } });
 let sunsetShown = false, hudElapsed = 0, body = null, roverFrom = null, lastCrunch = 0, wasNight = false;
@@ -1751,8 +1754,8 @@ function missionTarget(kind){
 }
 function performMissionWork(task){
   if(marsObjective(outpost,colony.s).id!==task.id)return;
-  if(task.id==='charger-1'){zhetela('Aim at the highlighted charging-post slot in the parking bay and press E / Use.');return;}
-  if(task.id==='base'||task.id==='charger-2'){zhetela('Select the output socket, then walk to the matching input socket and press E / Use.');return;}
+  if(task.id==='charger-1'){zhetela('Aim at the highlighted charging-post slot in the parking bay and press E / Action.');return;}
+  if(task.id==='base'||task.id==='charger-2'){zhetela('Select the output socket, then walk to the matching input socket and press E / Action.');return;}
   else if(task.id.startsWith('charger-'))outpost.chargerStep++;
   else if(task.id==='soil-0')outpost.soilStep=1;
   else if(task.id==='soil-1')outpost.soilStep=2;
@@ -1765,7 +1768,7 @@ function drawMissionHud(){
   charge.hidden=!nearby||inside||isModalOpen()||outpost.chargerStep<2;charge.textContent=`Rover ${Math.round(world.sev.battery*100)}% · ${world.chargingStatus?.status||'Approach charging bay'} · Stored charge ${(outpost.chargeReserve||0).toFixed(2)} kWh`;
 
   let delivery=document.getElementById('delivery-status');
-  if(!delivery){delivery=document.createElement('button');delivery.id='delivery-status';document.getElementById('hud').append(delivery);delivery.onclick=()=>modal({title:'Cargo deliveries',html:`<p>Orange squares on the minimap mark unopened pods. Go to a pod and press E / Use. Seeds enter your locker only after collection.</p><ul>${world.pickups.filter(p=>p.kind==='pod').map(p=>`<li>${p.cargo?cargoWords(p.cargo):'Base supplies'} · ${Math.round(Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z))} m away · map (${Math.round(p.x)}, ${Math.round(p.z)})</li>`).join('')}${pending.filter(p=>p.cargo).map(p=>`<li>${cargoWords(p.cargo)} · lands in ${Math.max(0,p.sol-outpost.sol)} sols</li>`).join('')}</ul>`});}
+  if(!delivery){delivery=document.createElement('button');delivery.id='delivery-status';document.getElementById('hud').append(delivery);delivery.onclick=()=>modal({title:'Cargo deliveries',html:`<p>Orange squares on the minimap mark unopened pods. Go to a pod and press E / Action. Seeds enter your locker only after collection.</p><ul>${world.pickups.filter(p=>p.kind==='pod').map(p=>`<li>${p.cargo?cargoWords(p.cargo):'Base supplies'} · ${Math.round(Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z))} m away · map (${Math.round(p.x)}, ${Math.round(p.z)})</li>`).join('')}${pending.filter(p=>p.cargo).map(p=>`<li>${cargoWords(p.cargo)} · lands in ${Math.max(0,p.sol-outpost.sol)} sols</li>`).join('')}</ul>`});}
   const pods=world.pickups.filter(p=>p.kind==='pod'),orders=pending.filter(p=>p.cargo),nearest=pods.reduce((n,p)=>Math.min(n,Math.hypot(p.x-world.player.position.x,p.z-world.player.position.z)),Infinity);
   let dismiss=document.getElementById('delivery-dismiss');
   if(!dismiss){dismiss=document.createElement('button');dismiss.id='delivery-dismiss';dismiss.textContent='×';dismiss.setAttribute('aria-label','Dismiss cargo notice');delivery.after(dismiss);dismiss.onclick=()=>{delivery.dataset.dismissed=delivery.dataset.key;};}
@@ -1777,7 +1780,7 @@ function drawMissionHud(){
   if(!q.seedsCollected){const seedOrder=pending.find(p=>p.cargo?.seeds);if(seedOrder)q.seedArrival=seedOrder.sol;q.seedsLanded=world.pickups.some(p=>p.kind==='pod'&&p.cargo?.seeds);}
   const task=activeMissionObjective();
   const milestones=firstMissionReport(outpost,colony.s);
-  missionCard.querySelector('.mission-progress').textContent=`First base: ${milestones.filter(m=>m.done).length}/4 milestones · E / Use to interact`;
+  missionCard.querySelector('.mission-progress').textContent=`First base: ${milestones.filter(m=>m.done).length}/4 milestones · E / Action to interact`;
   if(milestones.every(m=>m.done)&&!outpost.firstBaseDebrief){outpost.firstBaseDebrief=true;saveGame();zhetela('First base mission complete! Open the quest log for your learning debrief. Keep packaged food in reserve. Next: rover charging, supported shelter shielding and food-culture research.',true);}
   missionCard.hidden=isModalOpen()||world.cinematic||$('#hud').classList.contains('menu-open');
   if(task.id+'|'+(task.step||'')!==missionKey){missionKey=task.id+'|'+(task.step||'');zhetela(task.step||task.detail);missionCard.querySelector('summary').textContent=task.target==='workbench'?'Go to the workbench':task.title;if(task.step){const next=document.createElement('small');next.className='mission-next-step';next.textContent=task.step;missionCard.querySelector('summary').append(next);}missionCard.querySelector('p').textContent=task.detail;missionCard.open=true;missionCollapseAt=performance.now()+8000;}

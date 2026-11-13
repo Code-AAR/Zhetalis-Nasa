@@ -16,7 +16,7 @@ Up to 4 players can share a mission with a room code (**Play together · co-op**
 
 ## Hands-on first base mission
 
-New Mars missions begin in first person (V switches view). Collect the landed kits at the locker, open the workbench and fit the three parts into their matching highlighted slots in order. At the remote power field, equip the pickaxe (1), clear four marked rocks, then place the three panels. Assemble and place the battery, select Solar OUT then Battery IN, and connect Battery OUT to Base IN. Use E, click, or touch Use; R or the Drop button releases a held part/cable without losing fitted parts.
+New Mars missions begin in first person (V switches view). Collect the landed kits at the locker, open the workbench and fit the three parts into their matching highlighted slots in order. At the remote power field, equip the pickaxe (1), clear four marked rocks, then place the three panels. Assemble and place the battery, select Solar OUT then Battery IN, and connect Battery OUT to Base IN. Use E, click, or the touch Action button; R or the Drop button releases a held part/cable without losing fitted parts.
 
 Most ordinary surface rocks can be cleared with several strikes; the largest boulders remain obstacles. Only identified mineral deposits yield samples. Fitted parts, site clearance and removed rocks persist in saves. Previously commissioned bases retain their progress. The charger has its own assembly, placement and socket connection steps after the first food mission.
 

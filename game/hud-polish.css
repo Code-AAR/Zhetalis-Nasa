@@ -1,0 +1,36 @@
+/* HUD tidy-up (loaded last). Rules of thumb: one thing per screen corner, nothing over the thumbs,
+   and while you sleep only the sleep caption, the crew chip and the button that gets you up stay visible. */
+
+/* the action button names what it will do (Sleep, Open, Mine...; src/touch.js) */
+.t-buttons .t-big span { max-width: 54px; text-align: center; line-height: 1.1; overflow-wrap: anywhere; }
+.t-buttons .t-big.long span { font-size: .56rem; }
+
+/* asleep in a bunk */
+body.is-sleeping #mission-objective, body.is-sleeping #zhetela-message, body.is-sleeping #hud #alerts,
+body.is-sleeping #hud #hint, body.is-sleeping #hud #toolbar, body.is-sleeping #rations, body.is-sleeping #mouse-note,
+body.is-sleeping #crosshair, body.is-sleeping #toast, body.is-sleeping #construction-drop, body.is-sleeping #delivery-status,
+body.is-sleeping .t-stick, body.is-sleeping .t-buttons button:not(#t-use) { visibility: hidden !important; }
+body.is-sleeping #hud .status, body.is-sleeping #touch { z-index: 6; }
+body.is-sleeping #hud .meters { opacity: .45; }
+
+/* narrow windows: the mouse note goes under the Sol panel (which now also holds the crew chip), not on it */
+@media (max-width: 760px) {
+  #mouse-note { top: var(--top-clear, 92px); }
+}
+/* upright phone: alerts take the row under the meters, so the mission card starts one row lower and is narrower */
+body.layout-phone.portrait #mission-objective { top: calc(var(--top-clear, 126px) + 40px); width: min(210px, calc(100vw - 150px)); }
+body.layout-phone.portrait #coop-chip { min-width: 0; }
+
+/* upright phone with the guide (Zhetela) talking: the guide takes the hint's row above the tool belt, full width,
+   the hint and rations step aside, and the mission card shrinks to its title (the guide is saying the same thing) */
+body.layout-phone.portrait.touch #zhetela-message:not([hidden]) { left: 10px; right: 10px; width: auto; max-width: none; bottom: calc(270px + env(safe-area-inset-bottom)); }
+body.layout-phone.portrait.touch:has(#zhetela-message:not([hidden])) #hud #hint,
+body.layout-phone.portrait.touch:has(#zhetela-message:not([hidden])) #rations { visibility: hidden; }
+body.layout-phone.portrait:has(#zhetela-message:not([hidden])) #mission-objective :is(p, button, .mission-progress) { display: none; }
+/* upright phone: the tool belt is about 110 px tall, so rations and the hint stack above it instead of on it */
+body.layout-phone.portrait.touch #rations { bottom: calc(268px + env(safe-area-inset-bottom)); }
+body.layout-phone.portrait.touch #hud #hint { bottom: calc(314px + env(safe-area-inset-bottom)); }
+/* keyboard and mouse: the alert sits right under the Sol panel (whose height changes with the crew chip and the
+   menu), instead of at a fixed distance from the bottom where short windows pushed it onto the panel */
+body:not(.touch) #hud #alerts { top: var(--top-clear, 120px); bottom: auto; right: 10px; left: auto; transform: none; }
+body.fp:not(.touch) #hud #alerts { top: var(--top-clear, 120px); }

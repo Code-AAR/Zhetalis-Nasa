@@ -18,7 +18,7 @@ export const ORES = {
   carbonate:{ name: 'Carbonate rock', color: '#9c6b4a', fact: 'carbonate', hits: 3, yield: 1, desc: 'Rock soaked by water that was not acid. Rare, and worth a lot of science.' },
 };
 export const TOOLS = {
-  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'Breaks ore out of rocks (NASA’s Hammer 3D model). Hold it and press Use next to a mineral rock.' },
+  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'Breaks ore out of rocks (NASA’s Hammer 3D model). Hold it and press Action next to a mineral rock.' },
   builder: { name: 'Builder', icon: '🛠', desc: 'NASA’s Pistol Grip Tool, the power drill astronauts use on spacewalks. Puts kits together into buildings, like a greenhouse.' },
   jug:     { name: 'Water jug', icon: '💧', desc: 'Carries 10 L of water from the base tank to your plants.' },
 };
@@ -315,7 +315,7 @@ export class Colony {
     tank.scale.y = Math.max(0.05, h.gh.tank / GREENHOUSE.tank); tank.position.y = 0.45 * tank.scale.y;
   }
 
-  // ---------- what's nearby, for the Use button ----------
+  // ---------- what's nearby, for the Action button ----------
   targets(p) {
     const list = [];
     for (const d of this.deposits) {
