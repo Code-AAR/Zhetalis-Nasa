@@ -7,7 +7,7 @@ function measure() {
   if (!hud || hud.classList.contains('hidden')) return;
   const meters = hud.querySelector('.meters'), status = hud.querySelector('.status');
   let bottom = 0;
-  if (meters) bottom = Math.max(bottom, meters.getBoundingClientRect().bottom);
+  if (meters) { bottom = Math.max(bottom, meters.getBoundingClientRect().bottom); document.body.style.setProperty('--meters-clear', Math.round(bottom + 8) + 'px'); }   // just the meters: sideways alerts use the left column (hud-polish.css)
   if (status && !hud.classList.contains('menu-open')) bottom = Math.max(bottom, status.getBoundingClientRect().bottom);
   if (bottom > 0) document.body.style.setProperty('--top-clear', Math.round(bottom + 8) + 'px');
 }

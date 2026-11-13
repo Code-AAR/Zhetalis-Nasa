@@ -95,6 +95,7 @@ export function initTouch({ keys, look, press }) {
     // main.js calls this every frame: hide the controls while a pop-up is open, light up the action button when
     // something is near and name what it will do (Sleep, Open, Mine...), so the button reads like the hint
     sync({ active, canUse, inside, canEat, useLabel }) {
+      if (on && !document.body.classList.contains('touch')) document.body.classList.add('touch');   // the thumb layout (tool belt above the stick) must match the controls on screen
       const show = on && active;
       if (show !== shown) {
         shown = show; root.classList.toggle('hidden', !show);

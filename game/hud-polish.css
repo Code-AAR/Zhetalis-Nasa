@@ -23,14 +23,43 @@ body.layout-phone.portrait #coop-chip { min-width: 0; }
 
 /* upright phone with the guide (Zhetela) talking: the guide takes the hint's row above the tool belt, full width,
    the hint and rations step aside, and the mission card shrinks to its title (the guide is saying the same thing) */
-body.layout-phone.portrait.touch #zhetela-message:not([hidden]) { left: 10px; right: 10px; width: auto; max-width: none; bottom: calc(270px + env(safe-area-inset-bottom)); }
+body.layout-phone.portrait.touch #zhetela-message:not([hidden]) { left: 10px; right: 10px; width: auto; max-width: none; bottom: calc(282px + env(safe-area-inset-bottom)); }
 body.layout-phone.portrait.touch:has(#zhetela-message:not([hidden])) #hud #hint,
 body.layout-phone.portrait.touch:has(#zhetela-message:not([hidden])) #rations { visibility: hidden; }
 body.layout-phone.portrait:has(#zhetela-message:not([hidden])) #mission-objective :is(p, button, .mission-progress) { display: none; }
 /* upright phone: the tool belt is about 110 px tall, so rations and the hint stack above it instead of on it */
-body.layout-phone.portrait.touch #rations { bottom: calc(268px + env(safe-area-inset-bottom)); }
-body.layout-phone.portrait.touch #hud #hint { bottom: calc(314px + env(safe-area-inset-bottom)); }
+body.layout-phone.portrait.touch #rations { bottom: calc(280px + env(safe-area-inset-bottom)); }
+body.layout-phone.portrait.touch #hud #hint { bottom: calc(326px + env(safe-area-inset-bottom)); }
 /* keyboard and mouse: the alert sits right under the Sol panel (whose height changes with the crew chip and the
    menu), instead of at a fixed distance from the bottom where short windows pushed it onto the panel */
 body:not(.touch) #hud #alerts { top: var(--top-clear, 120px); bottom: auto; right: 10px; left: auto; transform: none; }
 body.fp:not(.touch) #hud #alerts { top: var(--top-clear, 120px); }
+
+/* sideways touch screens (tablets, sideways phones, short windows): the alert stays in the left column under the
+   meters, clear of the Sol panel on the right and the thumb buttons below it */
+body.touch:not(.portrait) #hud #alerts { top: var(--meters-clear, 64px); left: calc(8px + env(safe-area-inset-left)); right: auto; max-width: min(440px, calc(100vw - 250px)); align-items: flex-start; }
+body.touch:not(.portrait) #hud #alerts .alert { text-align: left; }
+/* short screens: the Sol panel (with the crew chip) must end above the thumb buttons, so it gets compact */
+@media (max-height: 560px) {
+  body.touch #hud #tod, #coop-chip .cc-head span { display: none; }
+  #coop-chip { padding-top: 5px; margin-top: 4px; }
+  #coop-chip .cc-head { justify-content: flex-end; }
+  #coop-chip .cc-crew { margin-top: 4px; }
+  #coop-chip .cc-vote { min-height: 36px; padding: 4px 8px; }
+  body.touch #hud #menu-btn { min-height: 38px; }
+}
+body.touch:not(.portrait) #mission-objective { top: calc(var(--meters-clear, 64px) + 44px); }
+/* touch: the tool belt sits fully above the joystick's resting circle (centre 96 px up, 60 px radius) */
+body.touch #hud #toolbar { bottom: calc(164px + env(safe-area-inset-bottom)); }
+/* short touch screens (sideways phones): no room above the joystick, so the tool belt sits beside it at the
+   bottom and the hint sits just above the belt, between the thumbs */
+@media (max-height: 560px) {
+  body.touch #hud #toolbar { left: calc(150px + env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); }
+  body.touch #hud #hint { bottom: calc(128px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 420px); }
+}
+@media (max-height: 560px) {
+  body.layout-phone:not(.portrait).touch #hud #hint, body.layout-tablet:not(.portrait).touch #hud #hint { bottom: calc(128px + env(safe-area-inset-bottom)); }
+}
+@media (max-height: 560px) {
+  body.touch:not(.portrait) #rations { bottom: calc(168px + env(safe-area-inset-bottom)); }
+}
