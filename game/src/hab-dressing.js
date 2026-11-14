@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCrew } from './hab-crew.js';
+import { loadModel } from './nasamodels.js';
 
 const SPACING = 10.2, R = 4, CEIL = 3.3;
 // Fictional crew. The first `crew` of them live here (2 on Cadet, 3 on Explorer, 4 on Commander); the rest of the
@@ -474,15 +475,15 @@ export function dressHab(I) {
     if (o.geometry.type === 'CircleGeometry' && Math.abs(o.position.y) < .01 && o.rotation.x < 0) { o.material = o.material.clone(); o.material.map = floorTex; o.material.color.set('#ffffff'); o.material.roughness = .95; o.material.needsUpdate = true; }
   });
   // remove the wall panels where the cabin doors go (pod 3: two each side of the south wall)
-  const cabinSlots = [2, 4, 22, 20];
+  const cabinSlots = [2, 4, 22, 20], doorSlots = [...cabinSlots, 12];   // 12: the storm shelter hatch (south wall)
   const doomed = [];
   scene.traverse(o => {
     if (!o.isMesh || o.geometry.type !== 'BoxGeometry') return; const p = o.geometry.parameters;
     if (Math.abs(p.width - 1.1) > .01 || Math.abs(p.height - 6.6) > .01) return;
-    for (const j of cabinSlots) { const a = slotA(j); if (Math.hypot(o.position.x - (3 * SPACING + Math.sin(a) * R), o.position.z - Math.cos(a) * R) < .05) doomed.push(o); }
+    for (const j of doorSlots) { const a = slotA(j); if (Math.hypot(o.position.x - (3 * SPACING + Math.sin(a) * R), o.position.z - Math.cos(a) * R) < .05) doomed.push(o); }
   });
   doomed.forEach(o => o.removeFromParent());
-  for (const j of cabinSlots) { const hdr = new THREE.Group(); onWall(3, slotA(j), R, hdr); hdr.add(box(1.15, CEIL - 2.4 + .05, .08, wallMats[0], 0, 2.4 + (CEIL - 2.4) / 2, 0)); root.add(hdr); }
+  for (const j of doorSlots) { const hdr = new THREE.Group(); onWall(3, slotA(j), R, hdr); hdr.add(box(1.15, CEIL - 2.4 + .05, .08, wallMats[0], 0, 2.4 + (CEIL - 2.4) / 2, 0)); root.add(hdr); }
   // lamps and labels come down under the new ceilings (not in the tall Wardroom)
   scene.traverse(o => {
     if (o.isPointLight && Math.abs(o.position.y - 5.8) < .01) { const pod = Math.round(o.position.x / SPACING); if (pod !== 4) o.position.y = CEIL - .35; o.color.set('#fff3e2'); o.userData.habLamp = true; }
@@ -630,10 +631,7 @@ export function dressHab(I) {
     const towels = new THREE.Group(); onWall(3, slotA(9.6), R - .05, towels); towels.add(box(1.0, .03, .03, mat('rail2', '#b9bec2', { m: .6, r: .3 }), 0, 1.6, .06));
     CREW.forEach((c, k) => { const t = rbox(.18, .5, .02, .02, mat('towel' + c.id, c.colour, { r: 1 }), -.36 + k * .24, 1.36, .07); t.name = 'towel-' + c.id; towels.add(t); });
     P.add(towels);
-    // the storm shelter gets water-bag walls (water is good radiation shielding) and its own sign
-    const sh = new THREE.Group(); onWall(3, Math.PI, R - 1.0, sh);
-    for (let k = 0; k < 6; k++) sh.add(rbox(.38, .32, .25, .08, mat('waterBag', '#8fb3d9', { r: .4, t: .9 }), -1.25 + (k % 2) * 2.5, .2 + Math.floor(k / 2) * .34, .2));
-    P.add(sh); const shs = new THREE.Group(); onWall(3, Math.PI, R - .06, shs); shs.add(pic(.9, .18, label('STORM SHELTER', { w: 512, h: 100, bg: '#ffd27a', fg: '#1d1d1d', font: 'bold 48px system-ui' }), 0, 2.78, .02)); P.add(shs);
+    // (the storm shelter is a walk-in room off this pod's south wall: built further down)
     // a quiet-hours sign and the crew calendar on the wall between the cabins
     const cal = new THREE.Group(); onWall(3, slotA(0), R - .05, cal); P.add(cal);
     I.calendar = { canvas: null, mesh: null, sol: -1 };
@@ -839,25 +837,86 @@ export function dressHab(I) {
   note(5, -.7, 3.2, 'open the medical cabinet', '🩺 Medical', '<p>First aid, medicines and an ultrasound. One crewmate trains as the medical officer.</p>' + fact('The ISS has an ultrasound machine; doctors on Earth can guide the crew through a scan.'));
 
   for (const x of [-.95, .95]) I.obstacles.push(new THREE.Box3(new THREE.Vector3(x - .15, 0, 3.2), new THREE.Vector3(x + .15, 2, 3.8)));   // outer airlock door frame
-  { // storm shelter (pod 3): the old flat board becomes a padded nook walled in water bags, as in NASA's water-wall shelter studies
-    const st = I.stations.find(t => t.type === 'shelter'), G = st && scene.children.find(o => o.isGroup && Math.abs(o.position.x - st.x) < .01 && Math.abs(o.position.z - st.z) < .01);
-    if (G) {
-      G.traverse(o => { if (o.isMesh) o.visible = false; });
-      const S = new THREE.Group(); G.add(S);
-      const frame = mat('shelterFrame', '#3d4a55', { r: .7 }), bag = mat('waterBag', '#d6e6ef', { r: .45 }), strap = mat('bagStrap', '#2d5fa8', { r: .8 });
-      S.add(rbox(2.6, 2.55, .12, .05, frame, 0, 1.28, -.92));
-      for (const sx of [-1, 1]) for (let k = 0; k < 7; k++) { S.add(rbox(.42, .32, .95, .08, bag, sx * 1.1, .17 + k * .34, -.42)); S.add(box(.44, .04, .05, strap, sx * 1.1, .17 + k * .34, .02)); }
-      for (let k = 0; k < 5; k++) S.add(rbox(.44, .2, .95, .07, bag, -.9 + k * .45, 2.5, -.42));
-      S.add(rbox(1.7, .4, .62, .05, frame, 0, .2, -.55)); S.add(rbox(1.7, .12, .62, .05, mat('shelterPad', '#3b7bd8', { r: .95 }), 0, .46, -.55));
-      for (const x of [-.42, .42]) S.add(rbox(.78, .5, .12, .05, mat('shelterBack', '#2f5f9e', { r: .95 }), x, .82, -.8));
-      S.add(rbox(.5, .14, .35, .04, mat('blanket', '#c94f3d', { r: 1 }), .55, .59, -.6)); S.add(rbox(.5, .12, .35, .04, mat('blanket2', '#e0b04a', { r: 1 }), .55, .72, -.6));
-      for (let k = 0; k < 4; k++) S.add(cyl(.09, .09, .3, mat('waterPouch', '#9fd0e8', { r: .3 }), -.7 + k * .2, .67, -.62, 12));
-      S.add(pic(.9, .2, label('STORM SHELTER', { w: 512, h: 112, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 56px system-ui' }), 0, 2.15, -.78));
-      S.add(pic(.32, .32, tex(128, 128, (g, w) => { g.fillStyle = '#f2c230'; g.fillRect(0, 0, w, w); g.fillStyle = '#1d1d1d'; g.beginPath(); g.arc(64, 64, 10, 0, 7); g.fill();
-        for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + k * 2 * Math.PI / 3; g.beginPath(); g.moveTo(64, 64); g.arc(64, 64, 52, a - .52, a + .52); g.closePath(); g.fill(); } g.fillStyle = '#f2c230'; g.beginPath(); g.arc(64, 64, 16, 0, 7); g.fill(); g.fillStyle = '#1d1d1d'; g.beginPath(); g.arc(64, 64, 9, 0, 7); g.fill(); }), 0, 1.68, -.78));
-      S.add(pic(.7, .14, label('WATER WALL · 20 cm', { w: 512, h: 100, bg: '#26343d', font: 'bold 40px system-ui' }), 0, 1.4, -.78));
-      const lamp = cyl(.06, .08, .08, mat('lampShade', '#f4efe2', { e: '#ffd9a0', ei: 1.5 }), .7, 2.25, -.7, 16); S.add(lamp);
+  { // storm shelter (pod 3): a walk-in room behind a hatch in the south wall, walled in water bags (water is good
+    // radiation shielding; NASA studies line a small, well-shielded room with water and stores). Two stacked bunks,
+    // a strapped bench, and real NASA 3D Resources models: ISS Crew Lock Bags, EVA helmets, the orange Advanced
+    // Crew Escape Suit and an Orbital Replacement Unit (game/assets/nasa/shelter, see MODELS.md).
+    const st = I.stations.find(t => t.type === 'shelter');
+    const G = st && scene.children.find(o => o.isGroup && Math.abs(o.position.x - st.x) < .01 && Math.abs(o.position.z - st.z) < .01);
+    if (G) { G.traverse(o => { if (o.isMesh) o.visible = false; }); I.obstacles = (I.obstacles || []).filter(b => !(st.x > b.min.x && st.x < b.max.x && st.z > b.min.z && st.z < b.max.z)); }
+    const W = 3.0, D = 2.7, Hc = 2.3, P = pods[3], Rm = new THREE.Group();
+    Rm.userData.noBake = Rm.userData.walk = true; onWall(3, Math.PI, R - .02, Rm); P.add(Rm);
+    const wallM = mat('shelterWall', '#d8dcd6', { r: .9, side: THREE.DoubleSide }), floorM = mat('shelterFloor', '#3c4650', { r: .95 }), frame = mat('shelterFrame', '#3d4a55', { r: .7, m: .2 });
+    const bagM = mat('waterBag', '#d6e6ef', { r: .45 }), strap = mat('bagStrap', '#2d5fa8', { r: .8 }), pad = mat('shelterPad', '#3b7bd8', { r: .95 }), padDark = mat('shelterBack', '#2f5f9e', { r: .95 });
+    // shell
+    Rm.add(box(W, .02, D, floorM, 0, .01, -D / 2)); Rm.add(box(W, .02, D, wallM, 0, Hc, -D / 2));
+    for (const sx of [-1, 1]) Rm.add(box(.04, Hc, D, wallM, sx * W / 2, Hc / 2, -D / 2));
+    Rm.add(box(W, Hc, .04, wallM, 0, Hc / 2, -D));
+    // front wall with the hatch opening: the round pod wall curves away from this flat room, so without it you would
+    // see straight out of the hab past both sides of the hatch
+    for (const sx of [-1, 1]) Rm.add(box(W / 2 - .56, Hc, .06, wallM, sx * (.56 + (W / 2 - .56) / 2), Hc / 2, -.03));
+    Rm.add(box(1.12, Hc - 2.1, .06, wallM, 0, 2.1 + (Hc - 2.1) / 2, -.03));
+    // water walls: bags strapped in rows on both side walls and across the ceiling
+    for (const sx of [-1, 1]) for (let row = 0; row < 6; row++) for (let col = 0; col < 4; col++) {
+      const z = -.4 - col * .6, y = .2 + row * .34; Rm.add(rbox(.26, .3, .56, .07, bagM, sx * (W / 2 - .15), y, z));
+      if (col === 0) Rm.add(box(.03, .04, D - .2, strap, sx * (W / 2 - .29), y + .08, -D / 2 - .05));
     }
+    for (let k = 0; k < 5; k++) Rm.add(rbox(.56, .14, D - .3, .05, bagM, -1.2 + k * .6, Hc - .09, -D / 2 - .05));
+    // hatch: a thick frame in the pod wall, the round-cornered hatch swung open against the pod wall
+    for (const sx of [-1, 1]) Rm.add(box(.12, 2.1, .3, frame, sx * .56, 1.05, 0));
+    Rm.add(box(1.24, .16, .3, frame, 0, 2.14, 0)); Rm.add(box(1.24, .06, .3, frame, 0, .03, 0));
+    const hatch = rbox(1.0, 1.95, .1, .12, mat('shelterHatch', '#9aa5ad', { r: .5, m: .4 }), 0, 0, 0); hatch.position.set(-1.2, 1.05, .22); hatch.rotation.y = Math.PI / 2 - .2; Rm.add(hatch);
+    Rm.add(pic(.9, .18, label('STORM SHELTER', { w: 512, h: 100, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 52px system-ui' }), 0, 2.45, .16));
+    // two stacked bunks along the back wall
+    const bunkZ = -D + .55;
+    for (const sx of [-1.12, 1.12]) Rm.add(box(.06, 2.0, .06, frame, sx, 1.0, bunkZ + .38)), Rm.add(box(.06, 2.0, .06, frame, sx, 1.0, bunkZ - .38));
+    for (const top of [.55, 1.55]) {
+      Rm.add(box(2.2, .08, .8, frame, 0, top - .14, bunkZ)); Rm.add(rbox(2.1, .12, .74, .05, pad, 0, top - .05, bunkZ));
+      Rm.add(rbox(.42, .09, .3, .04, mat('pillow', '#f2f2ee', { r: 1 }), -.8, top + .05, bunkZ));
+      Rm.add(box(2.1, .04, .04, strap, 0, top + .12, bunkZ + .38));   // restraint strap along the open side
+    }
+    Rm.add(box(.4, .04, .04, frame, 1.12, 1.2, bunkZ + .4)); Rm.add(box(.04, 1.6, .04, frame, 1.25, .8, bunkZ + .4));   // ladder rail
+    // strapped bench on the left wall
+    Rm.add(rbox(.45, .42, 1.25, .05, frame, -1.05, .21, -1.05)); Rm.add(rbox(.47, .1, 1.27, .05, pad, -1.05, .47, -1.05));
+    for (const z of [-.6, -1.05, -1.5]) Rm.add(box(.5, .03, .05, strap, -1.05, .53, z));
+    Rm.add(rbox(.08, .5, 1.25, .04, padDark, -1.27, .8, -1.05));
+    // helmet shelf above the bench, ready display by the hatch, a warm light strip
+    Rm.add(box(.32, .03, 1.2, mat('ply', '#c49a6c', { r: .75 }), -1.12, 1.62, -1.05));
+    const disp = tex(512, 288, (g, w, h) => {
+      g.fillStyle = '#071318'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffd27a'; g.font = 'bold 34px monospace'; g.fillText('SHELTER STATUS', 22, 48);
+      g.fillStyle = '#7dffb2'; g.font = '28px monospace';
+      ['Water wall   20 cm', 'Seats + bunks   4', 'Air + water   72 h', 'Dose rate   watch'].forEach((t, i) => g.fillText(t, 22, 100 + i * 44));
+    });
+    const dp = pic(.62, .35, disp, .95, 1.5, -.06, true); dp.rotation.y = Math.PI; Rm.add(dp);   // faces into the room
+    Rm.add(rbox(1.6, .05, .12, .03, mat('shelterLED', '#ffe9c0', { e: '#ffd9a0', ei: 1.4 }), 0, Hc - .19, -1.1));
+    bake(Rm);
+    // the room's frame in the hab, for its floor, bunks and station (bunks.js); the pod is baked flat later
+    Rm.updateMatrix(); const frameM = Rm.matrix.clone();
+    const toScene = (x, z) => new THREE.Vector3(x, 0, z).applyMatrix4(frameM);
+    I.shelterRoom = { frame: frameM, walk: { x0: -.78, x1: .66, z0: -1.55, z1: 0 }, door: { x0: -.32, x1: .32, z0: -.4, z1: .75 }, bunkZ, tops: [.55, 1.55] };
+    if (st) { const p = toScene(0, -.75); st.x = p.x; st.z = p.z; st.label = 'check the storm shelter supplies'; }
+    // NASA models, scaled to real sizes (metres) and placed when they finish loading
+    const place = (file, size, axis, x, y, z, ry = 0, after) => loadModel(file).then(g => {
+      if (!g) return; const o = g.scene.clone(true), b = new THREE.Box3().setFromObject(o), s = b.getSize(new THREE.Vector3());
+      const k = size / (axis === 'y' ? s.y : Math.max(s.x, s.z)); o.scale.setScalar(k);
+      const b2 = new THREE.Box3().setFromObject(o), c = b2.getCenter(new THREE.Vector3());
+      const holder = new THREE.Group(); o.position.set(-c.x, -b2.min.y, -c.z); holder.add(o); holder.position.set(x, y, z); holder.rotation.y = ry;
+      o.traverse(m => { if (!m.isMesh) return; m.castShadow = false; m.receiveShadow = true;
+        // some NASA files make suit fabric 75-85% opaque: draw it solid so the wall doesn't show through it
+        for (const mt of [].concat(m.material)) { if (mt.transmission > 0) { mt.transmission = 0; mt.needsUpdate = true; } }   // the NASA ACES file exports its fabric as glass (transmission 1)
+        for (const mt of [].concat(m.material)) if (mt.transparent && (mt.opacity ?? 1) >= .5) { mt.transparent = false; mt.opacity = 1; mt.alphaTest = mt.map ? .5 : 0; mt.depthWrite = true; mt.needsUpdate = true; } });   // visors (under 50%) stay see-through
+      Rm.add(holder);
+      if (after != null) {   // a number: hang it flat against the right-hand water wall at that x (its real depth varies)
+        holder.updateMatrixWorld(true); const bw = new THREE.Box3().setFromObject(holder);
+        holder.position.x -= Rm.worldToLocal(bw.max.clone()).x - after;
+      }
+    });
+    place('nasa/shelter/aces-suit.glb', 1.75, 'y', 1.0, .02, -1.25, -Math.PI / 2, 1.18);   // orange launch-and-entry suit hung on the right wall
+    place('nasa/shelter/crew-lock-bag.glb', .5, 'y', 1.0, .9, -.42, -Math.PI / 2, 1.2);   // ISS Crew Lock Bags strapped by the hatch
+    place('nasa/shelter/crew-lock-bag.glb', .5, 'y', 1.0, .02, -.42, -Math.PI / 2, 1.2);
+    place('nasa/shelter/helmet.glb', .34, 'y', -1.12, 1.635, -.7, Math.PI / 2);
+    place('nasa/shelter/helmet.glb', .34, 'y', -1.12, 1.635, -1.4, Math.PI / 2);
+    place('nasa/shelter/orbital-replacement-unit.glb', .55, 'xz', .55, .02, bunkZ + .02, 0);   // spare equipment unit stowed under the lower bunk
   }
   upgradeProps(I, scene, pods);   // real equipment in place of the old placeholder blocks
   // ---------- solids: one oriented box per furniture item (racks sit at angles round the curved wall, so a plain

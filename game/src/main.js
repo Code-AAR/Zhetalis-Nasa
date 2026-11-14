@@ -1598,7 +1598,7 @@ renderer.setAnimationLoop(() => {
     if (inside && room === interior) interior.setHabClock?.(solClock / TUNED.solSeconds, outpost.sol, outpost.crew);   // hab lights follow the sol; cabins follow crew size
     if (inside) room.update(dt, world.keys, !isModalOpen());
     if (airlockRoom && room === airlockRoom) updateAirlockGuide();
-    if (inside && room===interior && interior.pos.z < -4.65){
+    if (inside && room===interior && interior.pos.z < -4.65 && Math.abs(interior.pos.x - 20.4) < 1.5){   // only the greenhouse tunnel (pod 2), not the storm shelter room in pod 3
       if(!colony.s.farmQuest.visited)farmProgress('visited');
       room=ghRoom;
       ghRoom.pos.set(interior.pos.x-20.4,0,interior.pos.z+23);

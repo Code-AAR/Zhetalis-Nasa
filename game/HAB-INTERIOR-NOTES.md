@@ -70,3 +70,18 @@ The calendar crosses off sols, and the whiteboard rotates chores and dinner each
 **Lander (`src/world.js`):** ladder stand-offs and feet, grab bars by the hatch, hatch frame with hinges and handle, round port over the flat window, a grated step at the sill.
 
 Preview: `hab-preview.html` (serve the game folder, then open it). Buttons jump to each room.
+
+## Round 4 (14 Nov): walk-in storm shelter
+The storm shelter in **Crew quarters** used to be a shallow nook you couldn't step into. It is now a 3 × 2.7 m room behind a hatch in the pod's south wall:
+- **Walls:** water-bag walls on both sides and the ceiling (water is good radiation shielding).
+- **Furniture:** two stacked bunks at the back, which you can sleep in (`bunks.js`); a strapped bench; a shelter status screen; a warm light strip.
+- **NASA 3D Resources models** (copied unchanged from the project archive into `assets/nasa/shelter/`, credited in `assets/nasa/MODELS.md`):
+  - two ISS Crew Lock Bags by the hatch
+  - two EVA helmets on the shelf
+  - the orange Advanced Crew Escape Suit (ACES) against the wall
+  - an Orbital Replacement Unit stowed under the lower bunk
+
+  The ACES file exports its fabric as glass (transmission 1) and some parts at 75–85 % opacity. The game draws them solid, and only parts under 50 % opacity (visors) stay see-through.
+- **Fix:** walking past z −4.65 used to count as entering the greenhouse tunnel anywhere in the hab. It now applies only in the tunnel by pod 2, so the shelter room doesn't teleport you.
+
+The room is a game illustration, not a validated radiation-shield design.

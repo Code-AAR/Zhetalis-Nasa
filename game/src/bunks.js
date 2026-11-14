@@ -33,16 +33,20 @@ export class Bunks {
         stand, station,
       });
     }
-    // storm-shelter bunks: two stacked beds along the pod wall (interior.js), placed by crew-interior.js
-    const sh = interior.stations.find(st => st.type === 'shelter');
-    if (sh) {
-      const headX = -1, lie = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(headX, 0, 0), new THREE.Vector3(0, 1, 0)));
-      [['low', .675], ['high', 1.875]].forEach(([id, top]) => this.list.push({
+    // storm-shelter bunks: two stacked beds across the back of the walk-in shelter room (hab-dressing.js)
+    const sr = interior.shelterRoom;
+    if (sr) {
+      const m = sr.frame, q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().extractRotation(m));
+      const at = (x, y, z) => new THREE.Vector3(x, y, z).applyMatrix4(m);
+      // lying along the bunk: head (+y) towards the room's -x end, front (+z) up
+      const lie = q.clone().multiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 1, 0))));
+      [['low', sr.tops[0], -.35], ['high', sr.tops[1], .35]].forEach(([id, top, sx]) => this.list.push({
         id: 'shelter-' + id, shelter: true, label: `sleep in the ${id === 'low' ? 'lower' : 'upper'} storm-shelter bunk`,
-        eye: new THREE.Vector3(sh.x - .85, top + .3, sh.z), look: new THREE.Vector3(sh.x + .7, top + .55, sh.z),
-        body: { pos: new THREE.Vector3(sh.x + .95, top + .2, sh.z), quat: lie.clone() },
-        stand: new THREE.Vector3(sh.x + (id === 'low' ? -.35 : .35), 0, sh.z + 1.05), station: new THREE.Vector3(sh.x + (id === 'low' ? -.35 : .35), 0, sh.z + .85),
+        eye: at(-.8, top + .3, sr.bunkZ), look: at(.7, top + .5, sr.bunkZ),
+        body: { pos: at(.95, top + .2, sr.bunkZ), quat: lie.clone() },
+        stand: at(sx, 0, -1.15), station: at(sx, 0, -1.35),
       }));
+      this.shelter = { inv: m.clone().invert(), walk: sr.walk, door: sr.door };
     }
     for (const b of this.list) interior.stations.push({ type: 'bunk', bunk: b.id, x: b.station.x, z: b.station.z, priority: .4, get label() { return b.label; } });
   }
@@ -58,10 +62,14 @@ export class Bunks {
     for (const [id, p] of occupants ?? []) if (id !== me && p.sl === bunk.id) return `${p.name} is already sleeping there.`;
     return null;
   }
-  // Extra floor inside the cabins. `from` is where you stand now: a cabin whose door has shut (a crewmate
+  // Extra floor inside the cabins and the storm shelter. `from` is where you stand now: a cabin whose door has shut (a crewmate
   // went to sleep) only keeps you out if you are not already inside it.
   walkable(x, z, from) {
     const v = this._v ??= new THREE.Vector3();
+    if (this.shelter) {   // the storm shelter room: floor in front of the bunks, between bench and suit, and its hatch
+      const { inv, walk: w, door: d } = this.shelter; v.set(x, 0, z).applyMatrix4(inv);
+      if ((v.x > w.x0 && v.x < w.x1 && v.z > w.z0 && v.z < w.z1) || (v.x > d.x0 && v.x < d.x1 && v.z > d.z0 && v.z < d.z1)) return true;
+    }
     for (const { cabin, inv } of this.cabins) {
       v.set(x, 0, z).applyMatrix4(inv);
       const inRoom = v.x > ROOM.x0 && v.x < ROOM.x1 && v.z > ROOM.z0 && v.z < ROOM.z1;
