@@ -17,7 +17,7 @@ const CARDS = {
     title: 'Dust storms dim the Sun',
     compare: { label: 'Solar power reaching your panels', earth: 100, mars: 35, unit: '%', earthName: 'Clear sky', marsName: 'This storm' },
     body: 'Storm winds reach 17 to 30 m/s, but in air this thin they feel like a breeze. The danger is darkness: dust blocks sunlight, so solar power drops. In 2018 a storm covered the whole planet and Opportunity never woke up. Dust devils stop too, because the ground no longer heats up.',
-    game: 'In the game: the haze closes in, shadows fade, and your panels make about a third of their usual power until the storm ends.',
+    game: 'In the game: the haze closes in and your panels make about a third of their usual power. Dust also piles onto them much faster than on real Mars, so go out and clean them at least twice a sol. Jump, and the wind carries you a few centimetres.',
     source: { text: 'NASA: the fact and fiction of Martian dust storms', url: 'https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/' },
   },
 };

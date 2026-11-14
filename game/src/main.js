@@ -109,6 +109,8 @@ let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you a
 const coop = new Coop();
 let remote = null, coopHud = null, guestMission = false, sleepBunk = null, myVote = false, skipTimer = 0, sleepFade = 0, poseT = 0, shareT = 0, hudT = 0;
 const sharedSeen = new Map(), snapshotWaiting = new Set();
+const STORM_PANEL_DUST = 1.0;   // cleanliness lost per sol in a dust storm (1.0 -> 0.5 in half a sol)
+let panelDustShown = 1;
 const dustVeil = Object.assign(document.createElement('div'), { id: 'dust-veil' }); document.body.appendChild(dustVeil); let dustVeilShown = '';
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
@@ -1398,7 +1400,7 @@ if (location.hash === '#debug') window.game = { get eva(){return eva;},get airlo
 // carries the mission clock. Twice a second each game sends the parts of the shared outpost it changed (outpost
 // fields, crew stores and greenhouses, supply pods, surveys). Personal things stay personal: your suit air, hunger,
 // tool belt and ore bag. The host runs each new sol; guests take its results from the shared state.
-const SKIP_DELAY = 3, PERSONAL_COLONY = new Set(['belt', 'held', 'bag', 'jug', 'seenOre']), HOST_ONLY = new Set(['o.dose', 'o.chargeReserve', 'o.sol', 'o.nextSupply']);
+const SKIP_DELAY = 3, PERSONAL_COLONY = new Set(['belt', 'held', 'bag', 'jug', 'seenOre']), HOST_ONLY = new Set(['o.dose', 'o.chargeReserve', 'o.sol', 'o.nextSupply', 'o.cleanSum', 'o.cleanT']);
 const clockText = h => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor(h % 1 * 60)).padStart(2, '0')}`;
 function localPose() {
   const p = { v: myVote ? 1 : 0 };
@@ -1652,6 +1654,17 @@ renderer.setAnimationLoop(() => {
       if (ev === 'starving') toast(keyWord('You are out of rations, so you are slower and breathing harder. Eat inside the outpost or the rover (hold F).', 'You are out of rations, so you are slower and breathing harder. Eat inside the outpost or the rover.'), 6000);
       if (!inside && !world.driving && Math.hypot(world.player.position.x - 28, world.player.position.z + 35) > 25) earn('steps');
       if (world.driving && roverFrom && world.sev.pos.distanceTo(roverFrom) > 200) earn('driver');
+      // Panel dust: sample cleanliness through the sol for the power total (sim.js). In a dust storm, dust settles on
+      // the panels fast enough that they need cleaning at least twice a sol (a game speed-up: real storm dust builds
+      // up over weeks). Only the host (or a solo player) runs this; co-op shares the result.
+      if (!coop.guest) {
+        const perSol = step / TUNED.solSeconds;
+        outpost.cleanSum = (outpost.cleanSum || 0) + outpost.clean * perSol; outpost.cleanT = (outpost.cleanT || 0) + perSol;
+        if (outpost.dust > 0) {
+          outpost.clean = Math.max(0.3, outpost.clean - STORM_PANEL_DUST * perSol);
+          if (Math.abs(outpost.clean - panelDustShown) > .02) { panelDustShown = outpost.clean; world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97; outpost.today = outpost.forecast(); }
+        }
+      }
       if (wasNight && !world.night) earn('night');   // the Sun is up again
       wasNight = world.night;
       if (solClock >= TUNED.solSeconds && coop.guest) solClock -= TUNED.solSeconds;   // the host runs the new sol; its changes arrive as shared state

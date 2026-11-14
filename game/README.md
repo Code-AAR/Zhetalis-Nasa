@@ -18,7 +18,7 @@ Up to 4 players can share a mission with a room code (**Play together · co-op**
 
 Dust devils now come in several sizes (about 1.5-3.6 m wide at the base, 43-88 m tall) and drift at 1-2 m/s, like the ones Spirit filmed in Gusev Crater. They form only in the warm middle of the sol and never during a storm. Because Mars air is about 1.3% as dense as Earth's (NASA Mars Fact Sheet), a dust devil cannot lift or push you. Walking into one fills your visor with dust and you lean slightly into the gust. One that crosses your solar panels blows dust off them, as dust devils did for Spirit and Opportunity.
 
-Dust storms use a regional-storm optical depth of 4. The direct Sun drops to about 14%, so shadows fade, the haze closes in within tens of metres, and fine dust streams past on the wind. The first dust devil and the first storm each show a short "Real Mars" card (`src/real-mars.js`) with an Earth-vs-Mars comparison and a NASA source.
+Dust storms use a regional-storm optical depth of 4. The direct Sun drops to about 14%, so shadows fade, the haze closes in within tens of metres, and fine dust streams past on the wind. In a storm, jumping lets the wind carry you about 5-20 cm downwind: real drag on a suited astronaut in 17-30 m/s gusts at Mars air density. Storm dust also coats the solar panels at 100% per sol (a game speed-up; real build-up takes weeks), so they need cleaning at least twice a sol, and each sol's solar power uses the panels' average cleanliness across the sol. The first dust devil and the first storm each show a short "Real Mars" card (`src/real-mars.js`) with an Earth-vs-Mars comparison and a NASA source.
 
 ## Hands-on first base mission
 

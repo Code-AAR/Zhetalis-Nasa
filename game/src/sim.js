@@ -154,7 +154,11 @@ export class Outpost {
   tick(rng = Math.random) {
     if (this.over) return [];
     const events = [];
+    // solar power follows how clean the panels were on average across the sol (main.js samples it), so a mid-sol
+    // clean in a dust storm pays off; with no samples (older saves, guests) the cleanliness right now is used
+    const cleanNow = this.clean; if (this.cleanT > 0) this.clean = this.cleanSum / this.cleanT;
     const f = this.forecast();
+    this.clean = cleanNow; this.cleanSum = 0; this.cleanT = 0;
     const tierBefore = this.tier;
     this.emergencyKWh = Math.max(0, (this.emergencyKWh || 0) - this.emergencyDraw());
     this.sol += 1;

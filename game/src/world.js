@@ -989,6 +989,17 @@ export class World {
       this.vel.y -= g * dt;
       p.y += this.vel.y * dt;
     }
+    // Storm wind while you are in the air (on the ground your boots' grip holds you). Real physics: drag force
+    // F = 1/2 * air density * wind² * drag coefficient * area, with Mars air ~0.016 kg/m³ (NASA Mars Fact Sheet),
+    // storm gusts of 17-30 m/s (Viking), ~0.9 m² of suited astronaut and ~150 kg with the suit. That is only 4-8 N,
+    // so one 2.3 s jump drifts you about 10-20 cm downwind (+x, the way the storm dust blows).
+    const wv = this.windVel ??= new THREE.Vector3();
+    if (!this.onGround && this.dustOn && !this.driving) {
+      const gust = 17 + 13 * (.5 + .5 * Math.sin(this.time * .7) * Math.sin(this.time * .23 + 1));
+      const a = .5 * .016 * gust * gust * 1.2 * .9 / 150;
+      wv.x += a * dt; wv.z += a * .25 * Math.sin(this.time * .4) * dt;
+      p.x += wv.x * dt; p.z += wv.z * dt;
+    } else if (wv.x || wv.z) wv.set(0, 0, 0);
     this.rockContact.block(p, previous, this.onGround);
     this.collide(p, previous, this.onGround);
     this.settlement?.blockRails(p,previous);
