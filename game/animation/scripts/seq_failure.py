@@ -16,7 +16,7 @@ END = sc.frame_end
 F_STALL, F_SNAP, F_SPLIT = 70, 120, 192
 F_ROVER, F_WALK, F_SWAP, F_LIFT, F_OK = 200, 262, 300, 318, 345
 
-g, rk = mars_ground(size=1400, res=90, amp=7, flat_r=110, seed=4)
+g, rk, _ = mars_ground(size=1400, center=(-60, -32), flat_r=110, seed=4, clear=[(-10, 15, 42), (-82, -28, 7), (-71, -28, 7), (-60, -28, 7), (-49, -28, 7), (-38, -28, 7), (-20, -55, 12), (-52, -42, 8), (5, -64, 14)])
 base = finished_outpost(skip=('solar',))
 
 # one row of five trackers right in front of the camera

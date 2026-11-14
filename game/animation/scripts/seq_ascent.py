@@ -16,7 +16,7 @@ sc = reset(NAME, 20)
 END = sc.frame_end
 F_IGN, F_UP, F_PITCH, F_WIDE = 72, 80, 170, 300
 
-g, rk = mars_ground(size=3000, res=100, amp=8, flat_r=110, seed=4)
+g, rk, _ = mars_ground(size=3000, center=(20, -20), flat_r=110, seed=4, rocks_n=160)
 base = finished_outpost()
 mav, ascent, plume, z0 = base['ascent']
 MAV = Vector((46, 30, 0))

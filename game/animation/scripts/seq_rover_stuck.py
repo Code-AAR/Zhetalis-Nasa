@@ -15,8 +15,8 @@ sc = reset(NAME, 17)
 END = sc.frame_end
 F_SINK, F_STOP, F_SPLIT, F_OUT, F_BOARDS, F_BACK, F_FREE = 60, 120, 192, 215, 285, 320, 380
 
-g, rk = mars_ground(size=1400, res=90, amp=7, flat_r=110, seed=9)
-sand = cyl('soft_sand', 9, 0.06, loc=(30, 0, 0.0), m=mat('soft_sand', (0.66, 0.44, 0.28), rough=1.0), verts=40, base=True)
+g, rk, _ = mars_ground(size=1400, center=(18, -6), flat_r=110, seed=9, clear=[(0, 0, 9), (14, 0, 9), (30, 0, 15)])
+sand = cyl('soft_sand', 9, 0.03, loc=(30, 0, 0.0), m=mat('soft_sand', (0.6, 0.41, 0.29), rough=1.0, alpha=0.75), verts=40, base=True)
 sand.scale = (1.4, 0.8, 1)
 
 sev = rover('sev', (-30, 0, 0))
@@ -43,8 +43,8 @@ for f in range(F_SINK, F_STOP + 50, 2):
 for f in range(F_BACK, F_FREE, 4):
     spray.emit(f, (27.0 - (f - F_BACK) * 0.19, rnd.choice((-1.6, 1.6)), 0.3), (0.06, 0, 0.04), 24, 0.3, 1.0)
 
-beacon_r = sphere('rover_beacon_red', 0.16, loc=(0, 0, 1.85), m=mat('beacon_red', (1, 0.1, 0.05), emit=(1, 0.1, 0.05), strength=6), parent=body)
-beacon_g = sphere('rover_beacon_green', 0.16, loc=(0, 0, 1.85), m=mat('beacon_green', (0.1, 1, 0.3), emit=(0.1, 1, 0.3), strength=5), parent=body)
+beacon_r = sphere('rover_beacon_red', 0.16, loc=(0, 0, 1.5), m=mat('beacon_red', (1, 0.1, 0.05), emit=(1, 0.1, 0.05), strength=6), parent=body)
+beacon_g = sphere('rover_beacon_green', 0.16, loc=(0, 0, 1.5), m=mat('beacon_green', (0.1, 1, 0.3), emit=(0.1, 1, 0.3), strength=5), parent=body)
 A.key(beacon_r, 0, scale=(0.001,) * 3, interp='CONSTANT'); A.key(beacon_g, 0, scale=(0.001,) * 3, interp='CONSTANT')
 for f in range(F_STOP - 10, F_FREE, 16):
     A.key(beacon_r, f, scale=(1, 1, 1), interp='CONSTANT'); A.key(beacon_r, f + 8, scale=(0.001,) * 3, interp='CONSTANT')

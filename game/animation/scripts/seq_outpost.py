@@ -24,7 +24,7 @@ def grow(o, m0, m1, flat=False, over=1.06):
     A.key(o, f1 - max(2, (f1 - f0) // 5), scale=(over, over, over))
     A.key(o, f1, scale=(1, 1, 1))
 
-g, rk = mars_ground(size=1400, res=90, amp=7, flat_r=110, seed=4)
+g, rk, _ = mars_ground(size=1400, flat_r=110, seed=4, rocks_n=180)
 
 # ---------- month 0: the two pods (crew pod; cargo pod = the ascent vehicle on its descent stage)
 L1, P1 = lander('crew_pod', (0, 0, 0))

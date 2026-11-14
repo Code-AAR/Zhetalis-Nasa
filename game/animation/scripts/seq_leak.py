@@ -16,7 +16,7 @@ sc = reset(NAME, 15)
 END = sc.frame_end
 F_CRACK, F_SPLIT, F_ARRIVE, F_PATCH, F_SEALED = 40, 180, 262, 280, 305
 
-g, rk = mars_ground(size=1400, res=90, amp=7, flat_r=110, seed=4)
+g, rk, _ = mars_ground(size=1400, center=(-2, 8), flat_r=110, seed=4, clear=[(0, 10, 40), (-82, -40, 20), (62, -40, 12), (46, 30, 8)])
 base = finished_outpost()
 
 # the leak: on walkway 1, just before it meets habitat 1

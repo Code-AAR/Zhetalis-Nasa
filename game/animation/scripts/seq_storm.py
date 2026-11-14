@@ -15,7 +15,7 @@ sc = reset(NAME, 18)
 END = sc.frame_end
 F_HIT, F_DARK = 190, 300          # the front reaches the site / full storm
 
-g, rk = mars_ground(size=3000, res=110, amp=10, flat_r=110, seed=4)
+g, rk, _ = mars_ground(size=3000, flat_r=110, seed=4, rocks_n=160)
 base = finished_outpost()
 
 # ---------- the storm: three faint dust shells, each a 2.5 km sphere sliding in from +X

@@ -15,7 +15,7 @@ sc = reset(NAME, 26)
 END = sc.frame_end
 F_SEP, F_SHIELD, F_IGN, F_LEGS, F_TOUCH = 200, 228, 238, 430, 560
 
-g, rk = mars_ground(size=9000, res=110, amp=40, flat_r=200, seed=6, rocks_n=50)
+g, rk, _ = mars_ground(size=9000, span=9000, vscale=0.12, flat_r=200, seed=6, rocks_n=160)
 
 veh = empty('edl_vehicle')
 lroot, P = lander('pod', (0, 0, 0))

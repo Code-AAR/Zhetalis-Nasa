@@ -2,7 +2,7 @@
 (space-pack lander = the game's landing pod, hab, NASA SEV rover, astronaut, greenhouse walkway, NASA orbital
 replacement unit); simple game-authored shapes for what it has no model of (solar trackers, fission power unit,
 oxygen/methane plant, dish). Sizes in metres."""
-import math
+import math, os, random
 from common import *
 from mathutils import Vector
 
@@ -15,10 +15,166 @@ def mars_world(sun_strength=2.6):
     return s, sky
 
 
-def mars_ground(size=1400, res=90, amp=7, flat_r=110, seed=4, rocks_n=60):
-    g = terrain('mars_ground', size, res, amp, RUST, seed=seed, flat_r=flat_r, flat_soft=120)
-    r = rocks('rocks', rocks_n, 25, size * 0.3, (0.2, 1.1), (0.33, 0.2, 0.14), seed=seed + 1, avoid=[(0, 0, 70)])
-    return g, r
+def _terrain_data():
+    """The game's own terrain: MOLA heights of Gusev Crater (512x512, assets/terrain/gusev-mola-128.*) and the real
+    ground brightness (assets/terrain/gusev-albedo-256.*). North is +Y here (the game's -Z)."""
+    import json, numpy as np
+    t = os.path.join(ASSETS, 'terrain')
+    meta = json.load(open(os.path.join(t, 'gusev-mola-128.json')))
+    h = np.fromfile(os.path.join(t, 'gusev-mola-128.bin'), '<i2').reshape(meta['n'], meta['n']).astype(np.float32)
+    am = json.load(open(os.path.join(t, 'gusev-albedo-256.json')))
+    al = np.fromfile(os.path.join(t, 'gusev-albedo-256.bin'), np.uint8).reshape(am['n'], am['n']).astype(np.float32) / 255
+    return h, meta, al
+
+
+def _bilinear(g, u, v):
+    import numpy as np
+    n = g.shape[0]
+    u = np.clip(u, 0, n - 1.001); v = np.clip(v, 0, n - 1.001)
+    x0 = u.astype(int); y0 = v.astype(int); fx = u - x0; fy = v - y0
+    return (g[y0, x0] * (1 - fx) + g[y0, x0 + 1] * fx) * (1 - fy) + (g[y0 + 1, x0] * (1 - fx) + g[y0 + 1, x0 + 1] * fx) * fy
+
+
+def regolith_texture(size=512, seed=3):
+    """Tileable Mars soil: rust dust with grain, darker basalt pebbles and pale dust patches (generated, no source art)."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+
+    def tile_noise(cells):
+        g = rng.random((cells, cells)).astype(np.float32)
+        x = np.linspace(0, cells, size, endpoint=False)
+        x0 = x.astype(int); f = x - x0; f = f * f * (3 - 2 * f); x1 = (x0 + 1) % cells
+        top = g[x0][:, x0] * (1 - f)[None, :] + g[x0][:, x1] * f[None, :]
+        bot = g[x1][:, x0] * (1 - f)[None, :] + g[x1][:, x1] * f[None, :]
+        return top * (1 - f)[:, None] + bot * f[:, None]
+
+    n = sum(tile_noise(c) * w for c, w in ((4, .45), (8, .25), (16, .15), (64, .1), (128, .05)))
+    grain = rng.random((size, size)).astype(np.float32)
+    base = np.array([0.56, 0.37, 0.26], np.float32)
+    col = base[None, None, :] * (0.78 + 0.4 * n[..., None]) * (0.93 + 0.14 * grain[..., None])
+    yy, xx = np.ogrid[-6:7, -6:7]
+    for _ in range(260):                                   # pebbles: small dark basalt bits, some pale
+        cx, cy = rng.integers(0, size, 2); r = rng.uniform(1.0, 4.5)
+        tone = np.array([0.24, 0.16, 0.13]) if rng.random() < 0.7 else np.array([0.75, 0.55, 0.40])
+        m = np.clip(1.2 - np.sqrt(xx * xx + yy * yy) / r, 0, 1)[..., None]
+        ys = (np.arange(cy - 6, cy + 7) % size)[:, None]; xs = (np.arange(cx - 6, cx + 7) % size)[None, :]
+        col[ys, xs] = col[ys, xs] * (1 - m) + tone * m
+    img = bpy.data.images.new('regolith', size, size)
+    rgba = np.concatenate([np.clip(col, 0, 1), np.ones((size, size, 1))], axis=2).astype(np.float32)
+    img.pixels.foreach_set(rgba[::-1].ravel())
+    img.pack()
+    return img
+
+
+def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, seed=4, rocks_n=140, craters=10, clear=None, **_old):
+    """Detailed ground from the game's own data. A polar mesh around `center` (dense where the camera works, sparse
+    far away) with real MOLA heights mapped like the game maps them (span metres for the 4-degree crop, heights
+    x vscale, flat base), small bumps and impact craters, real albedo as vertex colour times a tiled soil texture,
+    and the game's textured rocks (assets/mars-rocks.glb). Returns (ground, rocks root, height function)."""
+    import numpy as np
+    h, meta, al = _terrain_data()
+    n = meta['n']
+    cx, cy = center
+    rnd = random.Random(seed)
+    crater_list = []
+    for _ in range(craters):                                 # small impact craters away from the base
+        for _try in range(200):
+            r = rnd.uniform(4, 22); a = rnd.uniform(0, math.tau); d = rnd.uniform(flat_r + 20, size * 0.4)
+            x, y = math.cos(a) * d, math.sin(a) * d
+            if all((x - X) ** 2 + (y - Y) ** 2 > (r + R + 10) ** 2 for X, Y, R in crater_list):
+                crater_list.append((x, y, r)); break
+    h0 = _bilinear(h, np.array([(n - 1) / 2]), np.array([(n - 1) / 2]))[0]
+
+    def height(X, Y):
+        X = np.asarray(X, float); Y = np.asarray(Y, float)
+        u = (X / span + .5) * (n - 1); v = (.5 - Y / span) * (n - 1)
+        z = (_bilinear(h, u, v) - h0) * vscale
+        R = np.hypot(X, Y)
+        k = np.clip((R - flat_r) / 60.0, 0, 1); k = k * k * (3 - 2 * k)
+        ph = seed * 3.1
+        bumps = 0.25 * np.sin(X * 0.37 + ph) * np.sin(Y * 0.29 - ph) + 0.12 * np.sin(X * 1.3 + Y * 0.9) * np.cos(Y * 1.1 - X * 0.4)
+        z = z * k + bumps * (0.15 + 0.85 * k)
+        for x, y, r in crater_list:                        # bowl, raised rim
+            d = np.hypot(X - x, Y - y) / r
+            z = z - np.where(d < 1, 0.22 * r * (1 - d * d), 0) + 0.05 * r * np.exp(-((d - 1) / 0.25) ** 2)
+        return z
+
+    # polar grid: 0.6 m rings near the centre, growing 7% per ring further out
+    radii = [0.0]; r = 0.6
+    while r < size * 0.72:
+        radii.append(r); r = r + 0.6 if r < 8 else r * 1.07
+    seg = 192
+    ang = np.linspace(0, math.tau, seg, endpoint=False)
+    RR = np.array(radii[1:])[:, None]
+    X = np.concatenate([[cx], (cx + RR * np.cos(ang)[None, :]).ravel()])
+    Y = np.concatenate([[cy], (cy + RR * np.sin(ang)[None, :]).ravel()])
+    Z = height(X, Y)
+    verts = np.stack([X, Y, Z], 1)
+    faces = [(0, 1 + (i + 1) % seg, 1 + i)[::-1] for i in range(seg)]
+    for ri in range(len(radii) - 2):
+        a0 = 1 + ri * seg; a1 = a0 + seg
+        faces += [(a0 + i, a0 + (i + 1) % seg, a1 + (i + 1) % seg, a1 + i) for i in range(seg)]
+    me = bpy.data.meshes.new('mars_ground')
+    me.from_pydata(verts.tolist(), [], faces)
+    me.update()
+    for p in me.polygons: p.use_smooth = True
+    g = bpy.data.objects.new('mars_ground', me); link(g)
+    if me.polygons[len(me.polygons) // 2].normal.z < 0:     # make sure the ground faces up
+        me.flip_normals()
+    # world-space UVs for the tiled soil (one tile per 7 m)
+    uv = me.uv_layers.new(name='UVMap')
+    loops = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', loops)
+    uv.data.foreach_set('uv', np.stack([X[loops] / 7.0, Y[loops] / 7.0], 1).ravel())
+    # real albedo -> vertex colour (darker = dust swept off dark basalt sand), plus darker crater floors
+    na = al.shape[0]
+    A_ = _bilinear(al, (X / span + .5) * (na - 1), (.5 - Y / span) * (na - 1))
+    shade = 0.82 + 0.36 * A_ + 0.06 * np.sin(X * 0.05 + Y * 0.031) * np.cos(Y * 0.043)
+    for x, y, rr in crater_list:
+        shade = shade * np.where(np.hypot(X - x, Y - y) / rr < 1.1, 0.88, 1.0)
+    ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
+    ca.data.foreach_set('color', np.stack([shade, shade, shade, np.ones_like(shade)], 1).astype(np.float32).ravel())
+    m = bpy.data.materials.new('mars_soil'); m.use_nodes = True; nt = m.node_tree
+    b = nt.nodes['Principled BSDF']; b.inputs['Roughness'].default_value = 0.95; b.inputs['Specular IOR Level'].default_value = 0.1
+    tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = regolith_texture(seed=seed)
+    vc = nt.nodes.new('ShaderNodeVertexColor'); vc.layer_name = 'Col'
+    mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
+    nt.links.new(tex.outputs['Color'], mix.inputs[6]); nt.links.new(vc.outputs['Color'], mix.inputs[7])
+    nt.links.new(mix.outputs[2], b.inputs['Base Color'])
+    setmat(g, m)
+
+    # the game's textured rocks, scattered with realistic sizes (most small, a few boulders)
+    lib, P = import_glb('mars-rocks.glb', 'rock_library', tex=512)
+    shapes = []
+    for o in P.values():
+        if o.type == 'MESH':
+            # bake the file's grid placement out: shape data is used directly with its own local bounds
+            lmn = Vector(map(min, *[Vector(c) for c in o.bound_box])); lmx = Vector(map(max, *[Vector(c) for c in o.bound_box]))
+            shapes.append((o.data, max(lmx - lmn), (lmn + lmx) / 2, lmn.z))
+    for o in [lib] + list(lib.children_recursive):
+        bpy.data.objects.remove(o)
+    root = empty('rocks')
+    # clear: circles (x, y, r) kept free of rocks for buildings and paths; default keeps the outpost area clear
+    avoid = (clear if clear is not None else [(0, 0, flat_r * 0.6)]) + [(x, y, r * 1.2) for x, y, r in crater_list]
+    placed = tries = 0
+    while placed < rocks_n and tries < rocks_n * 30:
+        tries += 1
+        near = rnd.random() < 0.6
+        d = rnd.uniform(6, 110) if near else rnd.uniform(60, size * 0.45)
+        a = rnd.uniform(0, math.tau); x, y = cx + math.cos(a) * d, cy + math.sin(a) * d
+        if any((x - X0) ** 2 + (y - Y0) ** 2 < R0 ** 2 for X0, Y0, R0 in avoid):
+            continue
+        data, ext, c, zmin = rnd.choice(shapes)
+        target = rnd.choice((0.25, 0.35, 0.5, 0.7, 1.0)) if near else rnd.uniform(0.6, 2.8)
+        if rnd.random() < 0.05: target *= 2.2                      # an occasional big boulder
+        k = target / ext
+        o = bpy.data.objects.new(f'rock_{placed}', data)
+        o.scale = (k, k, k)
+        rz = rnd.uniform(0, math.tau); o.rotation_euler = (0, 0, rz)
+        ox = (c.x * math.cos(rz) - c.y * math.sin(rz)) * k; oy = (c.x * math.sin(rz) + c.y * math.cos(rz)) * k
+        gz = float(height([x], [y])[0])
+        o.location = (x - ox, y - oy, gz - zmin * k - target * 0.12)   # sunk in a little
+        link(o, root); placed += 1
+    return g, root, height
 
 
 def lander(name, loc=(0, 0, 0), rot_z=0):
