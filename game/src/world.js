@@ -16,7 +16,7 @@ import { createRockContact } from './rock-contact.js';
 import { createDriveProps } from './drive-props.js';
 import { addMarsRockField } from './mars-rock-field.js';
 import { mergeStatic } from './static-merge.js';
-import { SURFACE_DETAIL, GRAPHICS_MODE, regolithMaps, rockMaterial, makeGroundDust } from './surface-detail.js';
+import { SURFACE_DETAIL, GRAPHICS_MODE, regolithMaps, rockMaterial, makeGroundDust, makeStormDust } from './surface-detail.js';
 import { effectiveQuality } from './device-profile.js';
 import { solarPanel, makeCellMat } from './models.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -33,6 +33,7 @@ function vnoise(x, z) {
 function fbm(x, z, oct = 5) { let s = 0, a = 1, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, z * f); n += a; a *= 0.5; f *= 2.03; } return s / n; }
 
 export const WORLD_SIZE = WORLD_EXTENT;
+const STORM_TAU = 4;   // dust optical depth of a regional storm (a clear day is about 0.5)
 // Archived measured MOLA topography, cropped without resampling by the importer.
 // The game compresses this region, exaggerates relief and flattens its base apron.
 const [terrainResponse,metaResponse]=await Promise.all([
@@ -580,6 +581,7 @@ export class World {
     this.scene.add(this.sun, this.sun.target);
     this.terrain = makeTerrain(); this.scene.add(this.terrain);
     this.groundDust = makeGroundDust(heightAt); this.scene.add(this.groundDust);
+    this.stormDust3d = makeStormDust(heightAt); this.scene.add(this.stormDust3d);
 
     let seed = 2126; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const { rocks, colliders, lowRocks } = makeRocks(rng); this.scene.add(rocks); this.rocks=rocks;
@@ -786,12 +788,15 @@ export class World {
     const dusk = Math.max(0, 1 - Math.abs(elev + 0.05) / 0.38);                // around sunrise and sunset
     const dir = new THREE.Vector3(Math.cos(ang) * 0.9, elev, 0.35).normalize();
     this.sunDir = dir;
-    this.sun.intensity = (this.dustOn ? 0.6 : 1.9) * day;
+    // A regional dust storm has an optical depth (tau) of about 4: the direct Sun is mostly blocked, shadows go soft and
+    // faint, and the light that is left comes from the whole dusty sky (NASA; Opportunity measured tau ~10.8 in 2018).
+    const tau = this.dustOn ? STORM_TAU : 0, direct = Math.exp(-tau / 2);
+    this.sun.intensity = 1.9 * day * direct;
     this.sun.color.set('#fff1dc').lerp(new THREE.Color('#ffc08a'), dusk);
-    this.hemi.intensity = 0.22 + 0.93 * day * (this.dustOn ? 0.7 : 1);
+    this.hemi.intensity = 0.22 + 0.93 * day * (this.dustOn ? 0.62 : 1);
     const u = this.sky.material.uniforms, C = c => new THREE.Color(c);
-    u.zenith.value.copy(C(this.dustOn ? '#8a5232' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#3d2c38'), THREE.MathUtils.clamp((1 - day) * 1.2, 0, 1) * 0.8).lerp(C('#020308'), THREE.MathUtils.clamp((1 - day - 0.55) / 0.45, 0, 1));
-    u.horizon.value.copy(C(this.dustOn ? '#b5744c' : '#dcb08a')).lerp(C('#b07a5a'), dusk * 0.5).lerp(C('#0d0b12'), 1 - day);
+    u.zenith.value.copy(C(this.dustOn ? '#6e4129' : '#9c6646')).lerp(C('#2a1f2a'), dusk * 0.6).lerp(C('#3d2c38'), THREE.MathUtils.clamp((1 - day) * 1.2, 0, 1) * 0.8).lerp(C('#020308'), THREE.MathUtils.clamp((1 - day - 0.55) / 0.45, 0, 1));
+    u.horizon.value.copy(C(this.dustOn ? '#9a6240' : '#dcb08a')).lerp(C('#b07a5a'), dusk * 0.5).lerp(C('#0d0b12'), 1 - day);
     u.halo.value.copy(C('#f2eee6')).lerp(C('#4f8be0'), Math.min(1, dusk * 1.5));   // pale by day, blue at sunset
     // ice clouds: pale by day, blue-white glow while the Sun is just below the horizon (the clouds are high enough to stay lit), dark at night
     const glowAfter = THREE.MathUtils.clamp(1 - Math.abs(elev + .1) / .14, 0, 1);
@@ -803,10 +808,10 @@ export class World {
     this.skyLights.motes.material.size = this.dustOn ? 0.007 : 0.003;
     this.nightness = 1 - day;
     // Suspended dust gives Mars its warm haze (NASA Mars Facts). Distances are art tuning, not measured visibility.
-    const fogDay = new THREE.Color(this.dustOn ? '#b5744c' : '#dcb08a');
+    const fogDay = new THREE.Color(this.dustOn ? '#93603f' : '#dcb08a');
     this.scene.fog.color.copy(fogDay).lerp(new THREE.Color('#121019'), 1 - day);
     // Built-in smoothstep fog starts gently beside the player and thickens into the distance.
-    this.scene.fog.near = 2; this.scene.fog.far = this.dustOn ? 120 : 280 - 60 * (1 - day);
+    this.scene.fog.near = this.dustOn ? 1 : 2; this.scene.fog.far = this.dustOn ? 58 : 280 - 60 * (1 - day);   // storm: the plain disappears within tens of metres
     this.skyLights.stars.setOpacity((1 - day) * (this.dustOn ? 0.2 : 1));
     this.skyLights.planets.userData.setOpacity((1 - day) * (this.dustOn ? 0.15 : 0.9));
     this.skyLights.glow.material.color.set('#fff1dc').lerp(new THREE.Color('#3f86ff'), Math.min(1, dusk * 1.4));  // the blue sunset
@@ -855,7 +860,7 @@ export class World {
     rig.position.set(sway, bob + breathe - this.squash * 0.08, 0);
     rig.scale.set(1, 1 - this.squash * 0.04, 1);
     this.lean.x += ((0.05 * this.swing + 0.1 * this.runMix) - this.lean.x) * ease(4);   // lean a little into the walk
-    rig.rotation.set(this.lean.x, 0, this.lean.z);
+    rig.rotation.set(this.lean.x, 0, this.lean.z + (this.windLean || 0));   // windLean: leaning into a dust devil's gust (sites.js)
     // first person: a gentle head bob through the helmet
     this.headBob = { y: (bob - 0.02) * 0.6 - this.squash * 0.1, x: sway * 0.6 };
     // a rigged team model with its own animations: blend idle -> walk -> run by speed
@@ -984,6 +989,17 @@ export class World {
       this.vel.y -= g * dt;
       p.y += this.vel.y * dt;
     }
+    // Storm wind while you are in the air (on the ground your boots' grip holds you). Real physics: drag force
+    // F = 1/2 * air density * wind² * drag coefficient * area, with Mars air ~0.016 kg/m³ (NASA Mars Fact Sheet),
+    // storm gusts of 17-30 m/s (Viking), ~0.9 m² of suited astronaut and ~150 kg with the suit. That is only 4-8 N,
+    // so one 2.3 s jump drifts you about 10-20 cm downwind (+x, the way the storm dust blows).
+    const wv = this.windVel ??= new THREE.Vector3();
+    if (!this.onGround && this.dustOn && !this.driving) {
+      const gust = 17 + 13 * (.5 + .5 * Math.sin(this.time * .7) * Math.sin(this.time * .23 + 1));
+      const a = .5 * .016 * gust * gust * 1.2 * .9 / 150;
+      wv.x += a * dt; wv.z += a * .25 * Math.sin(this.time * .4) * dt;
+      p.x += wv.x * dt; p.z += wv.z * dt;
+    } else if (wv.x || wv.z) wv.set(0, 0, 0);
     this.rockContact.block(p, previous, this.onGround);
     this.collide(p, previous, this.onGround);
     this.settlement?.blockRails(p,previous);
@@ -1073,6 +1089,7 @@ export class World {
     this.skyLights.stars.position.copy(cam); this.skyLights.planets.position.copy(cam);
     this.skyLights.moons.userData.place(this.phase, cam, (this.nightness ?? 0) * (this.dustOn ? 0.2 : 1));
     this.groundDust.userData.update(cam, this.time, this.dustOn, this.nightness ?? 0);
+    this.stormDust3d.userData.update(cam, this.time, this.dustOn, this.nightness ?? 0);
     this.skyLights.motes.userData.update(this.frameDt || 0.016, cam, this.time, this.dustOn ? 3.5 : 0.6);
     const look = new THREE.Vector3(); this.camera.getWorldDirection(look);
     this.headlamp.position.copy(cam); this.headlamp.target.position.copy(cam).addScaledVector(look, 10);
