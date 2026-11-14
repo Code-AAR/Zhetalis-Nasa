@@ -85,3 +85,28 @@ The storm shelter in **Crew quarters** used to be a shallow nook you couldn't st
 - **Fix:** walking past z −4.65 used to count as entering the greenhouse tunnel anywhere in the hab. It now applies only in the tunnel by pod 2, so the shelter room doesn't teleport you.
 
 The room is a game illustration, not a validated radiation-shield design.
+
+## Round 5 (14 Nov): clipping clean-up and the `?overlaps` check
+Open the game with `?overlaps` in the address (e.g. `http://localhost:8790/?overlaps#debug`). When the hab is built, the console lists every pair of props whose parts sit inside one another, and `window.habOverlaps` holds the list (`src/overlap-check.js`).
+- It runs before baking, while each prop is still its own object.
+- Each part is tested as a rotated box, and hatch rings are tested as their four solid bars.
+- Flat decals, hanging wires, curved bands and pipes are ignored.
+- The roof ribs meeting at the Wardroom hub, and their hanger rods, are reported on purpose: those joins are intended.
+
+Fixed with it (now **0** clipping pairs):
+- **Crew cabins:** they moved from 30°/60° to 15°/45° (both sides). The outer two had cut into the hatch frames and the tunnel handrails.
+- **Tunnel hatches:**
+  - The two doors of each tunnel used to overlap in the middle; they now swing to opposite walls.
+  - The leaves are 2.0 m wide, so they end at the far hatch.
+  - They stand off the wall, clear of the handrails.
+- **Tunnel fittings:** the handrails now fit between the frames (1.8 m), and the cable tray runs along the middle of the ceiling.
+- **Greenhouse hatch:** its handrails moved off the frame posts.
+- **Lab bench:** moved clear of the Science-pod hatch handrail. Mei Lin's lab spot follows it.
+- **3D printer:** moved off the cargo rack.
+- **Wardroom window:** the old sill hidden inside the new frame is removed.
+- **Cabin door headers:** no longer dip into the cabin roofs.
+- **Storm shelter:**
+  - The ORU is sized to fit under the lower bunk.
+  - The helmets, shelf and bench sit clear of the water bags.
+  - The open hatch rests inside the curve of the pod wall.
+  - Wall-hung NASA props are aligned with an up-to-date room matrix.

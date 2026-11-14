@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createCrew } from './hab-crew.js';
 import { loadModel } from './nasamodels.js';
+import { findOverlaps } from './overlap-check.js';
 
 const SPACING = 10.2, R = 4, CEIL = 3.3;
 // Fictional crew. The first `crew` of them live here (2 on Cadet, 3 on Explorer, 4 on Commander); the rest of the
@@ -29,7 +30,8 @@ let seed = 911;
 const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
 const M = {};   // shared materials by key
 function mat(key, colour, o = {}) {
-  return M[key] ??= new THREE.MeshStandardMaterial({ color: colour, roughness: o.r ?? .8, metalness: o.m ?? 0, emissive: o.e ?? '#000000', emissiveIntensity: o.ei ?? 1, side: o.side ?? THREE.FrontSide, transparent: !!o.t, opacity: o.t ?? 1 });
+  if (M[key]) return M[key];
+  return M[key] = Object.assign(new THREE.MeshStandardMaterial({ color: colour, roughness: o.r ?? .8, metalness: o.m ?? 0, emissive: o.e ?? '#000000', emissiveIntensity: o.ei ?? 1, side: o.side ?? THREE.FrontSide, transparent: !!o.t, opacity: o.t ?? 1 }), { name: key });
 }
 const box = (w, h, d, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); return o; };
 const cyl = (r1, r2, h, m, x = 0, y = 0, z = 0, seg = 16) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m); o.position.set(x, y, z); return o; };
@@ -475,7 +477,8 @@ export function dressHab(I) {
     if (o.geometry.type === 'CircleGeometry' && Math.abs(o.position.y) < .01 && o.rotation.x < 0) { o.material = o.material.clone(); o.material.map = floorTex; o.material.color.set('#ffffff'); o.material.roughness = .95; o.material.needsUpdate = true; }
   });
   // remove the wall panels where the cabin doors go (pod 3: two each side of the south wall)
-  const cabinSlots = [2, 4, 22, 20], doorSlots = [...cabinSlots, 12];   // 12: the storm shelter hatch (south wall)
+  // (30 and 60 degrees put the outer cabins into the hatch frames and handrails at 90 degrees; 15/45 clear them)
+  const cabinSlots = [1, 3, 23, 21], doorSlots = [...cabinSlots, 12];   // 12: the storm shelter hatch (south wall)
   const doomed = [];
   scene.traverse(o => {
     if (!o.isMesh || o.geometry.type !== 'BoxGeometry') return; const p = o.geometry.parameters;
@@ -483,7 +486,7 @@ export function dressHab(I) {
     for (const j of doorSlots) { const a = slotA(j); if (Math.hypot(o.position.x - (3 * SPACING + Math.sin(a) * R), o.position.z - Math.cos(a) * R) < .05) doomed.push(o); }
   });
   doomed.forEach(o => o.removeFromParent());
-  for (const j of doorSlots) { const hdr = new THREE.Group(); onWall(3, slotA(j), R, hdr); hdr.add(box(1.15, CEIL - 2.4 + .05, .08, wallMats[0], 0, 2.4 + (CEIL - 2.4) / 2, 0)); root.add(hdr); }
+  for (const j of doorSlots) { const hdr = new THREE.Group(); onWall(3, slotA(j), R, hdr); hdr.add(box(1.15, CEIL - 2.42, .08, wallMats[0], 0, 2.42 + (CEIL - 2.42) / 2, 0)); root.add(hdr); }
   // lamps and labels come down under the new ceilings (not in the tall Wardroom)
   scene.traverse(o => {
     if (o.isPointLight && Math.abs(o.position.y - 5.8) < .01) { const pod = Math.round(o.position.x / SPACING); if (pod !== 4) o.position.y = CEIL - .35; o.color.set('#fff3e2'); o.userData.habLamp = true; }
@@ -577,7 +580,7 @@ export function dressHab(I) {
       P.add(g); block(g);
     });
     // a 3D printer (spare parts are printed on site) with a half-finished bracket on the bed
-    const pr = new THREE.Group(); onWall(1, -1.13, R - .5, pr);
+    const pr = new THREE.Group(); onWall(1, -1.17, R - .55, pr);   // (at -1.13 its stand touched the cargo rack)
     { const alu = mat('alu', '#2b2f33', { m: .6, r: .35 }), steel = mat('pSteel', '#b8bec4', { m: .7, r: .32 }), glassM = new THREE.MeshStandardMaterial({ color: '#cfe8f2', roughness: .05, transparent: true, opacity: .22, depthWrite: false });
       // a steel stand with a drawer of spares
       pr.add(rbox(.7, .6, .05, .02, mat('pDark', '#2f353b'), 0, .735, 0).rotateX(-Math.PI / 2)); for (const x of [-.31, .31]) for (const z of [-.25, .25]) pr.add(box(.04, .7, .04, steel, x, .35, z));
@@ -715,7 +718,7 @@ export function dressHab(I) {
   {
     const P = pods[5];
     // lab bench: microscope, glovebox for Mars samples, sample bags labelled with real Spirit sites
-    const LB = new THREE.Group(); onWall(5, Math.PI + 1.0, R - .45, LB); P.add(LB);
+    const LB = new THREE.Group(); onWall(5, Math.PI + .8, R - .45, LB); P.add(LB);   // (at +1.0 it ran into the hatch handrail)
     LB.add(box(1.8, .06, .7, mat('labTop', '#e8e5de', { r: .4 }), 0, .9, 0)); LB.add(box(1.75, .86, .6, mat('labBody', '#aab1ba', { r: .6, m: .2 }), 0, .43, -.03));
     LB.add(rbox(.7, .5, .45, .05, mat('gloveBox', '#bfe0ee', { t: .45, r: .1 }), -.45, 1.18, -.05)); for (const x of [-.6, -.3]) LB.add(cyl(.06, .06, .05, mat('port', '#2b2b2b'), x, 1.1, .19, 16).rotateX(Math.PI / 2));
     const mic = new THREE.Group(); mic.position.set(.35, .93, 0); mic.add(box(.18, .03, .22, mat('micBase', '#2b2f33', { r: .4 }))); mic.add(box(.04, .3, .04, mat('micBase', '#2b2f33'), 0, .15, -.08)); const tube = cyl(.025, .025, .18, mat('micTube', '#d4d8d6', { m: .3 }), 0, .3, -.02, 12); tube.rotation.x = .5; mic.add(tube); LB.add(mic);
@@ -750,31 +753,36 @@ export function dressHab(I) {
     H.add(pic(1.4, .2, label(`${side > 0 ? '' : '← '}${next.toUpperCase()}${side > 0 ? ' →' : ''}`, { w: 768, h: 110, bg: '#26343d', fg: '#ecf2e7', font: 'bold 50px system-ui' }), 0, 3.08, .16));
     H.add(pic(.34, .09, label(`NODE ${i}-${i + side}`, { w: 256, h: 68, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 36px monospace' }), 1.15, 2.55, .16));
     // the hatch, swung back flat against the tunnel wall, with its little pressure window and handle
-    const door = new THREE.Group(); door.position.set(-1.38 * side, 0, -.2); door.rotation.y = side * Math.PI / 2; H.add(door);
-    door.add(at(rbox(2.4, 2.5, .08, .3, hatchDoorM), 0, 1.47, 0).translateX(side * 1.2));
-    door.add(at(new THREE.Mesh(new THREE.CircleGeometry(.12, 20), mat("hatchWin", "#9fd0e8", { r: .1, m: .2 })), side * 1.2, 2.0, .045));
-    door.add(box(.5, .06, .06, mat("hatchHandle", "#2b2f33", { r: .4 }), side * 1.2, 1.4, .07));
+    // The two hatches of one tunnel swing to opposite walls (they used to overlap in the 2.2 m tunnel), stand just off
+    // the wall so the handrail stays clear, and are 2.0 m wide so the leaf ends at the far hatch instead of inside it.
+    const door = new THREE.Group(); door.position.set(-1.24, 0, -.2); door.rotation.y = Math.PI / 2; H.add(door);
+    door.add(at(rbox(2.0, 2.5, .08, .3, hatchDoorM), 0, 1.47, 0).translateX(1.0));
+    door.add(at(new THREE.Mesh(new THREE.CircleGeometry(.12, 20), mat("hatchWin", "#9fd0e8", { r: .1, m: .2 })), 1.0, 2.0, .045));
+    door.add(box(.5, .06, .06, mat("hatchHandle", "#2b2f33", { r: .4 }), 1.0, 1.4, .07));
   }
   { // the hatch at the back of Life support into the greenhouse tunnel
     const H = new THREE.Group(); H.userData.walk = true; onWall(2, Math.PI, R - .02, H); pods[2].add(H);
     H.add(at(ring(3.0, 3.0, 2.6, 2.7, .3, hatchM), 0, 1.47, 0)); H.add(at(ring(2.7, 2.8, 2.54, 2.64, .34, seal), 0, 1.47, 0));
     H.add(pic(1.4, .2, label('GREENHOUSE · DOME 1 →', { w: 768, h: 110, bg: '#2d5a2a', fg: '#e9f7e4', font: 'bold 50px system-ui' }), 0, 3.08, .16));
     H.add(pic(.34, .09, label('NODE 2-G', { w: 256, h: 68, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 36px monospace' }), 1.15, 2.55, .16));
-    for (const off of [-1.4, 1.4]) { const h = handrail(1.0, true); h.position.set(off, 1.2, .05); H.add(h); }
+    for (const off of [-1.65, 1.65]) { const h = handrail(1.0, true); h.position.set(off, 1.2, .05); H.add(h); }   // beside the frame, not on its posts
   }
   for (let i = 0; i < 5; i++) {   // the short tunnels: ribs, a handrail each side, a cable bundle
     const cx = i * SPACING + SPACING / 2, T = new THREE.Group(); T.userData.walk = true; pods[i].add(T);
     for (const dx of [-1.0, 1.0]) { const rib = ring(2.8, 2.9, 2.64, 2.78, .12, hatchM); rib.rotation.y = Math.PI / 2; rib.position.set(cx + dx, 1.5, 0); rib.position.y = 1.5 - .04; T.add(rib); }
-    for (const z of [-1.38, 1.38]) { const hr = handrail(2.6); hr.rotation.y = z > 0 ? Math.PI : 0; hr.position.set(cx, 1.05, z > 0 ? 1.42 : -1.42); T.add(hr); }
-    T.add(box(1.9, .03, .16, mat('tray', '#9aa1a7', { m: .4, r: .5 }), cx, 2.38, -1.24)); T.add(box(1.9, .07, .01, mat('tray', '#9aa1a7'), cx, 2.41, -1.32));
-    for (let k = 0; k < 3; k++) { const c = cyl(.018, .018, 1.9, mat('cable' + k, ['#2b2b2b', '#c23b2f', '#2d5fa8'][k], { r: .6 }), cx, 2.415, -1.29 + k * .042, 8); c.rotation.z = Math.PI / 2; T.add(c); }
-    for (const dx of [-.6, .6]) T.add(box(.03, .12, .2, mat('pSteel', '#b8bec4', { m: .7, r: .32 }), cx + dx, 2.44, -1.24));
+    for (const z of [-1.38, 1.38]) { const hr = handrail(1.8);   // fits between the two hatch frames (2.6 poked into both)
+      hr.rotation.y = z > 0 ? Math.PI : 0; hr.position.set(cx, 1.05, z > 0 ? 1.42 : -1.42); T.add(hr); }
+    // cable tray along the middle of the ceiling (on the wall it sat where an opened hatch now rests)
+    T.add(box(1.8, .03, .16, mat('tray', '#9aa1a7', { m: .4, r: .5 }), cx, 2.68, 0)); for (const z of [-.085, .085]) T.add(box(1.8, .07, .01, mat('tray', '#9aa1a7'), cx, 2.71, z));
+    for (let k = 0; k < 3; k++) { const c = cyl(.018, .018, 1.8, mat('cable' + k, ['#2b2b2b', '#c23b2f', '#2d5fa8'][k], { r: .6 }), cx, 2.715, -.042 + k * .042, 8); c.rotation.z = Math.PI / 2; T.add(c); }
+    for (const dx of [-.6, .6]) T.add(box(.03, .1, .2, mat('pSteel', '#b8bec4', { m: .7, r: .32 }), cx + dx, 2.76, 0));
     T.add(box(3.2, .01, 1.2, mat('tunnelMat', '#3a3f45', { r: 1 }), cx, .045, 0));
   }
 
   { // the Wardroom window: fit the view into the wall opening and give it a proper deep frame (its edges used to poke through the angled panels)
     let view; scene.traverse(o => { if (o.isMesh && o.geometry.type === 'PlaneGeometry' && Math.abs(o.geometry.parameters.width - 3.6) < .01 && Math.abs(o.geometry.parameters.height - 1.85) < .01) view = o; });
     if (view) { view.scale.x = 3.1 / 3.6; }
+    scene.traverse(o => { const p = o.geometry?.parameters; if (o.isMesh && o.geometry.type === 'BoxGeometry' && Math.abs(p.width - 2.8) < .01 && Math.abs(p.height - .12) < .01 && Math.abs(p.depth - .2) < .01) o.visible = false; });   // the old sill sat inside the new frame
     const cx = 4 * SPACING, F = new THREE.Group(); F.userData.walk = true; F.position.set(cx, 2.0, -3.74); pods[4].add(F);
     F.add(ring(3.5, 2.05, 3.0, 1.62, .18, hatchM)); F.add(at(ring(3.06, 1.68, 2.94, 1.56, .26, seal), 0, 0, -.02));
     F.add(box(3.3, .06, .34, mat('ply', '#c49a6c'), 0, -.86, .12));   // a deep sill to lean on
@@ -865,7 +873,7 @@ export function dressHab(I) {
     // hatch: a thick frame in the pod wall, the round-cornered hatch swung open against the pod wall
     for (const sx of [-1, 1]) Rm.add(box(.12, 2.1, .3, frame, sx * .56, 1.05, 0));
     Rm.add(box(1.24, .16, .3, frame, 0, 2.14, 0)); Rm.add(box(1.24, .06, .3, frame, 0, .03, 0));
-    const hatch = rbox(1.0, 1.95, .1, .12, mat('shelterHatch', '#9aa5ad', { r: .5, m: .4 }), 0, 0, 0); hatch.position.set(-1.2, 1.05, .22); hatch.rotation.y = Math.PI / 2 - .2; Rm.add(hatch);
+    const hatch = rbox(1.0, 1.95, .1, .12, mat('shelterHatch', '#9aa5ad', { r: .5, m: .4 }), 0, 0, 0); hatch.position.set(-1.1, 1.05, .45); Rm.add(hatch);   // swung back flat, inside the curve of the pod wall
     Rm.add(pic(.9, .18, label('STORM SHELTER', { w: 512, h: 100, bg: '#f2c230', fg: '#1d1d1d', font: 'bold 52px system-ui' }), 0, 2.45, .16));
     // two stacked bunks along the back wall
     const bunkZ = -D + .55;
@@ -877,11 +885,11 @@ export function dressHab(I) {
     }
     Rm.add(box(.4, .04, .04, frame, 1.12, 1.2, bunkZ + .4)); Rm.add(box(.04, 1.6, .04, frame, 1.25, .8, bunkZ + .4));   // ladder rail
     // strapped bench on the left wall
-    Rm.add(rbox(.45, .42, 1.25, .05, frame, -1.05, .21, -1.05)); Rm.add(rbox(.47, .1, 1.27, .05, pad, -1.05, .47, -1.05));
-    for (const z of [-.6, -1.05, -1.5]) Rm.add(box(.5, .03, .05, strap, -1.05, .53, z));
-    Rm.add(rbox(.08, .5, 1.25, .04, padDark, -1.27, .8, -1.05));
+    Rm.add(rbox(.45, .42, 1.25, .05, frame, -.99, .21, -1.05)); Rm.add(rbox(.47, .1, 1.27, .05, pad, -.99, .47, -1.05));   // clear of the water bags
+    for (const z of [-.6, -1.05, -1.5]) Rm.add(box(.5, .03, .05, strap, -.99, .53, z));
+    Rm.add(rbox(.08, .5, 1.25, .04, padDark, -1.18, .8, -1.05));
     // helmet shelf above the bench, ready display by the hatch, a warm light strip
-    Rm.add(box(.32, .03, 1.2, mat('ply', '#c49a6c', { r: .75 }), -1.12, 1.62, -1.05));
+    Rm.add(box(.3, .03, 1.2, mat('ply', '#c49a6c', { r: .75 }), -1.06, 1.62, -1.05));
     const disp = tex(512, 288, (g, w, h) => {
       g.fillStyle = '#071318'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffd27a'; g.font = 'bold 34px monospace'; g.fillText('SHELTER STATUS', 22, 48);
       g.fillStyle = '#7dffb2'; g.font = '28px monospace';
@@ -907,16 +915,16 @@ export function dressHab(I) {
         for (const mt of [].concat(m.material)) if (mt.transparent && (mt.opacity ?? 1) >= .5) { mt.transparent = false; mt.opacity = 1; mt.alphaTest = mt.map ? .5 : 0; mt.depthWrite = true; mt.needsUpdate = true; } });   // visors (under 50%) stay see-through
       Rm.add(holder);
       if (after != null) {   // a number: hang it flat against the right-hand water wall at that x (its real depth varies)
-        holder.updateMatrixWorld(true); const bw = new THREE.Box3().setFromObject(holder);
+        Rm.updateWorldMatrix(true, false); holder.updateMatrixWorld(true); const bw = new THREE.Box3().setFromObject(holder);   // (a stale room matrix once threw a bag 20 m away)
         holder.position.x -= Rm.worldToLocal(bw.max.clone()).x - after;
       }
     });
     place('nasa/shelter/aces-suit.glb', 1.75, 'y', 1.0, .02, -1.25, -Math.PI / 2, 1.18);   // orange launch-and-entry suit hung on the right wall
     place('nasa/shelter/crew-lock-bag.glb', .5, 'y', 1.0, .9, -.42, -Math.PI / 2, 1.2);   // ISS Crew Lock Bags strapped by the hatch
     place('nasa/shelter/crew-lock-bag.glb', .5, 'y', 1.0, .02, -.42, -Math.PI / 2, 1.2);
-    place('nasa/shelter/helmet.glb', .34, 'y', -1.12, 1.635, -.7, Math.PI / 2);
-    place('nasa/shelter/helmet.glb', .34, 'y', -1.12, 1.635, -1.4, Math.PI / 2);
-    place('nasa/shelter/orbital-replacement-unit.glb', .55, 'xz', .55, .02, bunkZ + .02, 0);   // spare equipment unit stowed under the lower bunk
+    place('nasa/shelter/helmet.glb', .34, 'y', -1.05, 1.635, -.7, Math.PI / 2);
+    place('nasa/shelter/helmet.glb', .34, 'y', -1.05, 1.635, -1.4, Math.PI / 2);
+    place('nasa/shelter/orbital-replacement-unit.glb', .32, 'y', .55, .02, bunkZ + .02, 0);   // low enough to slide under the bunk frame (.37 m)   // spare equipment unit stowed under the lower bunk
   }
   upgradeProps(I, scene, pods);   // real equipment in place of the old placeholder blocks
   // ---------- solids: one oriented box per furniture item (racks sit at angles round the curved wall, so a plain
@@ -944,6 +952,21 @@ export function dressHab(I) {
     for (const P of pods) for (const c of [...P.children]) solidOf(c);
     for (const c of root.children) if (!pods.includes(c)) solidOf(c);
     for (const t of I.stations) { const G = scene.children.find(o => o.isGroup && Math.abs(o.position.x - t.x) < .01 && Math.abs(o.position.z - t.z) < .01); if (G && !G.userData.solid) { G.userData.solid = true; solidOf(G); } }
+  }
+  // team check: ?overlaps lists props that sit inside one another (overlap-check.js), before baking merges them
+  if (new URLSearchParams(location.search).has('overlaps')) {
+    // hatch frames are hollow rings, so give the check their four solid bars (posts, top, bottom) to test against
+    const bars = new THREE.Group(), barM = new THREE.MeshBasicMaterial({ name: 'hatchRingBar' });
+    scene.traverse(o => { if (o.isGroup && o.userData.walk && o.children.some(c => c.material === hatchM && c.geometry.type === 'ExtrudeGeometry' && Math.abs(c.position.y - 1.47) < .01)) {
+      const H = new THREE.Group(); o.updateWorldMatrix(true, false); H.applyMatrix4(o.matrixWorld);
+      for (const x of [-1.4, 1.4]) H.add(at(new THREE.Mesh(new THREE.BoxGeometry(.2, 3.0, .3), barM), x, 1.47, 0));
+      for (const y of [1.47 - 1.42, 1.47 + 1.42]) H.add(at(new THREE.Mesh(new THREE.BoxGeometry(3.0, .16, .3), barM), 0, y, 0));
+      bars.add(H); } });
+    scene.add(bars);
+    const items = [...pods.flatMap(P => P.children), ...root.children.filter(o => !pods.includes(o)), ...scene.children.filter(o => o.isGroup && o !== root && o !== bars), ...bars.children];
+    window.habOverlaps = findOverlaps(items, { skip: o => o.name === 'contact-shadows' });
+    scene.remove(bars);
+    console.table(window.habOverlaps.map(h => ({ depth: h.depth, a: `${h.a.mat} @ ${h.a.at}`, b: `${h.b.mat} @ ${h.b.at}` })));
   }
   for (const P of pods) bake(P);
 
