@@ -24,7 +24,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/coop/health') { res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); return res.end(JSON.stringify({ ok: true, rooms: rooms.size })); }
-  let file = path.join(ROOT, decodeURIComponent(url.pathname));
+  let file; try { file = path.join(ROOT, decodeURIComponent(url.pathname)); } catch { res.writeHead(400); return res.end(); }   // a malformed %-escape must not crash the relay
   if (file !== ROOT && !file.startsWith(ROOT + path.sep)) { res.writeHead(403); return res.end(); }   // never a sibling folder like game-old
   fs.stat(file, (err, st) => {
     if (!err && st.isDirectory()) file = path.join(file, 'index.html');

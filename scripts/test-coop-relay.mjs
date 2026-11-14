@@ -24,6 +24,9 @@ try {
   await next(c, 'joined'); await next(d, 'joined'); assert.match((await next(e, 'error')).msg, /full/);
   const bad = await open(); send(bad, { t: 'join', code: 'ZZZZZ' }); assert.match((await next(bad, 'error')).msg, /No game/);
   a.close(); const h = await next(b, 'host'); assert.notEqual(h.id, made.id);
+  const badUrl = await fetch(`http://127.0.0.1:${PORT}/%E0`); assert.equal(badUrl.status, 400, 'malformed URL is refused');
+  const sib = await fetch(`http://127.0.0.1:${PORT}/../server/coop-relay.mjs`); assert.notEqual(sib.status, 200, 'no files outside game/');
+  assert.equal((await fetch(`http://127.0.0.1:${PORT}/coop/health`)).status, 200, 'still running after bad requests');
   console.log('co-op relay: all checks passed');
   for (const w of [b, c, d, e, bad]) w.close();
 } finally { relay.kill(); }
