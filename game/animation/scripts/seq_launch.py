@@ -1,6 +1,6 @@
 """1. Launch from Earth: NASA's SLS on Mobile Launcher 1 at Pad 39B.
 Event times follow Artemis I: RS-25 start T-6.4 s, liftoff T-0, boosters drop T+2:12 (~47 km), abort tower off T+3:11.
-Real time until the rocket clears the tower, then about 19x faster (the captions give the real times)."""
+Slightly slowed until the rocket clears the tower, then about 14x faster (the captions give the real times)."""
 import sys, os, math, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
@@ -152,14 +152,14 @@ sun(4.0, rot=(48, 0, -35))
 strength, ramp = world_sky((0.72, 0.82, 0.95), (0.18, 0.38, 0.85), (0.3, 0.3, 0.25), strength=1.2, stars=0.6)
 el = ramp.color_ramp.elements
 for f, zen, hor, stv in ((F_FAST, (0.18, 0.38, 0.85), (0.72, 0.82, 0.95), 1.2), (F_SRB, (0.02, 0.05, 0.16), (0.35, 0.5, 0.75), 0.8), (END, (0.0, 0.0, 0.01), (0.2, 0.32, 0.6), 0.6)):
-    el[1].color = (*zen, 1); el[1].keyframe_insert('color', frame=f)
-    el[2].color = (*hor, 1); el[2].keyframe_insert('color', frame=f)
+    el[1].color = (*zen, 1); el[1].keyframe_insert('color', frame=f * STRETCH)
+    el[2].color = (*hor, 1); el[2].keyframe_insert('color', frame=f * STRETCH)
     key_value(strength, f, stv)
 caption(cam, 'Kennedy Space Center, Pad 39B - SLS rocket, 98 m tall', 0, 40)
 caption(cam, 'T-6 s: the four RS-25 engines start', 40, 96)
 caption(cam, 'T-0: both solid rocket boosters light - liftoff!', 96, 200)
 caption(cam, 'Clearing the 116 m launch tower', 200, F_FAST)
-caption(cam, 'Faster than sound after about a minute (shown 19x faster)', F_FAST, F_SRB)
+caption(cam, f'Faster than sound after about a minute (shown {round(208 / ((END - F_FAST) / FPS) / STRETCH)}x faster)', F_FAST, F_SRB)
 caption(cam, 'T+2 min 12 s: boosters drop away, about 47 km up', F_SRB, F_LAS)
 caption(cam, 'T+3 min 11 s: the launch abort tower is jettisoned', F_LAS, END + 1)
 

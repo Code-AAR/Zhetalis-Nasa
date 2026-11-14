@@ -20,10 +20,10 @@ g, rk, _ = mars_ground(size=1400, center=(-2, 8), flat_r=110, seed=4, clear=[(0,
 base = finished_outpost()
 
 # the leak: on walkway 1, just before it meets habitat 1
-a, b = Vector((-1.5, 3.0, 0)), Vector((-8.6, 15.0, 0))
+a, b = Vector((*HAB1, 0)), Vector((*HAB2, 0))   # the walkway from habitat 1 to habitat 2
 along = (b - a).normalized()
 out = Vector((along.y, -along.x, 0))            # sideways, toward the camera
-SEAM = a + along * 11.2 + out * 1.75 + Vector((0, 0, 1.9))
+SEAM = a + along * (hab_wall_radius() + 1.3) + out * 1.75 + Vector((0, 0, 1.9))   # just outside habitat 1's collar
 frost = Puffs('leak_frost', 50, (0.95, 0.96, 1.0), alpha=0.55)
 rnd = random.Random(12)
 f = F_CRACK

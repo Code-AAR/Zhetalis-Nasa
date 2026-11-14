@@ -3,43 +3,43 @@
   {
    "name": "rover_stuck",
    "start": 0.0,
-   "end": 8.0
+   "end": 10.667
   },
   {
    "name": "rover_freed",
-   "start": 8.0,
-   "end": 16.958
+   "start": 10.667,
+   "end": 22.611
   }
  ],
  "captions": [
   {
    "t0": 0.0,
-   "t1": 2.5,
+   "t1": 3.33,
    "text": "The rover drives onto soft sand hidden under a dust crust..."
   },
   {
-   "t0": 2.5,
-   "t1": 6.67,
+   "t0": 3.33,
+   "t1": 8.88,
    "text": "Stuck! The wheels spin and dig in"
   },
   {
-   "t0": 6.67,
-   "t1": 8.0,
+   "t0": 8.88,
+   "t1": 10.67,
    "text": "Spirit got stuck like this in 2009 and never got out"
   },
   {
-   "t0": 8.0,
-   "t1": 13.33,
+   "t0": 10.67,
+   "t1": 17.79,
    "text": "Repair: dig out the wheels and lay traction boards"
   },
   {
-   "t0": 13.33,
-   "t1": 15.83,
+   "t0": 17.79,
+   "t1": 21.12,
    "text": "Back out slowly, the way you came in"
   },
   {
-   "t0": 15.83,
-   "t1": 17.0,
+   "t0": 21.12,
+   "t1": 22.67,
    "text": "Free! Opportunity escaped a dune like this in 2005 after five weeks"
   }
  ]

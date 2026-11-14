@@ -19,6 +19,9 @@ ANIM = os.path.dirname(HERE)                  # game/animation
 GAME = os.path.dirname(ANIM)                  # game
 ASSETS = os.path.join(GAME, 'assets')
 FPS = 24
+# Every film is played this much slower than its script's frame numbers (keys, captions, clip ranges are scaled when
+# the actions are written). 4/3 keeps the cruise loop on whole frames (288 -> 384).
+STRETCH = float(os.environ.get('ANIM_STRETCH', 4 / 3))
 
 
 def args():
@@ -389,7 +392,13 @@ class Anim:
         return a, slot, cb
 
     def build(self, clips):
-        """clips: [(name, first frame, last frame)]."""
+        """clips: [(name, first frame, last frame)]. Applies STRETCH to every key, clip range, caption and the timeline."""
+        S = STRETCH
+        self.k = {o: {ch: {f * S: v for f, v in keys.items()} for ch, keys in chans.items()} for o, chans in self.k.items()}
+        clips = [(n, f0 * S, f1 * S) for n, f0, f1 in clips]
+        CAPTIONS[:] = [(t, int(round(f0 * S)), int(round(f1 * S)), w, ph) for t, f0, f1, w, ph in CAPTIONS]
+        sc = bpy.context.scene
+        sc.frame_end = int(round((sc.frame_end + 1) * S)) - 1
         self.clips = clips
         self.full = {}
         for oname, chans in self.k.items():
@@ -571,7 +580,7 @@ def world_sky(horizon, zenith, ground, strength=1.0, stars=0.0):
 
 def key_value(socket, f, v):
     socket.default_value = v
-    socket.keyframe_insert('default_value', frame=f)
+    socket.keyframe_insert('default_value', frame=f * STRETCH)
 
 
 # ---------------------------------------------------------------- output

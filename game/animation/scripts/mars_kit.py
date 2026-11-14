@@ -314,21 +314,13 @@ def ascent_vehicle(name, loc=(0, 0, 0)):
 def finished_outpost(skip=()):
     """The outpost as it stands near the end of the 26 months (same layout as seq_outpost.py)."""
     out = {}
-    out['pod'] = lander('crew_pod', (0, 0, 0))[0]
+    out['pod'] = lander('crew_pod', (*POD, 0))[0]
     if 'ascent' not in skip:
-        out['ascent'] = ascent_vehicle('ascent_vehicle', (46, 30, 0))
-    out['hab1'] = hab('hab_1', (-12, 22, 0), rot_z=200)
-    out['hab2'] = hab('hab_2', (20, 40, 0), rot_z=150)
-    for i, c in enumerate(((-12, 22), (20, 40))):
-        berm(f'shield_berm_{i}', (*c, 0), 7.6, 9.6, 3.2)
-    for name, a, b in (('walkway_1', (-1.5, 3.0), (-8.6, 15.0)), ('walkway_2', (-5.0, 27.0), (14.0, 35.5))):
-        w, _ = import_glb('greenhouse-walkway.glb', name)
-        for o in w.children_recursive:
-            o.name = f'{name}_{o.name.split(".")[0]}'
-        va, vb = Vector((*a, 0)), Vector((*b, 0))
-        w.location = va
-        w.rotation_euler.z = math.atan2((vb - va).y, (vb - va).x) + math.pi / 2
-        w.scale = (1, (vb - va).length / 15.0, 1)
+        out['ascent'] = ascent_vehicle('ascent_vehicle', (*MAV, 0))
+    out['hab1'] = hab('hab_1', (*HAB1, 0), rot_z=200)
+    out['hab2'] = hab('hab_2', (*HAB2, 0), rot_z=150)
+    out['greenhouse'] = greenhouse('greenhouse', GH)
+    build_links()
     if 'solar' not in skip:
         out['trackers'] = []
         for row in range(3):
@@ -376,3 +368,159 @@ def walk_bob(obj, amp=0.06, step=7):
             A.key(obj, f, loc=(None, None, amp * (1 if int((f - f0) / (step / 2)) % 2 else 0.2)), interp='BEZIER')
             f += step / 2
         A.key(obj, f0, loc=(None, None, 0)); A.key(obj, f1, loc=(None, None, 0))
+
+
+# ---------------------------------------------------------------- outpost layout (shared by every Mars film)
+# The landing pod stands on its own (crews walk across from it); the walkways join habitat 1 to habitat 2 and to the
+# greenhouse. Every walkway runs wall to wall with a sealed airlock collar at each end.
+POD, MAV, HAB1, HAB2, GH = (0, 0), (46, 30), (-12, 22), (20, 40), (-46, 22)
+GH_LEN, GH_R = 22.0, 4.2
+BERM_IN, BERM_OUT = 7.6, 9.6
+_hab_r = None
+
+
+def hab_wall_radius():
+    """Outer radius of the habitat wall (measured once from the game's hab model)."""
+    global _hab_r
+    if _hab_r is None:
+        root, P = import_glb('space-pack/hab.glb', '_measure')
+        w = next(o for k, o in P.items() if k.startswith('Habitat_wall'))
+        mn, mx = bounds([w]); _hab_r = (mx.x - mn.x) / 2
+        for o in [root] + list(root.children_recursive): bpy.data.objects.remove(o)
+    return _hab_r
+
+
+def greenhouse(name, center=GH, rot_z=0.0):
+    """Arched glass greenhouse (22 m x 8.4 m) with plant beds, like the game's (src/greenhouse.js) but simplified.
+    Its long axis runs along local X; the walkway door is the +X end."""
+    import bmesh
+    root = empty(name, loc=(*center, 0)); root.rotation_euler.z = math.radians(rot_z)
+    def arch(oname, r_out, r_in, x0, x1, m, seg=24):
+        me = bpy.data.meshes.new(oname); bm = bmesh.new()
+        prof = [(math.cos(a), math.sin(a)) for a in [math.pi * i / seg for i in range(seg + 1)]]
+        rings = []
+        for x in (x0, x1):
+            outer = [bm.verts.new((x, c * r_out, s * r_out)) for c, s in prof]
+            inner = [bm.verts.new((x, c * r_in, s * r_in)) for c, s in prof]
+            rings.append((outer, inner))
+        (o0, i0), (o1, i1) = rings
+        for k in range(seg):
+            bm.faces.new((o0[k], o0[k + 1], o1[k + 1], o1[k])); bm.faces.new((i0[k + 1], i0[k], i1[k], i1[k + 1]))
+            bm.faces.new((o0[k + 1], o0[k], i0[k], i0[k + 1])); bm.faces.new((o1[k], o1[k + 1], i1[k + 1], i1[k]))
+        bm.normal_update(); bm.to_mesh(me); bm.free()
+        for p in me.polygons: p.use_smooth = True
+        o = bpy.data.objects.new(oname, me); link(o, root); setmat(o, m); return o
+    glass = mat('gh_glass', (0.75, 0.88, 0.95), rough=0.05, alpha=0.32)
+    frame = mat('gh_frame', (0.85, 0.86, 0.88), rough=0.4, metal=0.6)
+    L = GH_LEN
+    shell = arch(name + '_glass', GH_R, GH_R - 0.08, -L / 2, L / 2, glass); shell.visible_shadow = False
+    for i in range(9):
+        x = -L / 2 + i * L / 8
+        arch(f'{name}_rib{i}', GH_R + 0.08, GH_R - 0.12, x - 0.12, x + 0.12, frame)
+    for side in (-1, 1):                                    # sealed end walls: solid half discs
+        arch(f'{name}_end{side}', GH_R, 0.05, side * L / 2 - 0.06, side * L / 2 + 0.06, frame if side > 0 else glass)
+    cube(name + '_floor', (L, 2 * GH_R, 0.25), loc=(0, 0, 0.12), m=mat('gh_floor', (0.5, 0.48, 0.45), rough=0.8), parent=root)
+    leaf = mat('gh_leaf', (0.18, 0.55, 0.16), rough=0.7); soil = mat('gh_soil', (0.2, 0.13, 0.09), rough=1.0)
+    rnd = random.Random(7)
+    for row, y in enumerate((-2.2, 0, 2.2)):
+        cube(f'{name}_bed{row}', (L - 3, 1.1, 0.6), loc=(0, y, 0.55), m=soil, parent=root)
+        for j in range(14):
+            pl = sphere(f'{name}_plant{row}_{j}', 0.35, loc=(-L / 2 + 2 + j * (L - 4) / 13, y + rnd.uniform(-0.2, 0.2), 1.0), m=leaf, parent=root, sub=1)
+            s_ = rnd.uniform(0.7, 1.2); pl.scale = (s_, s_, s_ * 0.8)
+    return root
+
+
+def berm_gapped(name, center, gaps=(), r_in=BERM_IN, r_out=BERM_OUT, h=3.2, gap_w=5.0):
+    """Bagged-soil shielding wall around a habitat, with openings where walkways pass (gaps: directions in radians)."""
+    import bmesh
+    me = bpy.data.meshes.new(name); bm = bmesh.new()
+    seg = 96; prof = [(h, r_in + 0.6), (h, r_out - 0.6), (0, r_out), (0, r_in)]
+    def open_at(a):
+        for g in gaps:
+            d = abs((a - g + math.pi) % math.tau - math.pi)
+            if d * (r_in + r_out) / 2 < gap_w / 2: return True
+        return False
+    angs = [math.tau * i / seg for i in range(seg)]
+    rings = [[bm.verts.new((math.cos(a) * r, math.sin(a) * r, z)) for z, r in prof] for a in angs]
+    for i in range(seg):
+        j = (i + 1) % seg
+        if open_at(angs[i]) or open_at(angs[j]): continue
+        for k in range(4):
+            k2 = (k + 1) % 4
+            bm.faces.new((rings[i][k], rings[j][k], rings[j][k2], rings[i][k2]))
+        if open_at(angs[(i - 1) % seg]): bm.faces.new(list(reversed(rings[i])))   # close the wall ends at a gap
+        if open_at(angs[(j + 1) % seg]): bm.faces.new(rings[j])
+    bm.normal_update(); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new(name, me); link(o); o.location = (*center, 0)
+    setmat(o, mat('regolith_bags', (0.6, 0.38, 0.24), rough=1.0))
+    return o
+
+
+def walkway_between(name, a, ra, b, rb):
+    """The game's pressurised walkway from the wall of building a (radius ra) to building b (radius rb), sealed with an
+    airlock collar at both ends. Returns (root, start point, end point)."""
+    va, vb = Vector((*a, 0)), Vector((*b, 0))
+    d = (vb - va).normalized()
+    p0, p1 = va + d * (ra - 0.4), vb - d * (rb - 0.4)        # ends tucked just inside each wall
+    w, _ = import_glb('greenhouse-walkway.glb', name)
+    for o in w.children_recursive:
+        o.name = f'{name}_{o.name.split(".")[0]}'
+    w.location = p0
+    w.rotation_euler.z = math.atan2(d.y, d.x) + math.pi / 2  # the model runs along its -Y from its origin
+    w.scale = (1, (p1 - p0).length / 15.0, 1)
+    cm = mat('airlock_collar', (0.78, 0.79, 0.8), rough=0.45, metal=0.5)
+    collars = []
+    for k, p in enumerate((p0, p1)):
+        c = cube(f'{name}_collar{k}', (4.1, 0.9, 3.75), loc=(0, 0, 0), m=cm)
+        c.location = (p.x, p.y, 1.62); c.rotation_euler.z = math.atan2(d.y, d.x) + math.pi / 2
+        ring = cube(f'{name}_seal{k}', (4.3, 0.25, 3.95), m=mat('collar_seal', (0.25, 0.26, 0.28), rough=0.6))
+        q = p + d * (0.55 if k == 0 else -0.55)
+        ring.location = (q.x, q.y, 1.62); ring.rotation_euler.z = c.rotation_euler.z
+        collars += [c, ring]
+    return w, p0, p1, collars
+
+
+def outpost_obstacles():
+    """Footprints movers must not pass through: buildings (circles) and walkways (segments, half width)."""
+    r = hab_wall_radius()
+    circles = [(POD, 4.0), (MAV, 5.5), (HAB1, BERM_OUT + 0.8), (HAB2, BERM_OUT + 0.8), ((62, -40), 7.5)]
+    segs = [(HAB1, HAB2, 2.8), (HAB1, (GH[0] + GH_LEN / 2, GH[1]), 2.8), ((GH[0] - GH_LEN / 2, GH[1]), (GH[0] + GH_LEN / 2, GH[1]), GH_R + 0.8)]
+    return circles, segs
+
+
+def route_problems(points, extra_circles=()):
+    """Legs of a route [(x, y), ...] that cross a building or walkway (to check film paths)."""
+    circles, segs = outpost_obstacles()
+    circles = circles + list(extra_circles)
+    bad = []
+    def seg_dist(p, q, a, b):
+        import numpy as np
+        p, q, a, b = map(lambda t: np.array(t, float), (p, q, a, b))
+        best = 1e9
+        for t in np.linspace(0, 1, 60):
+            x = p + (q - p) * t
+            ab = b - a; u = max(0, min(1, np.dot(x - a, ab) / max(1e-9, np.dot(ab, ab))))
+            best = min(best, np.linalg.norm(x - (a + ab * u)))
+        return best
+    for p, q in zip(points, points[1:]):
+        for c, r in circles:
+            if seg_dist(p, q, c, c) < r: bad.append((p, q, 'building', c))
+        for a, b, w in segs:
+            if seg_dist(p, q, a, b) < w: bad.append((p, q, 'walkway', a, b))
+    return bad
+
+
+def gh_door():
+    return (GH[0] + GH_LEN / 2, GH[1])
+
+
+def build_links(names=('walkway_hab', 'walkway_greenhouse')):
+    """Walkways habitat 1 -> habitat 2 and habitat 1 -> greenhouse, and the soil walls with gaps for them.
+    Returns {name: walkway root} and the berm objects."""
+    r = hab_wall_radius()
+    w1 = walkway_between(names[0], HAB1, r, HAB2, r)[0]
+    w2 = walkway_between(names[1], HAB1, r, gh_door(), 0.0)[0]
+    ang = lambda a, b: math.atan2(b[1] - a[1], b[0] - a[0])
+    b1 = berm_gapped('shield_berm_0', HAB1, gaps=(ang(HAB1, HAB2), ang(HAB1, gh_door())))
+    b2 = berm_gapped('shield_berm_1', HAB2, gaps=(ang(HAB2, HAB1),))
+    return {names[0]: w1, names[1]: w2}, (b1, b2)

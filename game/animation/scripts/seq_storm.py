@@ -59,7 +59,7 @@ A.key(sf, 0, scale=(1, 1, 1), interp='LINEAR'); A.key(sf, F_HIT - 60, scale=(1, 
 A.key(sf, F_DARK, scale=(0.35, 1, 1)); A.key(sf, END, scale=(0.35, 1, 1))
 lamp, (sky_strength, ramp) = mars_world()
 for f, e, w in ((0, 2.6, 0.9), (F_HIT - 60, 2.6, 0.9), (F_DARK, 0.9, 0.5), (END, 0.9, 0.5)):
-    lamp.data.energy = e; lamp.data.keyframe_insert('energy', frame=f)
+    lamp.data.energy = e; lamp.data.keyframe_insert('energy', frame=f * STRETCH)
     key_value(sky_strength, f, w)
 
 # ---------- camera

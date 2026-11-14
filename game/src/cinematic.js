@@ -49,7 +49,7 @@ async function stage(name, parent, { clip, loop = false } = {}) {
   const mixer = new THREE.AnimationMixer(root);
   const action = mixer.clipAction(c); action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); action.clampWhenFinished = true; action.play();
   const info = caps?.clips?.find(x => x.name === c.name) || { start: 0 };
-  const lines = (caps?.captions || []).map(l => ({ ...l, t0: l.t0 - info.start, t1: l.t1 - info.start })).filter(l => l.t1 > 0 && l.t0 < c.duration);
+  const lines = (caps?.captions || []).map(l => ({ ...l, t0: l.t0 - info.start, t1: l.t1 - info.start })).filter(l => l.t1 > 0.05 && l.t0 < c.duration - 0.05);   // ignore rounding overlaps with the next clip
   const sunFactor = root.getObjectByName('sun_factor');
   return {
     duration: c.duration, lines, bars: !!look.bars,

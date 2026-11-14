@@ -72,7 +72,7 @@ def person(name, char, loc, rot_z=0, clip='idle', end=240, offset=0.0, speed=1.0
     out = bpy.data.actions.new(f'{name}_{clip}')
     slot = out.slots.new(id_type='OBJECT', name=arm.name)
     ocb = out.layers.new('L').strips.new(type='KEYFRAME').channelbag(slot, ensure=True)
-    frames = np.arange(0, end + 1, 2, dtype=np.float32)
+    frames = np.arange(0, (end + 1) * STRETCH + 1, 2, dtype=np.float32)   # film frames after STRETCH, clip at natural speed
     src_t = lo + np.mod(frames * speed + offset * length, length)
     for fc in cb.fcurves:
         dp = fc.data_path
@@ -89,3 +89,31 @@ def person(name, char, loc, rot_z=0, clip='idle', end=240, offset=0.0, speed=1.0
         bpy.data.actions.remove(a)
     A.own.append(arm)
     return root, arm
+
+
+def gesture(arm, bone, windows, end=None):
+    """Add motion on top of the baked clip: windows = [(f0, f1, (x, y, z) degrees), ...] in script frames (before
+    STRETCH); the bone eases into the extra rotation and back out. bone = plain Mixamo name, e.g. 'RightArm'."""
+    from mathutils import Euler, Quaternion
+    act = arm.animation_data.action
+    cb = _channelbag(act, arm.animation_data.action_slot)
+    names = [b.name for b in arm.pose.bones if b.name.startswith('mixamorig') and re.sub(r'^mixamorig\d*:?', '', b.name.split('.')[0]) == bone]
+    for bn in names:
+        fcs = [cb.fcurves.find(f'pose.bones["{bn}"].rotation_quaternion', index=i) for i in range(4)]
+        if not all(fcs):
+            continue
+        n = len(fcs[0].keyframe_points)
+        co = [np.zeros(n * 2, np.float32) for _ in range(4)]
+        for i in range(4): fcs[i].keyframe_points.foreach_get('co', co[i])
+        frames = co[0][0::2]
+        for f0, f1, rot in windows:
+            F0, F1 = f0 * STRETCH, f1 * STRETCH
+            ramp = min(12 * STRETCH, (F1 - F0) / 3)
+            for k, f in enumerate(frames):
+                if f < F0 or f > F1: continue
+                w = min(1.0, (f - F0) / ramp, (F1 - f) / ramp); w = w * w * (3 - 2 * w)
+                q = Quaternion([co[i][2 * k + 1] for i in range(4)])
+                q = q @ Euler([math.radians(a * w) for a in rot]).to_quaternion()
+                for i in range(4): co[i][2 * k + 1] = q[i]
+        for i in range(4):
+            fcs[i].keyframe_points.foreach_set('co', co[i]); fcs[i].update()

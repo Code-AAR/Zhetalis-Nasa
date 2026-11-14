@@ -19,22 +19,22 @@ Blender's timeline runs at 24 fps; the GLB clips are sampled at 12 fps (three.js
 
 | GLB | Clip | Length | Game moment |
 |---|---|---|---|
-| `ares_vi_briefing.glb` | `ares_vi_briefing` | 44 s | 1. New game, first: **Ares VI: Final Stage Briefing**, built from the team's storyboard (`storyboards/ares-vi-final-stage-briefing.html`): same 7 shots, camera moves and lines. Director Hale and the crew of four are the game's rigged characters (`assets/crew`, animations retargeted like `src/hab-crew.js`); the storyboard's model slots are filled with the Ares VI lander (descent stage + ascent vehicle), habitat, fission unit, solar tracker and ISRU plant as holograms over the table. Captions carry speaker and phase. |
-| `briefing_mission.glb` (0.5 MB) | `briefing_mission` | 25.9 s | 1. New game: the mission plan. Sun, Earth and Mars on real orbits (distances to scale), the launch window (Mars 44° ahead), the 259-day transfer ellipse solved with Kepler's equation, and the 26-month goal. |
-| `launch_earth.glb` (1.7 MB) | `launch_earth` | 22.9 s | 1. The ship launches after landing-site choice: SLS on Mobile Launcher 1 at Pad 39B. RS-25 start at 1.7 s, liftoff at 4.0 s, real time until it clears the tower, then about 19× faster: boosters drop at 17.6 s, abort tower off at 20.7 s. |
-| `cruise_loop.glb` (0.4 MB) | `cruise_loop` | 12.0 s, seamless loop | 2. The seven-month trip as the loading screen (load saves here). The camera circles the transit ship once per loop; the ion-thruster glow and lights repeat exactly. Set `action.setLoop(THREE.LoopRepeat)`. |
-| `mars_approach.glb` (0.4 MB) | `mars_approach` | 13.9 s | 2→3. Arrival: the docked capsule's engine brakes the ship into orbit, then the landing pod undocks. Plays right before you choose where to land. |
-| `edl_mars.glb` (0.5 MB) | `entry` | 8.3 s | 3. Entry: heat shield glow at hypersonic speed. |
-| | `descent_landing` | 17.6 s | Shell opens, engine fires while supersonic, powered descent, legs out at 9.6 s, touchdown at 15.0 s, dust. |
-| `outpost_26_months.glb` (1.0 MB) | `outpost_26_months` | 31.9 s | 3. From the two landing pods to a full outpost, 1.125 s per month (month *m* starts at 1 + 1.125·*m* s). The empty `month_counter` holds the month number in `scale.x`. |
-| `dust_storm.glb` (1.1 MB) | `dust_storm` | 17.9 s | 4. Random event: a regional dust storm. The front reaches the base at 7.9 s. The empty `sun_factor` holds the sunlight fraction in `scale.x` (1.0 → 0.35, matching the game's "about a third" power). |
-| `failure_solar_panel.glb` (0.7 MB) | `panel_failure` | 8.0 s | 4. Random failure: a tracker motor stalls (2.9 s), the bracket gives and the panel sags (5.0 s), red beacon flashing. The empty `row_power` holds the row's output in `scale.x` (1.0 → 0.8). |
-| | `panel_repair` | 7.9 s | The fix: rover brings a spare unit (NASA's Orbital Replacement Unit model), astronaut swaps it, panel back up, green light at 6.4 s into the clip. |
-| `failure_rover_stuck.glb` | `rover_stuck` | 8.0 s | 4. Random failure: the rover digs into soft sand (Spirit, Troy, 2009). |
-| | `rover_freed` | 9.0 s | The fix: dig out, traction boards, back out slowly (Opportunity, Purgatory dune, 2005). |
-| `failure_air_leak.glb` | `air_leak` | 7.5 s | 4. Random failure: a walkway seal fails and cabin air vents as a frozen plume. The empty `cabin_pressure` holds pressure in `scale.x`. |
-| | `leak_patched` | 7.5 s | The fix: patch the seal, top up the air, green light. |
-| `ascent_mars.glb` (1.1 MB) | `ascent_mars` | 19.9 s | 3. Leaving Mars after 26 months: fixed camera like the Apollo 17 liftoff film, then a chase shot. Ignition at 3.0 s. |
+| `ares_vi_briefing.glb` | `ares_vi_briefing` | 58.6 s | 1. New game, first: **Ares VI: Final Stage Briefing**, built from the team's storyboard (`storyboards/ares-vi-final-stage-briefing.html`): same 7 shots, camera moves and lines. Director Hale and the crew of four are the game's rigged characters (`assets/crew`, animations retargeted like `src/hab-crew.js`); the storyboard's model slots are filled with the Ares VI lander (descent stage + ascent vehicle), habitat, fission unit, solar tracker and ISRU plant as holograms over the table. Captions carry speaker and phase. |
+| `briefing_mission.glb` (0.5 MB) | `briefing_mission` | 34.6 s | 1. New game: the mission plan. Sun, Earth and Mars on real orbits (distances to scale), the launch window (Mars 44° ahead), the 259-day transfer ellipse solved with Kepler's equation, and the 26-month goal. |
+| `launch_earth.glb` (1.7 MB) | `launch_earth` | 30.6 s | 1. The ship launches after landing-site choice: SLS on Mobile Launcher 1 at Pad 39B. RS-25 start at 1.7 s, liftoff at 4.0 s, real time until it clears the tower, then about 19× faster: boosters drop at 17.6 s, abort tower off at 20.7 s. |
+| `cruise_loop.glb` (0.4 MB) | `cruise_loop` | 16.0 s, seamless loop | 2. The seven-month trip as the loading screen (load saves here). The camera circles the transit ship once per loop; the ion-thruster glow and lights repeat exactly. Set `action.setLoop(THREE.LoopRepeat)`. |
+| `mars_approach.glb` (0.4 MB) | `mars_approach` | 18.6 s | 2→3. Arrival: the docked capsule's engine brakes the ship into orbit, then the landing pod undocks. Plays right before you choose where to land. |
+| `edl_mars.glb` (0.5 MB) | `entry` | 11.1 s | 3. Entry: heat shield glow at hypersonic speed. |
+| | `descent_landing` | 23.5 s | Shell opens, engine fires while supersonic, powered descent, legs out at 9.6 s, touchdown at 15.0 s, dust. |
+| `outpost_26_months.glb` (1.0 MB) | `outpost_26_months` | 42.6 s | 3. From the two landing pods to a full outpost, 1.5 s per month (month *m* starts at 1.33 + 1.5·*m* s). The empty `month_counter` holds the month number in `scale.x`. |
+| `dust_storm.glb` (1.1 MB) | `dust_storm` | 23.9 s | 4. Random event: a regional dust storm. The front reaches the base at 7.9 s. The empty `sun_factor` holds the sunlight fraction in `scale.x` (1.0 → 0.35, matching the game's "about a third" power). |
+| `failure_solar_panel.glb` (0.7 MB) | `panel_failure` | 10.7 s | 4. Random failure: a tracker motor stalls (2.9 s), the bracket gives and the panel sags (5.0 s), red beacon flashing. The empty `row_power` holds the row's output in `scale.x` (1.0 → 0.8). |
+| | `panel_repair` | 10.6 s | The fix: rover brings a spare unit (NASA's Orbital Replacement Unit model), astronaut swaps it, panel back up, green light at 6.4 s into the clip. |
+| `failure_rover_stuck.glb` | `rover_stuck` | 10.7 s | 4. Random failure: the rover digs into soft sand (Spirit, Troy, 2009). |
+| | `rover_freed` | 11.9 s | The fix: dig out, traction boards, back out slowly (Opportunity, Purgatory dune, 2005). |
+| `failure_air_leak.glb` | `air_leak` | 10.0 s | 4. Random failure: a walkway seal fails and cabin air vents as a frozen plume. The empty `cabin_pressure` holds pressure in `scale.x`. |
+| | `leak_patched` | 9.9 s | The fix: patch the seal, top up the air, green light. |
+| `ascent_mars.glb` (1.1 MB) | `ascent_mars` | 26.6 s | 3. Leaving Mars after 26 months: fixed camera like the Apollo 17 liftoff film, then a chase shot. Ignition at 3.0 s. |
 
 Reading a control empty in the game (its value is the node's `scale.x`, so read it after `mixer.update`):
 
@@ -64,6 +64,14 @@ Click, Space, Enter or Esc skips; with reduced motion, or if a file can't load, 
 | Random failures (new) | `panel_failure`, `rover_stuck` or `air_leak`, then a pop-up. The fixes play `panel_repair` (press E at the solar panels, 1 part), `rover_freed` (press E at the rover) and `leak_patched` (patch from the pop-up or at an airlock door, 1 part). Unfixed panels and leaks get fixed by the rest of the crew after 8 and 5 sols. |
 | Winning the mission | `ascent_mars`, then the mission-complete screen |
 | Cutscenes menu | every film, to watch again |
+
+## Outpost layout (every Mars film)
+
+The landing pod stands on its own; crews walk across to the habitats. Pressurised walkways join habitat 1 to
+habitat 2 and to the arched greenhouse (month 8–9), each running wall to wall with a sealed airlock collar at both
+ends, through gaps left in the bagged-soil shielding walls. Rover and astronaut routes are checked against every
+building and walkway (`route_problems()` in `mars_kit.py`), so nothing drives or walks through them. All films run
+4/3 slower than their script frame numbers (`STRETCH` in `common.py`).
 
 ## Polish applied to every film
 

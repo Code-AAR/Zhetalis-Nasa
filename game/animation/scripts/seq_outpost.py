@@ -34,9 +34,11 @@ plume.scale = (1, 1, 0.001)
 # ---------- rover rolls off the cargo pod in month 1, then works around the site
 sev = rover('sev', (40, 24, 0), rot_z=200)
 grow(sev, 0.6, 1.0)
-stops = [(1.0, (40, 24), 200), (1.6, (12, -10), 230), (2.6, (-45, -38), 180), (3.6, (60, 50), 40), (4.4, (100, 80), 45),
-         (5.5, (-10, 10), 210), (7.2, (55, -30), 300), (9.0, (6, 12), 120), (11.5, (30, 50), 80), (14.0, (-30, 40), 160),
-         (16.0, (-40, -14), 200), (18.5, (-60, -60), 250), (21.0, (50, -50), 310), (23.5, (35, 18), 30), (26.0, (25, 10), 20)]
+stops = [(1.0, (40, 22), 0), (1.6, (14, -10), 0), (2.6, (-45, -40), 0), (3.6, (34, 6), 0), (4.4, (100, 80), 0),
+         (5.5, (12, 10), 0), (7.2, (55, -28), 0), (9.0, (8, -12), 0), (10.2, (64, 14), 0), (11.5, (40, 62), 0), (12.6, (64, 20), 0), (13.3, (10, -16), 0), (14.0, (-30, -6), 0),
+         (16.0, (-40, -14), 0), (18.5, (-60, -60), 0), (21.0, (50, -50), 0), (23.5, (34, 16), 0), (26.0, (26, 8), 0)]
+for bad in route_problems([p for _, p, _ in stops]):
+    print('ROUTE WARNING (rover):', bad)
 pts = []
 for m, (x, y), h in stops:
     pts += [(mf(m), (x, y))] + ([(mf(m) + 5, (x, y))] if m < 26 else [])   # park a moment at each stop
@@ -53,16 +55,16 @@ for row in range(5):
         trackers.append(tr)
 
 # ---------- month 3-4: two fission power units 150 m out (real ones ~1 km away), cable trench to the site
-for i, (x, y) in enumerate(((150, 110), (162, 96))):
+for i, (x, y) in enumerate(((160, -18), (172, -32))):
     fu = fission_unit(f'fission_{i}', (x, y, 0))
     grow(fu, 3.0 + i * 0.7, 3.6 + i * 0.7)
 cable = cube('power_cable', (1, 0.5, 0.15), loc=(0.5, 0, 0.08), m=mat('cable', (0.18, 0.18, 0.2), rough=0.8))
-cab = empty('power_cable_run', loc=(8, 6, 0)); cable.parent = cab
-d = Vector((150 - 8, 110 - 6, 0)); cab.rotation_euler.z = math.atan2(d.y, d.x)
+cab = empty('power_cable_run', loc=(10, -6, 0)); cable.parent = cab
+d = Vector((160 - 10, -18 + 6, 0)); cab.rotation_euler.z = math.atan2(d.y, d.x)
 A.key(cab, mf(2.9), scale=(0.001, 1, 1)); A.key(cab, mf(3.6), scale=(d.length, 1, 1))
 
 # ---------- month 4-6: first habitat
-H1 = (-12, 22)
+H1 = HAB1
 h1 = hab('hab_1', (*H1, 0), rot_z=200)
 grow(h1, 4.0, 5.8, flat=True, over=1.02)
 
@@ -77,30 +79,27 @@ hr = empty('propellant_hose_run', loc=(58, -35, 0)); hose.parent = hr
 d2 = Vector((46 - 58, 30 + 35 - 4, 0)); hr.rotation_euler.z = math.atan2(d2.y, d2.x)
 A.key(hr, mf(8.0), scale=(0.001, 1, 1)); A.key(hr, mf(8.8), scale=(d2.length, 1, 1))
 
-# ---------- month 9: pressurised walkway pod <-> habitat 1; month 13: habitat 1 <-> habitat 2
-def walkway(name, a, b, m0, m1):
-    w, _ = import_glb('greenhouse-walkway.glb', name)
-    for o in w.children_recursive:
-        o.name = f'{name}_{o.name.split(".")[0]}'
-    va, vb = Vector((*a, 0)), Vector((*b, 0))
-    dirv = (vb - va).normalized()
-    w.location = va
-    w.rotation_euler.z = math.atan2(dirv.y, dirv.x) + math.pi / 2     # model runs along -Y from its origin
-    w.location = va
-    L = (vb - va).length
+# ---------- month 8-9: greenhouse, joined to habitat 1 by a sealed walkway; month 11-13: habitat 2 and its walkway
+gh = greenhouse('greenhouse', GH)
+grow(gh, 7.6, 8.6, flat=True, over=1.0)
+r_h = hab_wall_radius()
+def link(name, a, ra, b, rb, m0, m1):
+    w, p0, p1, collars = walkway_between(name, a, ra, b, rb)
+    L = w.scale.y
     A.key(w, mf(m0) - 1, scale=(0.001,) * 3, interp='CONSTANT')
-    A.key(w, mf(m0), scale=(1, 0.001, 1)); A.key(w, mf(m1), scale=(1, L / 15.0, 1))
-    return w
-walkway('walkway_1', (-1.5, 3.0), (-8.6, 15.0), 9.0, 9.8)
-
-H2 = (20, 40)
+    A.key(w, mf(m0), scale=(1, 0.001, 1)); A.key(w, mf(m1), scale=(1, L, 1))
+    for i, c in enumerate(collars):                     # the airlock collars go on first, then the tube between them
+        A.key(c, mf(m0) - 1, scale=(0.001,) * 3, interp='CONSTANT'); A.key(c, mf(m0), scale=(1, 1, 1), interp='CONSTANT')
+link('walkway_greenhouse', HAB1, r_h, gh_door(), 0.0, 9.0, 9.8)
+H2 = HAB2
 h2 = hab('hab_2', (*H2, 0), rot_z=150)
 grow(h2, 11.0, 12.8, flat=True, over=1.02)
-walkway('walkway_2', (-5.0, 27.0), (14.0, 35.5), 13.0, 13.8)
+link('walkway_hab', HAB1, r_h, HAB2, r_h, 13.0, 13.8)
 
-# ---------- month 13-18: bagged-soil shielding walls around the habitats
-for i, (c, m0) in enumerate(((H1, 13.5), (H2, 15.5))):
-    b = berm(f'shield_berm_{i}', (*c, 0), 7.6, 9.6, 3.2)
+# ---------- month 13-18: bagged-soil shielding walls, with gaps for the walkways
+ang = lambda a, b: math.atan2(b[1] - a[1], b[0] - a[0])
+for i, (c, gaps, m0) in enumerate(((HAB1, (ang(HAB1, HAB2), ang(HAB1, gh_door())), 13.5), (HAB2, (ang(HAB2, HAB1),), 15.5))):
+    b = berm_gapped(f'shield_berm_{i}', c, gaps=gaps)
     A.key(b, mf(m0) - 1, scale=(0.001, 0.001, 0.001), interp='CONSTANT'); A.key(b, mf(m0), scale=(1, 1, 0.02)); A.key(b, mf(m0 + 2.5), scale=(1, 1, 1))
 
 # ---------- month 15-16: dish for talking to Earth, then it keeps tracking slowly
@@ -111,17 +110,21 @@ for m in range(16, 27):
     A.key(head, mf(m), rot=(50 + 8 * math.sin(m), 0, (m - 16) * 25))
 
 # ---------- crew: two astronauts walking between places
-places = [(-1, -4), (-8, 8), (-60, -40), (55, -32), (40, 22), (-40, 0), (20, 30), (-20, 30)]
+places = [(4, -6), (-6, -4), (-60, -40), (55, -32), (36, 14), (-40, -2), (30, 22), (-28, 6), (-20, 36), (8, 56)]
 for i in range(2):
     a = astronaut(f'astronaut_{i}', (places[i][0], places[i][1], 0))
     rnd = random.Random(20 + i)
-    last = Vector((*places[i], 0))
+    last = places[i]
     for m in [x * 0.75 for x in range(0, 36)]:
         if mf(m) > END: break
-        p = Vector((*rnd.choice(places), 0)) + Vector((rnd.uniform(-3, 3), rnd.uniform(-3, 3), 0))
-        hdg = math.degrees(math.atan2((p - last).y, (p - last).x)) + 90
-        A.key(a, mf(m), loc=tuple(p), rot=(0, 0, hdg))
-        last = p
+        for _try in range(40):                           # only walk where the way is clear of buildings and walkways
+            q = rnd.choice(places); q = (q[0] + rnd.uniform(-2, 2), q[1] + rnd.uniform(-2, 2))
+            if not route_problems([last, q]): break
+        else:
+            q = last
+        hdg = math.degrees(math.atan2(q[1] - last[1], q[0] - last[0])) + 90 if q != last else None
+        A.key(a, mf(m), loc=(q[0], q[1], 0), rot=(0, 0, hdg) if hdg is not None else None)
+        last = q
 
 # ---------- month counter for the game (scale.x = month)
 mc = empty('month_counter')
@@ -144,7 +147,7 @@ mars_world()
 caps = [(0, 'Sol 1: just the two landing pods'), (1, 'Month 1: the pressurised rover rolls off the cargo pod'),
         (2, 'Month 2: solar trackers go up'), (3, 'Month 3: small fission reactors give power day and night, even in storms'),
         (4.4, 'Month 5: the first big habitat'), (6.2, 'Month 7: the plant starts making oxygen and methane from CO2 air and ice'),
-        (8.6, 'Month 9: a pressurised walkway joins the pod and the habitat'), (11, 'Month 12: a second habitat'),
+        (7.6, 'Month 8: a greenhouse, and in month 9 a sealed walkway to it'), (11, 'Month 12: a second habitat, linked in month 13'),
         (13.5, 'Month 14: walls of bagged soil block some of the radiation'), (15, 'Month 16: a big dish to talk to Earth'),
         (17, 'Month 18: more solar power'), (20, 'Month 21: the ascent vehicle\'s tanks keep filling'),
         (24, 'Month 26: Earth and Mars line up again - the next ships can launch')]
