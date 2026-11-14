@@ -124,11 +124,13 @@ def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, se
     # world-space UVs for the tiled soil (one tile per 7 m)
     uv = me.uv_layers.new(name='UVMap')
     loops = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', loops)
-    uv.data.foreach_set('uv', np.stack([X[loops] / 7.0, Y[loops] / 7.0], 1).ravel())
+    uv.data.foreach_set('uv', np.stack([X[loops] / 11.0, Y[loops] / 11.0], 1).ravel())
     # real albedo -> vertex colour (darker = dust swept off dark basalt sand), plus darker crater floors
     na = al.shape[0]
     A_ = _bilinear(al, (X / span + .5) * (na - 1), (.5 - Y / span) * (na - 1))
     shade = 0.82 + 0.36 * A_ + 0.06 * np.sin(X * 0.05 + Y * 0.031) * np.cos(Y * 0.043)
+    for k, (fx, fy, amp) in enumerate(((0.013, 0.017, 0.07), (0.041, 0.029, 0.05), (0.11, 0.087, 0.035), (0.29, 0.23, 0.02))):
+        shade = shade + amp * np.sin(X * fx + seed * (k + 1)) * np.sin(Y * fy - seed * 0.7 * (k + 2))   # broad patches
     for x, y, rr in crater_list:
         shade = shade * np.where(np.hypot(X - x, Y - y) / rr < 1.1, 0.88, 1.0)
     ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
@@ -201,26 +203,123 @@ def hab(name, loc=(0, 0, 0), rot_z=0):
 
 
 def rover(name='sev', loc=(0, 0, 0), rot_z=0):
-    """NASA Space Exploration Vehicle (pressurised rover), decimated for the web."""
-    root, P = import_glb('sev.glb', name, decimate=0.07, tex=1024)
+    """NASA Space Exploration Vehicle (pressurised rover), decimated for the web, with its six wheels cut out as
+    their own objects (parented to the rover root, so the body can ride its suspension above them)."""
+    import bmesh
+    root, P = import_glb('sev.glb', name, decimate=0.14, tex=1024)
     mn, mx = bounds(root.children_recursive)
     holder = empty(name + '_body', parent=root)
     for o in list(root.children):
         if o is not holder:
             o.parent = holder
     holder.location.z = -mn.z
+    bpy.context.view_layer.update()
+    body = next(o for o in holder.children_recursive if o.type == 'MESH')
+    # wheels: the low, outer part of the mesh, split into 3 per side by position along the rover
+    mw = body.matrix_world; inv = root.matrix_world.inverted()      # rover-root frame: ground at z = 0
+    me = body.data; bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
+    W = mx.x - mn.x
+    cand = []
+    for f in bm.faces:
+        c = inv @ (mw @ f.calc_center_median())
+        if c.z < 1.1 and abs(c.x) > W * 0.28:
+            cand.append((f, c))
+    ys = sorted(c.y for _, c in cand)
+    wheels = []
+    if len(ys) > 30:
+        lo, hi = ys[0], ys[-1]
+        groups = {}
+        for f, c in cand:
+            k = (0 if c.x < 0 else 1, min(2, int((c.y - lo) / ((hi - lo) / 3 + 1e-6))))
+            groups.setdefault(k, []).append(f)
+        for (side, idx), faces in sorted(groups.items()):
+            wb = bmesh.new()
+            vmap = {}
+            for f in faces:
+                vs = []
+                for v in f.verts:
+                    if v.index not in vmap: vmap[v.index] = wb.verts.new(v.co)
+                    vs.append(vmap[v.index])
+                try: wb.faces.new(vs)
+                except ValueError: pass
+            wme = bpy.data.meshes.new(f'{name}_wheel_{side}{idx}'); wb.to_mesh(wme); wb.free()
+            for i, m_ in enumerate(me.materials): wme.materials.append(m_)
+            wo = bpy.data.objects.new(f'{name}_wheel_{side}{idx}', wme); link(wo)
+            wo.matrix_world = body.matrix_world.copy()
+            for p in wme.polygons: p.use_smooth = True
+            wheels.append(wo)
+        bmesh.ops.delete(bm, geom=[f for f, _ in cand], context='FACES')
+        bm.to_mesh(me)
+    bm.free()
+    for wo in wheels:                                 # pivot at each wheel's centre, hang it from the rover root
+        bpy.context.view_layer.objects.active = wo
+        bpy.ops.object.select_all(action='DESELECT'); wo.select_set(True)
+        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+        reparent(wo, root)
+        wo.rotation_mode = 'XYZ'
+    root['wheels'] = [w.name for w in wheels]
+    root['body'] = holder.name
     root.location = loc
     root.rotation_euler.z = math.radians(rot_z)
     return root
+
+
+def rover_motion(sev, step=2, slip=(), tracks=True, bump=0.035):
+    """Make the SEV look driven: wheels roll by the distance covered (backwards when reversing), spin in place
+    in `slip` windows [(f0, f1, turns per second)], the body rides its suspension, and tread marks are left behind."""
+    kx, ky = A.keys_of(sev, 'location', 0), A.keys_of(sev, 'location', 1)
+    kh = A.keys_of(sev, 'rotation_euler', 2)
+    fr = sorted(set(kx) & set(ky))
+    if len(fr) < 2: return
+    wheels = [bpy.data.objects[n] for n in sev.get('wheels', [])]
+    body = bpy.data.objects.get(sev.get('body', ''))
+    r = 0.55
+    def at(f):
+        prev = max([k for k in fr if k <= f], default=fr[0]); nxt = min([k for k in fr if k >= f], default=fr[-1])
+        t = 0 if nxt == prev else (f - prev) / (nxt - prev); t = t * t * (3 - 2 * t)
+        return Vector((kx[prev][0] + (kx[nxt][0] - kx[prev][0]) * t, ky[prev][0] + (ky[nxt][0] - ky[prev][0]) * t))
+    def heading(f):
+        if not kh: return sev.rotation_euler.z
+        ks = sorted(kh); prev = max([k for k in ks if k <= f], default=ks[0]); nxt = min([k for k in ks if k >= f], default=ks[-1])
+        t = 0 if nxt == prev else (f - prev) / (nxt - prev)
+        return kh[prev][0] + (kh[nxt][0] - kh[prev][0]) * t
+    ang, last, travelled, next_mark = 0.0, at(fr[0]), 0.0, 0.0
+    mark_mesh = None
+    marks = empty(sev.name + '_tracks') if tracks else None
+    f = fr[0]; rnd = random.Random(3)
+    while f <= max(fr[-1], max([s[1] for s in slip], default=0)):
+        p = at(min(f, fr[-1])); d = p - last; last = p
+        h = heading(f); fwd = Vector((math.sin(h), -math.cos(h)))     # the cab faces local -Y
+        sgn = 1 if d.dot(fwd) >= 0 else -1
+        ang += sgn * d.length / r
+        for f0, f1, tps in slip:
+            if f0 <= f <= f1: ang += math.tau * tps * step / FPS
+        for w in wheels:
+            A.key(w, f, rot=(math.degrees(ang), 0, 0), interp='LINEAR')
+        if body is not None and d.length > 0.01:
+            A.key(body, f, loc=(None, None, body.location.z + bump * (math.sin(f * 0.9) + 0.5 * math.sin(f * 2.3 + 1))), interp='LINEAR')
+        travelled += d.length
+        if tracks and travelled >= next_mark and d.length > 0.01:          # two tread strips under the wheel lines
+            next_mark = travelled + 0.7
+            if mark_mesh is None:
+                mark_mesh = cube(sev.name + '_track_mesh', (0.45, 0.75, 0.012), m=mat('tread', (0.2, 0.11, 0.07), rough=1.0)).data
+                bpy.data.objects.remove(bpy.data.objects[sev.name + '_track_mesh'])
+            side = Vector((math.cos(h), math.sin(h)))
+            for sx in (-1.55, 1.55):
+                q = p + side * sx
+                mo = bpy.data.objects.new(f'{sev.name}_track_{len(marks.children)}', mark_mesh); link(mo, marks)
+                mo.location = (q.x, q.y, 0.012); mo.rotation_euler.z = h
+                A.key(mo, f - 1, scale=(0.0001,) * 3, interp='CONSTANT'); A.key(mo, f, scale=(1, 1, 1), interp='CONSTANT')
+        f += step
 
 
 def astronaut(name, loc=(0, 0, 0), rot_z=0):
-    root, P = import_glb('astronaut.glb', name)
-    for k, o in P.items():
-        o.name = f'{name}_{k.split(".")[0]}'
-    root.location = loc
-    root.rotation_euler.z = math.radians(rot_z)
-    return root
+    """An articulated astronaut in NASA's Z-2 suit (astro_kit). Returns the holder; its rig is holder['rig']."""
+    import astro_kit
+    holder, arm = astro_kit.astronaut(name, loc, rot_z)
+    holder['rig'] = arm.name
+    astro_kit.stand(arm, 0)
+    return holder
 
 
 def solar_tracker(name, loc, w=8.0, h=3.2, post=1.8):
@@ -307,7 +406,7 @@ def ascent_vehicle(name, loc=(0, 0, 0)):
         cyl(f'{name}_tank{i}_band', 0.97, 0.35, loc=(x, y, z0 + 2.4), m=stripe, parent=ascent, base=True)
     cyl(name + '_ascent_engine', 0.45, 1.1, loc=(0, 0, z0 - 1.0), m=mat('nozzle', (0.25, 0.24, 0.24), rough=0.4, metal=0.7),
         parent=ascent, r2=0.18, base=True)
-    plume = flame(name + '_plume', 0.5, 9, ascent, (0, 0, z0 - 1.0), color=(0.55, 0.65, 1.0), strength=5, alpha=0.6)
+    plume = flame(name + '_plume', 0.5, 9, ascent, (0, 0, z0 - 1.0), color=(0.55, 0.65, 1.0), strength=5, alpha=0.6, diamonds=3)
     return root, ascent, plume, z0
 
 
@@ -356,18 +455,12 @@ def rover_path(sev, pts, reverse=()):
 
 
 def walk_bob(obj, amp=0.06, step=7):
-    """Low-gravity walking: a small bounce while the astronaut moves between its location keys
-    (Mars gravity is 38% of Earth's, so steps are slow and loping)."""
-    kx = A.keys_of(obj, 'location', 0); ky = A.keys_of(obj, 'location', 1)
-    frames = sorted(set(kx) & set(ky))
-    for f0, f1 in zip(frames, frames[1:]):
-        d = math.hypot(kx[f1][0] - kx[f0][0], ky[f1][0] - ky[f0][0])
-        if d < 0.8 or f1 - f0 < step * 2: continue
-        f = f0 + step / 2
-        while f < f1 - step / 2:
-            A.key(obj, f, loc=(None, None, amp * (1 if int((f - f0) / (step / 2)) % 2 else 0.2)), interp='BEZIER')
-            f += step / 2
-        A.key(obj, f0, loc=(None, None, 0)); A.key(obj, f1, loc=(None, None, 0))
+    """Walk the articulated astronaut wherever its keys move it: planted strides while moving, standing otherwise."""
+    import astro_kit
+    kx = A.keys_of(obj, 'location', 0)
+    if not kx or 'rig' not in obj or obj.get('walked'): return
+    fr = sorted(kx)
+    astro_kit.walk(bpy.data.objects[obj['rig']], obj, fr[0], fr[-1])
 
 
 # ---------------------------------------------------------------- outpost layout (shared by every Mars film)

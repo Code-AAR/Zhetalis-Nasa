@@ -33,7 +33,7 @@ plasma.parent = veh; plasma.location = (0, 0, lmn.z - 1.0); plasma.visible_shado
 wake = lathe('plasma_wake', [(0, 6.2), (6, 5.0), (22, 0.5)], mat('wake', (1.0, 0.45, 0.15), emit=(1.0, 0.4, 0.12), strength=2.5, alpha=0.14), 24)
 wake.parent = veh; wake.location = (0, 0, lmn.z); wake.visible_shadow = False
 
-plume = flame('descent_plume', 0.9, 30, lroot, (0, 0, bmn.z + 0.05), color=(0.6, 0.68, 1.0), strength=3, alpha=0.45)
+plume = flame('descent_plume', 0.9, 30, lroot, (0, 0, bmn.z + 0.05), color=(0.6, 0.68, 1.0), strength=3, alpha=0.45, diamonds=3)
 
 # telescoping legs: tucked up 1.6 m until F_LEGS
 legs = empty('legs', parent=lroot)

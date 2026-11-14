@@ -24,6 +24,12 @@ FPS = 24
 STRETCH = float(os.environ.get('ANIM_STRETCH', 4 / 3))
 
 
+def set_stretch(v):
+    """A film timed at natural speed (action at real pace, explanation beats held by its own frame numbers) sets 1.0."""
+    global STRETCH
+    STRETCH = v
+
+
 def args():
     a = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     out = {'stills': None, 'export': '--export' in a, 'video': '--video' in a, 'scale': 50}
@@ -264,7 +270,7 @@ def lathe(name, profile, m=None, verts=20, caps=True):
     return o
 
 
-def flame(name, r, length, parent, loc, color=(1.0, 0.55, 0.15), strength=4, alpha=0.75, verts=18):
+def flame(name, r, length, parent, loc, color=(1.0, 0.55, 0.15), strength=4, alpha=0.75, verts=18, diamonds=0):
     """A glowing exhaust plume pointing down -Z from loc (nozzle). Origin at the nozzle, so scaling Z stretches it."""
     m = mat('flame_' + name, color, emit=color, strength=strength, alpha=alpha)
     L = length
@@ -277,6 +283,12 @@ def flame(name, r, length, parent, loc, color=(1.0, 0.55, 0.15), strength=4, alp
     cm = mat('flame_core_' + name, cc, emit=cc, strength=strength * 1.8, alpha=min(1, alpha + 0.15))
     core = lathe(name + '_core', [(0, r * 0.75), (-0.08 * L, r * 0.8), (-0.3 * L, r * 0.45), (-0.45 * L, r * 0.05)], cm, verts)
     core.parent = o; core.visible_shadow = False
+    glow = bpy.data.objects.new(name + '_glow', soft_card_mesh(name + '_glow', r * 2.6, cards=3, res=8, lumpy=0.1)); link(glow)
+    glow.data.materials.append(card_material('flame_glow_' + name, cc, 0.7, emit=cc, strength=strength * 1.5))
+    glow.parent = o; glow.location = (0, 0, -0.1 * L); glow.visible_shadow = False
+    for k in range(diamonds):           # shock diamonds: bright pinches in a clean (hydrogen or methane) plume
+        dmd = sphere(f'{name}_diamond{k}', r * 0.5, loc=(0, 0, -(0.16 + 0.11 * k) * L), m=mat('diamond_' + name, (1, 0.95, 0.9), emit=(1, 0.95, 0.9), strength=strength * 2.5, alpha=0.8), sub=2)
+        dmd.scale = (1, 1, 0.45); dmd.parent = o; dmd.visible_shadow = False
     o.scale = (1, 1, 0.001)           # off until lit
     return o
 
@@ -334,6 +346,19 @@ CAPTIONS = []
 def caption(cam, text, f_in, f_out, who=None, phase=None):
     """Subtitle from frame f_in to f_out, optionally with a speaker and a phase title (top left).
     Burnt into the preview video by the Video Sequencer and written to <name>.captions.json for the game."""
+    if len(text) > 58:
+        best = max(((text.rfind(sep, 20, len(text) - 12), sep) for sep in ('. ', ': ', ' - ', ', ', '; ')), key=lambda t: t[0])
+        if best[0] < 0:
+            cut = text.rfind(' ', 0, len(text) // 2 + 8); a, b = text[:cut], text[cut:]
+        elif best[1] == ' - ':
+            a, b = text[:best[0]], text[best[0] + 3:]          # drop the dash at the break
+        else:
+            a, b = text[:best[0] + 1], text[best[0] + 2:]
+        a, b = a.strip(), b.strip()
+        if a and b:
+            f_mid = int(f_in + (f_out - f_in) * len(a) / (len(a) + len(b)))
+            CAPTIONS.append((a, int(f_in), f_mid, who, phase)); CAPTIONS.append((b, f_mid, int(f_out), who, phase))
+            return
     CAPTIONS.append((text, int(f_in), int(f_out), who, phase))
 
 
@@ -357,6 +382,13 @@ class Anim:
             for i, v in enumerate(val):
                 if v is None:
                     continue
+                d.setdefault((path, i), {})[float(f)] = (float(v), interp)
+
+    def key_path(self, obj, f, path, vals, interp='BEZIER'):
+        """Key any animatable vector (e.g. a pose bone's rotation_euler) at script frame f."""
+        d = self.k.setdefault(obj.name, {})
+        for i, v in enumerate(vals):
+            if v is not None:
                 d.setdefault((path, i), {})[float(f)] = (float(v), interp)
 
     def hold(self, obj, f, interp='BEZIER'):
@@ -459,17 +491,63 @@ def flicker(obj, f0, f1, base=(1, 1, 1), amt=0.12, step=2, seed=1, grow=6):
     A.key(obj, f1, scale=(1, 1, 0.001), interp='LINEAR')
 
 
+def soft_card_mesh(name, r=1.0, cards=3, res=10, seed=0, lumpy=0.35):
+    """Crossed soft cards: `cards` planes through one centre, each a grid whose vertex alpha fades from the middle to
+    nothing at the rim, with a lumpy outline. Reads as a soft blob from any side, in Blender and in three.js."""
+    import bmesh
+    rnd = random.Random(seed)
+    bm = bmesh.new(); ca = bm.loops.layers.color.new('Col')
+    lump = [1 + rnd.uniform(-lumpy, lumpy) for _ in range(8)]
+    def edge(a):                                    # lumpy outline radius at angle a
+        x = (a / math.tau) * 8; i = int(x) % 8; t = x - int(x)
+        return lump[i] * (1 - t) + lump[(i + 1) % 8] * t
+    for c in range(cards):
+        rot = Euler((rnd.uniform(-0.4, 0.4), rnd.uniform(-0.4, 0.4), math.pi * c / cards)).to_matrix()
+        grid = [[None] * (res + 1) for _ in range(res + 1)]
+        for i in range(res + 1):
+            for j in range(res + 1):
+                u, v = (i / res) * 2 - 1, (j / res) * 2 - 1
+                grid[i][j] = bm.verts.new(rot @ Vector((u * r, 0, v * r)))
+        for i in range(res):
+            for j in range(res):
+                f = bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+                for loop in f.loops:
+                    co = rot.transposed() @ loop.vert.co
+                    d = math.hypot(co.x, co.z) / (r * edge(math.atan2(co.z, co.x) % math.tau))
+                    a = max(0.0, 1 - d) ** 1.6
+                    loop[ca] = (1, 1, 1, a)
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    return me
+
+
+def card_material(name, color, alpha, emit=None, strength=1.0):
+    """Material whose alpha comes from the cards' vertex alpha (and whose glTF export keeps it as COLOR_0.a)."""
+    m = mat(name, color, rough=1.0, alpha=alpha, emit=emit, strength=strength)
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    va = nt.nodes.new('ShaderNodeVertexColor'); va.layer_name = 'Col'
+    mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = alpha
+    nt.links.new(va.outputs['Alpha'], mul.inputs[0]); nt.links.new(mul.outputs[0], b.inputs['Alpha'])
+    m['export_alpha'] = alpha
+    return m
+
+
 class Puffs:
-    """A pool of shared-mesh dust/smoke puffs, each with a few keys: born small at p, drifts with v, grows, shrinks away."""
+    """A pool of dust/smoke puffs - soft crossed cards in a few shapes and tints - each with a few keys: born small at
+    p, drifts with v, grows and fades away."""
 
     def __init__(self, name, n, color, alpha=0.55, r=1.0, emit=None):
-        self.m = soften(mat(name, color, rough=1.0, alpha=alpha, emit=emit, strength=0.3 if emit else 1.0))
-        self.mesh = sphere(name + '_mesh', r, m=self.m, sub=3).data
-        bpy.data.objects.remove(bpy.data.objects[name + '_mesh'])
+        tints = [tuple(min(1, c * k) for c in color) for k in (1.0, 0.88, 1.1)]
+        self.mats = [card_material(f'{name}_{i}', t, alpha, emit=emit, strength=0.3) for i, t in enumerate(tints)]
+        self.meshes = []
+        for i in range(3):
+            me = soft_card_mesh(f'{name}_mesh{i}', r, seed=i + hash(name) % 97)
+            me.materials.append(self.mats[i]); self.meshes.append(me)
         self.root = empty(name)
         self.objs = []
+        rnd = random.Random(len(name))
         for i in range(n):
-            o = bpy.data.objects.new(f'{name}_{i}', self.mesh)
+            o = bpy.data.objects.new(f'{name}_{i}', self.meshes[i % 3])
+            o.rotation_euler = (0, 0, rnd.uniform(0, math.tau))
             o.scale = (0.001,) * 3
             o.visible_shadow = False
             link(o, self.root)
@@ -625,7 +703,7 @@ def edit_scene(sc):
             if font: ph.font = font
         t = strips.new_effect(f'cap{i}', 'TEXT', 2 + i % 2, f0, length=f1 - f0)
         t.text = (who + ':  ' if who else '') + text
-        t.font_size = 64 * R.resolution_percentage / 100
+        t.font_size = 76 * R.resolution_percentage / 100
         if font: t.font = font
         t.location = (0.5, 0.075)
         t.alignment_x = 'CENTER'
@@ -691,7 +769,7 @@ def export(name):
         export_apply=True, export_yup=True, export_cameras=True, export_lights=False,
         export_animations=True, export_animation_mode='NLA_TRACKS', export_force_sampling=True,
         export_frame_step=2, export_optimize_animation_size=True, export_anim_slide_to_zero=False,
-        export_image_format='JPEG', export_image_quality=85, export_extras=True, export_materials='EXPORT',
+        export_image_format='JPEG', export_image_quality=85, export_extras=True, export_materials='EXPORT', export_vertex_color='ACTIVE',
         export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6)
     import json
     fps = bpy.context.scene.render.fps

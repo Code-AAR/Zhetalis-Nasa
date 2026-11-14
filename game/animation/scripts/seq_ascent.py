@@ -72,14 +72,16 @@ while f < F_IGN + 70:
 # ---------- camera: fixed like the Apollo TV camera, tilting up to follow, then a wide shot over the outpost
 cam = camera(lens=45)
 CAMP = MAV + Vector((-38, -62, 2.2))
-for f in range(0, F_WIDE, 2):
+for f in range(0, F_WIDE, 2):                   # fixed at first, then trailing it at ~45 m so it stays big in frame
     p, th = path[f]
     tgt = MAV + p + Vector((0, 0, z0 + 3))
-    look(cam, f, tuple(CAMP), tuple(CAMP.lerp(tgt, 1.0)), interp='LINEAR')
+    d = tgt - CAMP
+    pos = CAMP if d.length < 45 else tgt - d.normalized() * 45
+    look(cam, f, tuple(pos), tuple(tgt), interp='LINEAR')
 for f in range(F_WIDE, END + 1, 2):
     p, th = path[f]
     k = (f - F_WIDE) / (END - F_WIDE)
-    look(cam, f, tuple(MAV + p + Vector((-70 - 30 * k, -120, -35))), tuple(MAV + p), interp='LINEAR')
+    look(cam, f, tuple(MAV + p + Vector((-22 - 10 * k, -38, -10))), tuple(MAV + p + Vector((0, 0, 4))), interp='LINEAR')
 
 mars_world()
 caption(cam, 'Tanks full of oxygen and methane made on Mars', 0, F_IGN)

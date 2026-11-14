@@ -34,6 +34,13 @@ while f < F_SEALED:
         frost.emit(f, tuple(SEAM), tuple(v), 34, 0.15, rnd.uniform(1.2, 2.2) * (0.4 + 0.6 * k))
     f += 2
 
+jet = bpy.data.objects.new('leak_jet', soft_card_mesh('leak_jet', 1.0, cards=2, res=10, lumpy=0.15)); link(jet)
+jet.data.materials.append(card_material('leak_jet', (0.95, 0.97, 1.0), 0.8))
+jet.location = tuple(SEAM + out * 0.9); jet.rotation_euler = (0, 0, math.atan2(out.y, out.x)); jet.visible_shadow = False
+A.key(jet, F_CRACK - 1, scale=(0.0001,) * 3, interp='CONSTANT')
+for f in range(F_CRACK, F_PATCH, 4):
+    A.key(jet, f, scale=(1.1 + 0.15 * math.sin(f * 0.9), 0.35, 0.3 + 0.05 * math.sin(f * 1.3)), interp='LINEAR')
+A.key(jet, F_SEALED, scale=(0.0001,) * 3)
 beacon = empty('leak_beacon', loc=tuple(SEAM - out * 1.6 + Vector((0, 0, 1.6))))
 red = sphere('beacon_red', 0.3, m=mat('beacon_red', (1, 0.1, 0.05), emit=(1, 0.1, 0.05), strength=6), parent=beacon)
 grn = sphere('beacon_green', 0.3, m=mat('beacon_green', (0.1, 1, 0.3), emit=(0.1, 1, 0.3), strength=5), parent=beacon)
@@ -56,6 +63,10 @@ A.key(astro, F_SPLIT + 5, loc=(2.5, -2.5, 0), rot=(0, 0, 30), scale=(1, 1, 1))
 A.key(astro, F_ARRIVE, loc=tuple(stand), rot=(0, 0, math.degrees(math.atan2(-out.y, -out.x)) + 90))
 A.key(astro, F_PATCH, rot=(15, 0, math.degrees(math.atan2(-out.y, -out.x)) + 90))
 A.key(astro, F_SEALED + 10, rot=(0, 0, math.degrees(math.atan2(-out.y, -out.x)) + 90))
+import astro_kit as _ak
+astro['walked'] = True
+_ak.walk(bpy.data.objects[astro['rig']], astro, F_SPLIT + 5, F_ARRIVE)
+_ak.repair(bpy.data.objects[astro['rig']], F_ARRIVE + 2, F_SEALED + 6, rate=12)    # pressing the patch on
 
 press = empty('cabin_pressure')
 A.key(press, 0, scale=(1, 1, 1)); A.key(press, F_CRACK, scale=(1, 1, 1))

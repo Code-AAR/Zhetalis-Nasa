@@ -82,6 +82,11 @@ A.key(oru, F_WALK - 1, loc=(-52, -38.2, 1.1), scale=(0.001,) * 3, interp='CONSTA
 A.key(oru, F_WALK, loc=(-52, -38.2, 1.1), scale=(k, k, k))
 A.key(oru, F_SWAP, loc=(-59.4, -28.9, 1.1), scale=(k, k, k))
 A.key(oru, F_SWAP + 12, loc=(-60, -28.15, 1.5), scale=(k, k, k))
+import astro_kit as _ak
+_arm = bpy.data.objects[astro['rig']]
+astro['walked'] = True
+_ak.walk(_arm, astro, F_WALK, F_SWAP, hold=_ak.arms(42, 42, bend_p=48, bend_n=48))     # carrying the spare unit
+_ak.repair(_arm, F_SWAP + 2, F_OK + 10)
 
 # ---------- power meter for the game: scale.x = row output (1.0 healthy, 0.8 with one of five panels down)
 pw = empty('row_power')

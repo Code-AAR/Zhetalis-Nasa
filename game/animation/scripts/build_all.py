@@ -27,6 +27,7 @@ def main():
         for line in r.stdout.splitlines():
             if line.startswith('EXPORTED') or 'Traceback' in line or 'Error:' in line and 'Shadow' not in line:
                 print('  ', line, flush=True)
+        sys.stdout.flush()
         if r.returncode:
             print(r.stdout[-3000:], r.stderr[-3000:])
             sys.exit(f'{n} failed')

@@ -47,7 +47,7 @@ cc = (cmn + cmx) / 2; R = (cmx.x - cmn.x) / 2
 core_flames = []
 for i, (dx, dy) in enumerate([(-1, -1), (1, -1), (-1, 1), (1, 1)]):
     fl = flame(f'rs25_{i}', 1.15, 20, rocket, (cc.x + dx * R * 0.34, cc.y + dy * R * 0.34, cmn.z - DECK + 0.3),
-               color=(1.0, 0.62, 0.32), strength=3, alpha=0.55)
+               color=(1.0, 0.62, 0.32), strength=3, alpha=0.55, diamonds=4)
     core_flames.append(fl)
 bflames = []
 for b, (mn_, mx_) in ((bL, (bmn, bmx)), (bR, (rmn, rmx))):
