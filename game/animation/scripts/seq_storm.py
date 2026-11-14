@@ -63,6 +63,9 @@ for f, e, w in ((0, 2.6, 0.9), (F_HIT - 60, 2.6, 0.9), (F_DARK, 0.9, 0.5), (END,
     key_value(sky_strength, f, w)
 
 # ---------- camera
+for _o in [o for o in bpy.data.objects if o.name.startswith('astronaut_') and o.parent is None]:
+    walk_bob(_o)
+
 cam = camera(lens=28)
 look(cam, 0, (-95, -60, 14), (200, 20, 60))                   # from behind the base, looking at the storm coming
 look(cam, 140, (-88, -52, 13), (150, 10, 40), interp='CONSTANT')

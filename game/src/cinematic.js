@@ -11,11 +11,12 @@ import { loadModel } from './nasamodels.js';
 const BASE = '../animation/glb/';                     // loadModel() prefixes 'assets/'
 const LOOKS = {                                        // background, hemisphere sky/ground, sun colour
   space: { bg: '#000', sky: '#9fb3ff', ground: '#000', sun: '#fff6ea', hemi: .35, sunI: 3.2 },
+  room: { bg: '#05070d', sky: '#8fb4ff', ground: '#201008', hemi: .9, sunI: 1.6, glow: true, bars: true },   // the briefing room
   solar: { bg: '#000', sky: '#9fb3ff', ground: '#000', sun: '#fff6ea', hemi: .2, sunI: 3.2, point: true },   // lit by the Sun at the centre
   earth: { bg: '#9db8dc', sky: '#cfe2ff', ground: '#5d6b45', sun: '#fff4e2', hemi: 1.2, sunI: 3.0 },
   mars: { bg: '#c49a78', sky: '#f2d2b4', ground: '#6b3d26', sun: '#ffe6c8', hemi: 1.1, sunI: 2.6, fog: [160, 1400] },
 };
-const LOOK_OF = { briefing_mission: 'solar', launch_earth: 'earth', cruise_loop: 'space', mars_approach: 'space' };
+const LOOK_OF = { ares_vi_briefing: 'room', briefing_mission: 'solar', launch_earth: 'earth', cruise_loop: 'space', mars_approach: 'space' };
 const reduced = () => matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const captionsCache = new Map();
 function captionsFor(name) {
@@ -38,6 +39,8 @@ async function stage(name, parent, { clip, loop = false } = {}) {
   const sun = look.point ? new THREE.PointLight(look.sun, look.sunI, 0, 0) : new THREE.DirectionalLight(look.sun, look.sunI);
   if (!look.point) sun.position.set(-300, 500, 260);
   scene.add(sun);
+  if (look.glow) { const g = new THREE.PointLight('#ff7a3d', 6, 9, 1.5); g.position.set(0, 1.6, 0); scene.add(g);
+    const key = new THREE.SpotLight('#ffffff', 40, 20, .8, .5, 1.5); key.position.set(0, 6, 3); scene.add(key); }
   const root = gltf.scene.clone(true); scene.add(root);    // loadModel caches the file; play a fresh copy
   const cams = []; root.traverse(o => { if (o.isCamera) cams.push(o); });
   const cam = cams[0] || new THREE.PerspectiveCamera(40, 1, .5, 60000);
@@ -49,7 +52,7 @@ async function stage(name, parent, { clip, loop = false } = {}) {
   const lines = (caps?.captions || []).map(l => ({ ...l, t0: l.t0 - info.start, t1: l.t1 - info.start })).filter(l => l.t1 > 0 && l.t0 < c.duration);
   const sunFactor = root.getObjectByName('sun_factor');
   return {
-    duration: c.duration, lines,
+    duration: c.duration, lines, bars: !!look.bars,
     frame(dt) {
       mixer.update(dt);
       if (sunFactor) sun.intensity = look.sunI * sunFactor.scale.x;
@@ -66,9 +69,9 @@ export function playCinematic(name, { clip, world } = {}) {
   if (reduced()) return Promise.resolve(false);
   return new Promise(resolve => {
     const box = document.createElement('section'); box.className = 'cinematic'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Cutscene');
-    box.innerHTML = '<p class="cine-cap" aria-live="polite"></p><button type="button" class="cine-skip">Skip ›</button><p class="cine-load">Loading…</p>';
+    box.innerHTML = '<p class="cine-phase"></p><p class="cine-cap" aria-live="polite"></p><button type="button" class="cine-skip">Skip ›</button><p class="cine-load">Loading…</p>';
     document.body.append(box);
-    const cap = box.querySelector('.cine-cap');
+    const cap = box.querySelector('.cine-cap'), phase = box.querySelector('.cine-phase');
     let st = null, raf = 0, done = false, last = performance.now();
     if (world) { world.cinematic = true; for (const k of Object.keys(world.keys || {})) world.keys[k] = false; }
     const end = played => {
@@ -85,11 +88,17 @@ export function playCinematic(name, { clip, world } = {}) {
     stage(name, box, { clip }).then(s => {
       if (done) { s.dispose(); return; }
       st = s; box.querySelector('.cine-load').remove(); last = performance.now();
+      box.classList.toggle('cine-bars', st.bars);
       const tick = now => {
         const dt = Math.min(.1, (now - last) / 1000); last = now;
         const t = st.frame(dt);
-        const line = st.lines.find(l => t >= l.t0 && t < l.t1)?.text || '';
-        if (cap.textContent !== line) cap.textContent = line;
+        const l = st.lines.find(l => t >= l.t0 && t < l.t1), key = l ? l.t0 + l.text : '';
+        if (cap.dataset.key !== key) {              // speaker on its own line, then the words
+          cap.dataset.key = key; cap.textContent = '';
+          if (l?.who) { const w = document.createElement('b'); w.className = 'cine-who'; w.textContent = l.who; cap.append(w); }
+          if (l) cap.append(l.text);
+          phase.textContent = l?.phase || '';
+        }
         if (t >= st.duration - 1e-3) return end(true);
         raf = requestAnimationFrame(tick);
       };

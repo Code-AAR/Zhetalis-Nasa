@@ -63,9 +63,10 @@ def preview_only(obj):
     return obj
 
 
-def import_glb(rel, name, parent=None, decimate=None, tex=None, keep_parts=False):
+def import_glb(rel, name, parent=None, decimate=None, tex=None, keep_parts=False, smooth=None):
     """Import a game GLB under one empty called `name`. Returns (root, {part name: object}).
-    decimate: keep this fraction of triangles on big meshes. tex: shrink textures to this size."""
+    decimate: keep this fraction of triangles on big meshes. tex: shrink textures to this size.
+    smooth: angle in degrees - smooth-shade the faceted space-pack models, keeping edges sharper than this."""
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=os.path.join(ASSETS, rel))
     new = [o for o in bpy.data.objects if o not in before]
@@ -80,6 +81,12 @@ def import_glb(rel, name, parent=None, decimate=None, tex=None, keep_parts=False
             m.ratio = decimate
             bpy.context.view_layer.objects.active = o
             bpy.ops.object.modifier_apply(modifier='dec')
+    if smooth:
+        for o in new:
+            if o.type == 'MESH':
+                for p in o.data.polygons: p.use_smooth = True
+                try: o.data.set_sharp_from_angle(angle=math.radians(smooth))
+                except Exception: pass
     if tex:
         for img in bpy.data.images:
             if img.size[0] > tex:
@@ -262,6 +269,11 @@ def flame(name, r, length, parent, loc, color=(1.0, 0.55, 0.15), strength=4, alp
     o.parent = parent
     o.location = loc
     o.visible_shadow = False
+    # white-hot core inside the plume (rides along with every flicker of the outer flame)
+    cc = tuple(0.55 + 0.45 * c for c in color)
+    cm = mat('flame_core_' + name, cc, emit=cc, strength=strength * 1.8, alpha=min(1, alpha + 0.15))
+    core = lathe(name + '_core', [(0, r * 0.75), (-0.08 * L, r * 0.8), (-0.3 * L, r * 0.45), (-0.45 * L, r * 0.05)], cm, verts)
+    core.parent = o; core.visible_shadow = False
     o.scale = (1, 1, 0.001)           # off until lit
     return o
 
@@ -316,10 +328,10 @@ def rocks(name, n, rmin, rmax, size_range, color, seed=5, avoid=()):
 CAPTIONS = []
 
 
-def caption(cam, text, f_in, f_out):
-    """Preview-only subtitle from frame f_in to f_out. Burnt into the preview video by the Video Sequencer,
-    so it never enters the GLB (the README lists the same lines for the game to show)."""
-    CAPTIONS.append((text, int(f_in), int(f_out)))
+def caption(cam, text, f_in, f_out, who=None, phase=None):
+    """Subtitle from frame f_in to f_out, optionally with a speaker and a phase title (top left).
+    Burnt into the preview video by the Video Sequencer and written to <name>.captions.json for the game."""
+    CAPTIONS.append((text, int(f_in), int(f_out), who, phase))
 
 
 # ---------------------------------------------------------------- animation
@@ -330,6 +342,7 @@ class Anim:
 
     def __init__(self):
         self.k = {}
+        self.own = []          # objects keyed directly with Blender (armatures): their action becomes the first clip
 
     def key(self, obj, f, loc=None, rot=None, scale=None, interp='BEZIER'):
         d = self.k.setdefault(obj.name, {})
@@ -402,6 +415,16 @@ class Anim:
                     st.action_slot = slot
                 except Exception:
                     pass
+            ad.action = None
+        for obj in self.own:
+            ad = obj.animation_data
+            if not ad or not ad.action:
+                continue
+            act, slot = ad.action, ad.action_slot
+            tr = ad.nla_tracks.new(); tr.name = self.clips[0][0]
+            st = tr.strips.new(self.clips[0][0], 0, act)
+            try: st.action_slot = slot
+            except Exception: pass
             ad.action = None
 
 
@@ -557,10 +580,10 @@ def render_setup(scale=50, samples=16):
     sc.render.engine = 'BLENDER_EEVEE'
     sc.render.resolution_x, sc.render.resolution_y = 1920, 1080
     sc.render.resolution_percentage = scale
-    try:
-        sc.eevee.taa_render_samples = samples
-    except Exception:
-        pass
+    for k, v in (('taa_render_samples', max(samples, 32)), ('use_raytracing', True), ('ray_tracing_method', 'SCREEN'),
+                 ('use_shadows', True), ('shadow_ray_count', 2), ('shadow_step_count', 8), ('use_fast_gi', True)):
+        try: setattr(sc.eevee, k, v)       # soft reflections, contact shadows and ambient light (EEVEE)
+        except Exception: pass
     sc.view_settings.view_transform = 'AgX'
     sc.view_settings.look = 'AgX - Medium High Contrast'
     sc.render.film_transparent = False
@@ -582,12 +605,17 @@ def edit_scene(sc):
     strips = se.strips
     st = strips.new_scene('shot', sc, 1, sc.frame_start)
     st.scene_input = 'CAMERA'
-    for i, (text, f0, f1) in enumerate(CAPTIONS):
+    for i, (text, f0, f1, who, phase) in enumerate(CAPTIONS):
         f0 = max(f0, sc.frame_start); f1 = min(f1, sc.frame_end + 1)
         if f1 <= f0:
             continue
+        if phase:
+            ph = strips.new_effect(f'phase{i}', 'TEXT', 4 + i % 2, f0, length=f1 - f0)
+            ph.text = phase; ph.font_size = 46 * R.resolution_percentage / 100; ph.location = (0.03, 0.88)
+            ph.alignment_x = 'LEFT'; ph.color = (1.0, 0.48, 0.24, 1); ph.use_shadow = True
+            if font: ph.font = font
         t = strips.new_effect(f'cap{i}', 'TEXT', 2 + i % 2, f0, length=f1 - f0)
-        t.text = text
+        t.text = (who + ':  ' if who else '') + text
         t.font_size = 64 * R.resolution_percentage / 100
         if font: t.font = font
         t.location = (0.5, 0.075)
@@ -631,7 +659,7 @@ def run(clips, opts, name):
     if opts['export']:
         d = os.path.join(ANIM, 'blend'); os.makedirs(d, exist_ok=True)
         sc.frame_set(0)
-        sc['captions'] = [f'{f0}-{f1}: {t}' for t, f0, f1 in CAPTIONS]
+        sc['captions'] = [f'{c[1]}-{c[2]}: {c[0]}' for c in CAPTIONS]
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(d, name + '.blend'), compress=True)
         export(name)
 
@@ -647,7 +675,7 @@ def export(name):
     d = os.path.join(ANIM, 'glb'); os.makedirs(d, exist_ok=True)
     bpy.ops.object.select_all(action='DESELECT')
     for o in bpy.context.scene.objects:
-        if not o.get('preview_only') and o.type in ('MESH', 'EMPTY', 'CAMERA'):
+        if not o.get('preview_only') and o.type in ('MESH', 'EMPTY', 'CAMERA', 'ARMATURE'):
             o.select_set(True)
     bpy.ops.export_scene.gltf(
         filepath=os.path.join(d, name + '.glb'), export_format='GLB', use_selection=True,
@@ -660,6 +688,7 @@ def export(name):
     fps = bpy.context.scene.render.fps
     with open(os.path.join(d, name + '.captions.json'), 'w', encoding='utf-8') as fh:
         json.dump({'clips': [{'name': c, 'start': round(f0 / fps, 3), 'end': round(f1 / fps, 3)} for c, f0, f1 in A.clips],
-                   'captions': [{'t0': round(f0 / fps, 2), 't1': round(f1 / fps, 2), 'text': t} for t, f0, f1 in CAPTIONS]},
+                   'captions': [dict({'t0': round(f0 / fps, 2), 't1': round(f1 / fps, 2), 'text': t}, **({'who': w} if w else {}), **({'phase': ph} if ph else {}))
+                                for t, f0, f1, w, ph in CAPTIONS]},
                   fh, indent=1, ensure_ascii=False)
     print('EXPORTED', name, os.path.getsize(os.path.join(d, name + '.glb')))

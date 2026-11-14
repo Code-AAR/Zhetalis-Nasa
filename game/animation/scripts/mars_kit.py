@@ -179,7 +179,7 @@ def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, se
 
 def lander(name, loc=(0, 0, 0), rot_z=0):
     """The game's landing pod (space-pack lander, 11 m tall, every part its own object)."""
-    root, P = import_glb('space-pack/lander.glb', name)
+    root, P = import_glb('space-pack/lander.glb', name, smooth=40)
     root.location = loc
     root.rotation_euler.z = math.radians(rot_z)
     # rename parts so two landers don't collide on export
@@ -192,7 +192,7 @@ def lander(name, loc=(0, 0, 0), rot_z=0):
 
 
 def hab(name, loc=(0, 0, 0), rot_z=0):
-    root, P = import_glb('space-pack/hab.glb', name)
+    root, P = import_glb('space-pack/hab.glb', name, smooth=40)
     for k, o in P.items():
         o.name = f'{name}_{k.split(".")[0]}'
     root.location = loc
@@ -202,7 +202,7 @@ def hab(name, loc=(0, 0, 0), rot_z=0):
 
 def rover(name='sev', loc=(0, 0, 0), rot_z=0):
     """NASA Space Exploration Vehicle (pressurised rover), decimated for the web."""
-    root, P = import_glb('sev.glb', name, decimate=0.05, tex=512)
+    root, P = import_glb('sev.glb', name, decimate=0.07, tex=1024)
     mn, mx = bounds(root.children_recursive)
     holder = empty(name + '_body', parent=root)
     for o in list(root.children):
@@ -361,3 +361,18 @@ def rover_path(sev, pts, reverse=()):
                 while h - last < -180: h += 360
         A.key(sev, f, loc=(x, y, 0), rot=(0, 0, h))
         last = h
+
+
+def walk_bob(obj, amp=0.06, step=7):
+    """Low-gravity walking: a small bounce while the astronaut moves between its location keys
+    (Mars gravity is 38% of Earth's, so steps are slow and loping)."""
+    kx = A.keys_of(obj, 'location', 0); ky = A.keys_of(obj, 'location', 1)
+    frames = sorted(set(kx) & set(ky))
+    for f0, f1 in zip(frames, frames[1:]):
+        d = math.hypot(kx[f1][0] - kx[f0][0], ky[f1][0] - ky[f0][0])
+        if d < 0.8 or f1 - f0 < step * 2: continue
+        f = f0 + step / 2
+        while f < f1 - step / 2:
+            A.key(obj, f, loc=(None, None, amp * (1 if int((f - f0) / (step / 2)) % 2 else 0.2)), interp='BEZIER')
+            f += step / 2
+        A.key(obj, f0, loc=(None, None, 0)); A.key(obj, f1, loc=(None, None, 0))

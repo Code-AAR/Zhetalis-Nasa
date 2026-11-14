@@ -61,6 +61,9 @@ press = empty('cabin_pressure')
 A.key(press, 0, scale=(1, 1, 1)); A.key(press, F_CRACK, scale=(1, 1, 1))
 A.key(press, F_PATCH, scale=(0.9, 1, 1), interp='LINEAR'); A.key(press, F_SEALED, scale=(0.9, 1, 1)); A.key(press, END, scale=(1, 1, 1))
 
+for _o in [o for o in bpy.data.objects if o.name.startswith('astronaut_') and o.parent is None]:
+    walk_bob(_o)
+
 cam = camera(lens=35)
 view = SEAM + out * 16 + Vector((0, 0, 3)) - along * 6
 look(cam, 0, tuple(view + out * 18 + Vector((0, 0, 8))), tuple(SEAM))

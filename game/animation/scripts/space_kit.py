@@ -9,7 +9,7 @@ def transit_ship(LOOP=288):
     """Builds the ship around the origin. Ion plumes and navigation lights repeat every LOOP frames.
     Returns (ship root, info dict)."""
     ship = empty('transit_ship')
-    st, P = import_glb('space-pack/05_OrbitalResearchStation.glb', 'transit_habitat', parent=ship)
+    st, P = import_glb('space-pack/05_OrbitalResearchStation.glb', 'transit_habitat', parent=ship, smooth=40)
     st.scale = (2.5, 2.5, 2.5)       # the pack's station is toy-sized (19 m); a crewed Mars transit ship is ~50 m
     bpy.context.view_layer.update()
     mn, mx = bounds(st.children_recursive)
@@ -23,7 +23,7 @@ def transit_ship(LOOP=288):
     cmn_, cmx_ = bounds([P['Rear_cap']])
 
     # crew capsule + service module from the game's Artemis-style rocket, scaled to Orion's 5 m and docked nose-in
-    rk, RP = import_glb('space-pack/01_ArtemisInspiredRocket.glb', 'crew_vehicle', parent=ship)
+    rk, RP = import_glb('space-pack/01_ArtemisInspiredRocket.glb', 'crew_vehicle', parent=ship, smooth=40)
     for k, o in list(RP.items()):
         if not (k.startswith('Service_module') or k.startswith('Crew_capsule') or k.startswith('Crew_window') or k == '01_ArtemisInspiredRocket'):
             bpy.data.objects.remove(o)

@@ -295,7 +295,7 @@ async function startNew() {
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();   // phones: fill the screen like an app
   startSound();                                                // sound can only start after a click
   $('#title').classList.add('hidden');
-  await playCinematic('briefing_mission');                     // the mission plan: orbits, launch window, 26 months
+  await playCinematic('ares_vi_briefing'); await playCinematic('briefing_mission');   // Director Hale's briefing, then the orbit plan
   setSound({ scene: 'launch', thrust: 0 });
   state.phase = 'launch';
   launch = new Launch();
@@ -1256,7 +1256,7 @@ $('#cine-btn').onclick = () => {
   modal({ title: 'Cutscenes', html: '<p>Watch the big moments again. Click, Space or Esc skips them.</p>', choices: [
     { label: 'Mars landing (here)', primary: true, onPick: () => { playLanding(world).catch(() => {}); } },
     { label: 'Dust storm (here)', onPick: () => { playStorm(world).catch(() => {}); } },
-    ...[['Mission briefing', 'briefing_mission'], ['Launch from Earth', 'launch_earth'], ['Trip to Mars', 'cruise_loop'], ['Arriving at Mars', 'mars_approach'],
+    ...[['Ares VI briefing', 'ares_vi_briefing'], ['Mission plan', 'briefing_mission'], ['Launch from Earth', 'launch_earth'], ['Trip to Mars', 'cruise_loop'], ['Arriving at Mars', 'mars_approach'],
       ['Crew landing', 'edl_mars', 'descent_landing'], ['26 months of building', 'outpost_26_months'], ['Dust storm film', 'dust_storm'],
       ['Solar panel failure', 'failure_solar_panel', 'panel_failure'], ['Rover stuck in sand', 'failure_rover_stuck', 'rover_stuck'], ['Air leak', 'failure_air_leak', 'air_leak'],
       ['Leaving Mars', 'ascent_mars']].map(([label, name, clip]) => ({ label, onPick: () => { playCinematic(name, { clip, world }); } })),

@@ -1,6 +1,6 @@
 # Mission sequences (Blender → GLB)
 
-Eleven animated sequences for the game's flow, built in Blender 5.3 from the game's own 3D models. Each one is
+Twelve animated sequences for the game's flow, built in Blender 5.3 from the game's own 3D models. Each one is
 a `.blend` file, a web GLB with named animation clips that three.js can play with `AnimationMixer`, and a preview
 video with captions.
 
@@ -19,6 +19,7 @@ Blender's timeline runs at 24 fps; the GLB clips are sampled at 12 fps (three.js
 
 | GLB | Clip | Length | Game moment |
 |---|---|---|---|
+| `ares_vi_briefing.glb` | `ares_vi_briefing` | 44 s | 1. New game, first: **Ares VI: Final Stage Briefing**, built from the team's storyboard (`storyboards/ares-vi-final-stage-briefing.html`): same 7 shots, camera moves and lines. Director Hale and the crew of four are the game's rigged characters (`assets/crew`, animations retargeted like `src/hab-crew.js`); the storyboard's model slots are filled with the Ares VI lander (descent stage + ascent vehicle), habitat, fission unit, solar tracker and ISRU plant as holograms over the table. Captions carry speaker and phase. |
 | `briefing_mission.glb` (0.5 MB) | `briefing_mission` | 25.9 s | 1. New game: the mission plan. Sun, Earth and Mars on real orbits (distances to scale), the launch window (Mars 44° ahead), the 259-day transfer ellipse solved with Kepler's equation, and the 26-month goal. |
 | `launch_earth.glb` (1.7 MB) | `launch_earth` | 22.9 s | 1. The ship launches after landing-site choice: SLS on Mobile Launcher 1 at Pad 39B. RS-25 start at 1.7 s, liftoff at 4.0 s, real time until it clears the tower, then about 19× faster: boosters drop at 17.6 s, abort tower off at 20.7 s. |
 | `cruise_loop.glb` (0.4 MB) | `cruise_loop` | 12.0 s, seamless loop | 2. The seven-month trip as the loading screen (load saves here). The camera circles the transit ship once per loop; the ion-thruster glow and lights repeat exactly. Set `action.setLoop(THREE.LoopRepeat)`. |
@@ -54,7 +55,7 @@ Click, Space, Enter or Esc skips; with reduced motion, or if a file can't load, 
 
 | Moment | Film |
 |---|---|
-| Start a new game | `briefing_mission`, then the live launch countdown (`src/launch.js`, unchanged) |
+| Start a new game | `ares_vi_briefing`, then `briefing_mission`, then the live launch countdown (`src/launch.js`, unchanged) |
 | After launch, and when you continue a saved game | the loading screen plays `cruise_loop` behind it (at least 9 s after launch, 4 s for a save) |
 | Reaching Mars | `mars_approach`, then the landing-site picker |
 | Landing | `edl_mars` (`entry` then `descent_landing`), replacing the old sky-crane film for the crew lander |
@@ -64,10 +65,19 @@ Click, Space, Enter or Esc skips; with reduced motion, or if a file can't load, 
 | Winning the mission | `ascent_mars`, then the mission-complete screen |
 | Cutscenes menu | every film, to watch again |
 
+## Polish applied to every film
+
+- Space-pack models (landing pods, habitats, transit station, crew capsule) are smooth-shaded with sharp edges kept above 40°,
+  instead of flat facets. SLS keeps 60% of its triangles; the SEV rover 7% with 1024 px textures.
+- Every rocket plume has a white-hot inner core tinted to its flame, inside the outer plume.
+- Walking astronauts bounce gently (low-gravity loping).
+- Previews render with EEVEE ray tracing (soft reflections, contact shadows, ambient light) at 32 samples.
+
 ## Captions for the game
 
 These run in the previews only. The game can show the same lines at the same times.
 
+- **Ares VI briefing** (speaker: Director Hale; phase titles top left): the seven lines from the storyboard. One change for accuracy: "turns regolith into oxygen and water" became "pulls water from icy soil and oxygen from the CO₂ air" (MOXIE on Perseverance makes oxygen from Mars's CO₂ air; water comes from ice in the ground).
 - **Briefing:** Your mission: fly to Mars and build an outpost · Earth and Mars both circle the Sun; Mars is farther out and slower · Launch when Mars is about 44 degrees ahead of Earth · The ship coasts on a curved path around the Sun… and meets Mars about 259 days (8.5 months) later · Earth and Mars line up for launches only every 26 months · Build a working outpost before the next ships arrive
 - **Launch:** Kennedy Space Center, Pad 39B: SLS rocket, 98 m tall · T−6 s: the four RS-25 engines start · T−0: both solid rocket boosters light, liftoff! · Clearing the 116 m launch tower · Faster than sound after about a minute (shown 19× faster) · T+2 min 12 s: boosters drop away, about 47 km up · T+3 min 11 s: the launch abort tower is jettisoned
 - **Cruise:** Seven months to Mars: the ship coasts most of the way · Blue glow: ion engines pushing gently, day after day
@@ -82,6 +92,7 @@ These run in the previews only. The game can show the same lines at the same tim
 
 ## Real Mars notes (what is real, what is squeezed)
 
+- **Ares VI briefing** (speaker: Director Hale; phase titles top left): the seven lines from the storyboard. One change for accuracy: "turns regolith into oxygen and water" became "pulls water from icy soil and oxygen from the CO₂ air" (MOXIE on Perseverance makes oxygen from Mars's CO₂ air; water comes from ice in the ground).
 - **Briefing:** Your mission: fly to Mars and build an outpost · Earth and Mars both circle the Sun; Mars is farther out and slower · Launch when Mars is about 44 degrees ahead of Earth · The ship coasts on a curved path around the Sun… and meets Mars about 259 days (8.5 months) later · Earth and Mars line up for launches only every 26 months · Build a working outpost before the next ships arrive
 - **Launch:** event times follow Artemis I. The climb is squeezed about 19× after the tower, and the path is a simple gravity turn, not the real trajectory.
 - **Cruise:** the minimum-energy transfer takes about 259 days (8.5 months); faster paths take 6–7 months. The ship is the game's space-pack station (scaled to ~48 m), with a crew capsule scaled to Orion's 5 m and a solar-electric (ion) propulsion module. Mars and Earth are placed for the picture, not to scale.
@@ -114,7 +125,7 @@ to keep the GLBs small. All eleven GLBs together are about 11 MB.
 
 ```
 cd game/animation/scripts
-python build_all.py              # all eleven: .blend + GLB + preview MP4 (about 12 minutes on an RTX laptop)
+python build_all.py              # all twelve: .blend + GLB + preview MP4 (about 12 minutes on an RTX laptop)
 python build_all.py storm        # just one
 python build_all.py --no-video   # .blend + GLB only
 ```

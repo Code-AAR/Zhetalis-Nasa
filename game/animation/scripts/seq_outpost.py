@@ -131,6 +131,9 @@ A.key(mc, mf(26), scale=(26, 1, 1), interp='LINEAR')
 A.key(mc, END, scale=(26, 1, 1), interp='LINEAR')
 
 # ---------- camera: one slow lap around the site
+for _o in [o for o in bpy.data.objects if o.name.startswith('astronaut_') and o.parent is None]:
+    walk_bob(_o)
+
 cam = camera(lens=30)
 for f in range(0, END + 1, 8):
     a = math.radians(-120 + 300 * f / END)

@@ -39,7 +39,7 @@ DECK = 0.294 * s
 
 # ---------- SLS Block 1 (98 m): parts core, boosterL, boosterR, upper, orion, las
 rocket = empty('sls_flight', loc=(0, 0, DECK))
-sls, P = import_glb('sls.glb', 'sls', parent=rocket, decimate=0.35)
+sls, P = import_glb('sls.glb', 'sls', parent=rocket, decimate=0.6)
 core, bL, bR, las = P['core'], P['boosterL'], P['boosterR'], P['las']
 cmn, cmx = bounds([core]); bmn, bmx = bounds([bL]); rmn, rmx = bounds([bR])
 cc = (cmn + cmx) / 2; R = (cmx.x - cmn.x) / 2
@@ -93,7 +93,7 @@ for b, side in ((bL, -1), (bR, 1)):
               rot=(r0[0] + 25 * t * t, r0[1] + side * 40 * t * t, r0[2]), interp='LINEAR' if j < 7 else 'BEZIER')
 
 # ---------- the boosters' smoke column (the RS-25s burn hydrogen: their exhaust is nearly clear water vapour)
-smoke = column('smoke_column', 6, 1, (0.86, 0.85, 0.82), rocket, (cc.x, cc.y, cmn.z - DECK - 30), alpha=0.35)
+smoke = column('smoke_column', 6, 1, (0.86, 0.85, 0.82), rocket, (cc.x, cc.y, cmn.z - DECK - 30), alpha=0.2)
 for f in range(F_LIFT + 30, F_SRB + 1, 4):
     L = max(0.001, (f - F_LIFT - 30) * (3 if f < F_FAST else 14)); A.key(smoke, f, scale=(1 + L / 500, 1 + L / 500, L), interp='LINEAR')
 A.key(smoke, F_LIFT + 29, scale=(1, 1, 0.001), interp='CONSTANT')

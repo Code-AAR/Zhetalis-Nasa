@@ -1,6 +1,6 @@
 """Browser check for the Blender cutscenes (game/src/cinematic.js + game/animation/glb/).
 Plays every film in the real game page, checks it draws, shows captions and skips cleanly, then checks that
-Start opens the mission briefing before the launch countdown.
+Start plays the Ares VI briefing and the orbit plan before the launch countdown.
 Usage: python scripts/test-cinematics-browser.py [screenshot folder]"""
 from playwright.sync_api import sync_playwright
 import functools, http.server, io, json, sys, threading
@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SHOTS = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-FILMS = [('briefing_mission', None), ('launch_earth', None), ('cruise_loop', None), ('mars_approach', None),
+FILMS = [('ares_vi_briefing', None), ('briefing_mission', None), ('launch_earth', None), ('cruise_loop', None), ('mars_approach', None),
          ('edl_mars', 'entry'), ('edl_mars', 'descent_landing'), ('outpost_26_months', None), ('dust_storm', None),
          ('failure_solar_panel', 'panel_failure'), ('failure_solar_panel', 'panel_repair'), ('failure_rover_stuck', 'rover_stuck'),
          ('failure_rover_stuck', 'rover_freed'), ('failure_air_leak', 'air_leak'), ('failure_air_leak', 'leak_patched'), ('ascent_mars', None)]
@@ -53,9 +53,13 @@ with sync_playwright() as p:
     page.wait_for_timeout(2500)
     if SHOTS: page.screenshot(path=str(SHOTS / 'start-briefing.png'))
     assert page.is_hidden('#countdown'), 'countdown should wait for the briefing'
+    page.keyboard.press('Escape')                       # Ares VI briefing -> the orbit plan
+    page.wait_for_timeout(800)
+    page.wait_for_selector('.cinematic canvas', timeout=60000)
+    assert page.is_hidden('#countdown'), 'countdown should wait for the orbit plan too'
     page.keyboard.press('Escape')
     page.wait_for_selector('#countdown:not(.hidden)', timeout=20000)
-    print('START: briefing first, then countdown')
+    print('START: Ares VI briefing, orbit plan, then countdown')
     assert not errors, errors
     print('All cutscenes load, draw, caption and skip.')
     b.close()

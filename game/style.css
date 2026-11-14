@@ -587,3 +587,11 @@ body.layout-phone #minimap, body.touch #minimap { display: none; }
 .cinematic .cine-skip { position: absolute; right: 16px; bottom: 16px; z-index: 1; }
 .cinematic .cine-load { position: absolute; inset: 0; display: grid; place-content: center; margin: 0; color: #ccc; font: 14px system-ui, sans-serif; }
 @media (prefers-reduced-motion: reduce) { .cinematic { transition: none; } }
+
+.cinematic .cine-phase { position: absolute; left: 20px; top: calc(9% + env(safe-area-inset-top, 0px)); margin: 0; z-index: 1; color: #ff7a3d;
+  font: 600 12px/1.2 system-ui, sans-serif; letter-spacing: .2em; pointer-events: none; }
+.cinematic .cine-phase:empty { display: none; }
+.cine-cap .cine-who { display: block; margin-bottom: 4px; color: #ff7a3d; font-size: 11px; letter-spacing: .18em; font-weight: 700; }
+.cinematic.cine-bars::before, .cinematic.cine-bars::after { content: ''; position: absolute; left: 0; right: 0; height: 7%; background: #000; z-index: 1; pointer-events: none; }
+.cinematic.cine-bars::before { top: 0; } .cinematic.cine-bars::after { bottom: 0; }
+.cinematic.cine-bars .cine-cap { text-align: left; border-left: 3px solid #ff7a3d; bottom: 10%; }

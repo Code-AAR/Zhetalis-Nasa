@@ -73,6 +73,9 @@ for i, wy in enumerate((-1.6, 1.6)):
     pile.location = (23.5, wy * 3.4, 0)
     A.key(pile, F_OUT + 50, scale=(0.001,) * 3); A.key(pile, F_BOARDS, scale=(0.9, 0.7, 0.35))
 
+for _o in [o for o in bpy.data.objects if o.name.startswith('astronaut_') and o.parent is None]:
+    walk_bob(_o)
+
 cam = camera(lens=35)
 look(cam, 0, (-8, -22, 4), (0, 0, 1))
 look(cam, F_SINK, (12, -20, 3.5), (24, 0, 1.2))

@@ -89,6 +89,9 @@ A.key(pw, 0, scale=(1, 1, 1)); A.key(pw, F_SNAP, scale=(1, 1, 1)); A.key(pw, F_S
 A.key(pw, F_OK - 1, scale=(0.8, 1, 1)); A.key(pw, F_OK + 10, scale=(1, 1, 1))
 
 # ---------- camera
+for _o in [o for o in bpy.data.objects if o.name.startswith('astronaut_') and o.parent is None]:
+    walk_bob(_o)
+
 cam = camera(lens=35)
 look(cam, 0, (-74, -44, 3.2), (-58, -27, 1.8))
 look(cam, F_SPLIT - 1, (-70, -42, 3.0), (-60, -28, 1.6))
