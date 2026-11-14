@@ -1,0 +1,36 @@
+{
+ "clips": [
+  {
+   "name": "dust_storm",
+   "start": 0.0,
+   "end": 17.958
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 4.17,
+   "text": "A dust storm is coming. Its winds reach 17-30 m/s..."
+  },
+  {
+   "t0": 4.17,
+   "t1": 7.92,
+   "text": "...but Mars air is so thin they push no harder than a breeze"
+  },
+  {
+   "t0": 7.92,
+   "t1": 12.5,
+   "text": "The real danger is darkness: dust blocks the sunlight"
+  },
+  {
+   "t0": 12.5,
+   "t1": 15.42,
+   "text": "Solar power drops to about a third. The fission reactors keep the lights on"
+  },
+  {
+   "t0": 15.42,
+   "t1": 18.0,
+   "text": "A storm can last for weeks. The crew waits inside"
+  }
+ ]
+}

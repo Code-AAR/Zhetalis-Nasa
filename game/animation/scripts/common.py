@@ -656,4 +656,10 @@ def export(name):
         export_frame_step=2, export_optimize_animation_size=True, export_anim_slide_to_zero=False,
         export_image_format='JPEG', export_image_quality=85, export_extras=True, export_materials='EXPORT',
         export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6)
+    import json
+    fps = bpy.context.scene.render.fps
+    with open(os.path.join(d, name + '.captions.json'), 'w', encoding='utf-8') as fh:
+        json.dump({'clips': [{'name': c, 'start': round(f0 / fps, 3), 'end': round(f1 / fps, 3)} for c, f0, f1 in A.clips],
+                   'captions': [{'t0': round(f0 / fps, 2), 't1': round(f1 / fps, 2), 'text': t} for t, f0, f1 in CAPTIONS]},
+                  fh, indent=1, ensure_ascii=False)
     print('EXPORTED', name, os.path.getsize(os.path.join(d, name + '.glb')))

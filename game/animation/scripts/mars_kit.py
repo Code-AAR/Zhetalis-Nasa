@@ -185,3 +185,23 @@ def finished_outpost(skip=()):
     out['dish'] = dish('earth_dish', (-48, 4, 0), r=3.4)
     out['dish'][1].rotation_euler = (math.radians(50), 0, math.radians(60))
     return out
+
+
+def rover_path(sev, pts, reverse=()):
+    """Key the SEV through [(frame, (x, y)), ...], always facing where it drives. The SEV's cab faces local -Y,
+    so heading = direction + 90 deg. Frames listed in `reverse` are driven backwards (cab facing away)."""
+    last = None
+    for i, (f, (x, y)) in enumerate(pts):
+        if i + 1 < len(pts):
+            nx, ny = pts[i + 1][1]; d = (nx - x, ny - y)
+        else:
+            px, py = pts[i - 1][1]; d = (x - px, y - py)
+        if abs(d[0]) + abs(d[1]) < 1e-6 and last is not None:
+            h = last
+        else:
+            h = math.degrees(math.atan2(d[1], d[0])) + 90 + (180 if f in reverse else 0)
+            if last is not None:
+                while h - last > 180: h -= 360
+                while h - last < -180: h += 360
+        A.key(sev, f, loc=(x, y, 0), rot=(0, 0, h))
+        last = h

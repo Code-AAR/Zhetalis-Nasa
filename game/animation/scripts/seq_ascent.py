@@ -82,10 +82,10 @@ for f in range(F_WIDE, END + 1, 2):
     look(cam, f, tuple(MAV + p + Vector((-70 - 30 * k, -120, -35))), tuple(MAV + p), interp='LINEAR')
 
 mars_world()
-caption(cam, 'Month 26: tanks full of oxygen and methane made on Mars', 0, F_IGN)
+caption(cam, 'Tanks full of oxygen and methane made on Mars', 0, F_IGN)
 caption(cam, 'Ignition! The landing stage stays behind as the launch pad', F_IGN, F_PITCH)
 caption(cam, 'Mars needs about 4.1 km/s to reach orbit - more than twice the Moon\'s 1.9 km/s', F_PITCH, F_WIDE)
 caption(cam, 'That is why this ascent stage carries so much more fuel than Apollo\'s', F_WIDE, 410)
-caption(cam, 'Next stop: the transit ship in orbit, then seven months home', 410, END + 1)
+caption(cam, 'Next stop: the transit ship in orbit, then months of coasting home', 410, END + 1)
 
 run([('ascent_mars', 0, END)], opts, NAME)

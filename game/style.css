@@ -574,3 +574,16 @@ body.layout-phone #minimap, body.touch #minimap { display: none; }
 #toast{font-size:14px;max-width:min(360px,calc(100vw - 32px));padding:10px 12px}
 
 #delivery-status{font-size:12px!important;max-width:240px!important;padding:8px 34px 8px 10px!important}#delivery-dismiss{position:fixed;right:10px;bottom:182px;z-index:40;width:32px;height:32px;padding:0;font-size:20px}#delivery-dismiss[hidden]{display:none}
+
+/* Blender cutscenes (src/cinematic.js): full screen, captions at the bottom, skip button */
+.cinematic { position: fixed; inset: 0; z-index: 140; background: #000; cursor: pointer; opacity: 1; transition: opacity .35s; }
+.cinematic.cine-out { opacity: 0; pointer-events: none; }
+.cinematic .cine-canvas, .cine-loop .cine-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cine-loop { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+.cine-cap { position: absolute; left: 50%; bottom: max(28px, 6vh); transform: translateX(-50%); margin: 0; max-width: min(92vw, 760px);
+  padding: 8px 14px; border-radius: 8px; background: rgba(0, 0, 0, .55); color: #fff; font: 600 clamp(14px, 2.1vw, 20px)/1.35 system-ui, sans-serif;
+  text-align: center; pointer-events: none; }
+.cine-cap:empty { display: none; }
+.cinematic .cine-skip { position: absolute; right: 16px; bottom: 16px; z-index: 1; }
+.cinematic .cine-load { position: absolute; inset: 0; display: grid; place-content: center; margin: 0; color: #ccc; font: 14px system-ui, sans-serif; }
+@media (prefers-reduced-motion: reduce) { .cinematic { transition: none; } }

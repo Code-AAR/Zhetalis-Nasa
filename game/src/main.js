@@ -72,6 +72,7 @@ import { Coop, CoopHud, openCoopDialog } from './coop.js';
 import { RemotePlayers } from './remote-players.js';
 import { nightVote, canSleepAt, morningClock } from './night-vote.js';
 import { SCREEN_MODES, screenName, screenMode, setScreenMode, nextScreenMode, onLayout } from './layout.js';
+import { playCinematic } from './cinematic.js';   // Blender-made sequences in animation/glb/
 loadModel('sls.glb'); loadModel('mobile-launcher.glb');   // NASA's 3D models start downloading on the title screen
 
 // Phones and tablets: draw fewer pixels, and skip shadows on small screens, so the game stays smooth
@@ -253,7 +254,7 @@ async function resume(d) {
   $('#title').classList.add('hidden');
   state.difficulty = d.difficulty; state.site = SITES[d.outpost.site] ? d.outpost.site : 'plains'; state.speed = d.speed || 1; $('#speed-btn').textContent = 'Speed ×' + state.speed;
   buildWorld();
-  if (!await waitForBase(world.ready)) return;
+  if (!await waitForBase(world.ready, { trip: true, minMs: 4000, title: 'Loading your mission' })) return;
   world.settlement?.layout?.setSite?.(state.site);   // Block Island only away from Gusev and Jezero
   world.settlement.surveys = new Set(d.surveys || []);
   if (world.lookouts) { world.lookouts.got = new Set(d.lookouts || []); world.lookouts.refresh(); }
@@ -288,12 +289,14 @@ async function resume(d) {
 }
 
 $('#reset-progress').onclick = () => modal({ title: 'Reset progress?', html: '<p>This deletes your saved mission and all your badges. It cannot be undone.</p>', choices: [{ label: 'Keep my progress', primary: true }, { label: 'Delete everything', onPick: resetGame }] });
-function startNew() {
+async function startNew() {
   missionMenu.dispose();
   clearSave();                                                 // a new mission replaces the old save
   if (isTouch() && document.body.classList.contains('layout-phone') && canFullscreen) goFullscreen();   // phones: fill the screen like an app
-  startSound(); setSound({ scene: 'launch', thrust: 0 });   // sound can only start after a click
+  startSound();                                                // sound can only start after a click
   $('#title').classList.add('hidden');
+  await playCinematic('briefing_mission');                     // the mission plan: orbits, launch window, 26 months
+  setSound({ scene: 'launch', thrust: 0 });
   state.phase = 'launch';
   launch = new Launch();
   say('countdown');
@@ -415,11 +418,14 @@ function buildWorld() {
 async function arrive() {
   $('#countdown').classList.add('hidden'); $('#skip')?.remove(); $('#retry-launch')?.remove();
   // Clear launch captions before waiting for network-dependent base assets.
-  const ready = await waitForBase(world.ready);
+  const ready = await waitForBase(world.ready, { trip: true, minMs: 9000 });
   if (!ready) return;
   setSound({ scene: 'arrival' });
+  await playCinematic('mars_approach');          // orbit insertion, then the landing pod undocks
   let landingFilm = null;
-  const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>{landingFilm = playLanding(world);}});
+  // A crew lander is too heavy for a parachute: the film shows supersonic retropropulsion (animation/README.md)
+  const landFilm = async () => { await playCinematic('edl_mars', { clip: 'entry' }); await playCinematic('edl_mars', { clip: 'descent_landing' }); placeLander(world); };
+  const selectedSite = await showArrival(F, outpost.delayMinutes(), {onDescent:()=>{landingFilm = landFilm();}});
   if (!selectedSite) { location.reload(); return; }
   state.site = selectedSite;
   outpost.site = selectedSite;
@@ -431,6 +437,8 @@ async function arrive() {
   await weatherReady;
   state.phase = 'mars';
   await landingFilm?.catch?.(() => {});        // let the landing film finish before the welcome box opens
+  placeLander(world);
+  await playCinematic('outpost_26_months', { world });   // the goal: from two pods to a full outpost
   $('#hud').classList.remove('hidden');
   phoneTips();
   say('welcome');
@@ -1005,7 +1013,7 @@ function handle(ev) {
     case 'hazard-detected':   // the monitor inside blinks; the first time, tell the player where to look
       if (!monitorTipShown) { monitorTipShown = true; toast('📟 New reading! The hazard monitor inside the base has spotted something. Go and check it.', 6000); }
       break;
-    case 'dust-cinematic': if(!inside)playStorm(world); break;
+    case 'dust-cinematic': if(!inside){ if(!outpost.stormFilmSeen){ outpost.stormFilmSeen=true; playCinematic('dust_storm',{world}); } else playStorm(world); } break;
     case 'dust':
       queue.push({type:'dust-cinematic'});
       world.setDust(true); say('dust');
@@ -1030,6 +1038,11 @@ function handle(ev) {
     }
     case 'cold-night': toast('🥶 Your batteries ran flat before morning - the cold slowed the oxygen maker and greenhouse. Build an extra battery!', 5000); break;
     case 'wind-clean': toast('💨 A gust of wind blew some dust off your solar panels! (This really happened to the Spirit and Opportunity rovers.)', 5000); break;
+    case 'panel-fault': outpost.today = outpost.forecast(); filmThen(inside ? null : ['failure_solar_panel', 'panel_failure'], () => modal({ title: '⚠️ Solar tracker failure!', html: `<p>One solar tracker's drive motor stalled and then its bracket gave way. The panel sags out of the sunlight: <b>solar power is down 20%</b>.</p><p><b>Fix it:</b> go to the solar panels and ${keyWord('press E', 'tap Action')} to swap in a spare drive unit (uses 1 part). If nobody does, the crew gets to it in ${outpost.panelFault} sols.</p>` })); break;
+    case 'rover-stuck': filmThen(inside ? null : ['failure_rover_stuck', 'rover_stuck'], () => modal({ title: '🚙 The rover is stuck!', html: `<p>Your rover drove onto soft sand hidden under a crust of dust, and its wheels dug in. It can't move until you dig it out.</p><p><b>Fix it:</b> walk to the rover and ${keyWord('press E', 'tap Action')}.</p><p class="fact">This really happens: NASA's Spirit rover got stuck in soft sand at a place called Troy in 2009 and never got out. Opportunity was luckier: in 2005 it spent five weeks slowly backing out of a sand ripple.</p>` })); break;
+    case 'air-leak': filmThen(inside ? null : ['failure_air_leak', 'air_leak'], () => modal({ title: '💨 Air leak!', html: `<p>A seal failed where the walkway joins the habitat. Cabin air is escaping, and the moisture in it freezes into a white plume in Mars's near-vacuum. <b>You lose extra oxygen every sol</b> until it is patched.</p><p class="fact">The International Space Station has had small leaks too. The crew hunted them down and sealed them with patches.</p>`,
+      choices: [{ label: 'Patch it now', cost: 'Uses 1 part', primary: true, onPick: patchLeak }, { label: 'Later', cost: `It keeps leaking. You can patch it at any airlock door. The crew gets to it in ${outpost.leak} sols.` }] })); break;
+    case 'fault-fixed-by-crew': outpost.today = outpost.forecast(); toast(ev.what === 'leak' ? '🛠 The rest of the crew found the air leak and patched it.' : '🛠 The rest of the crew swapped the broken solar tracker motor. Full power again.', 6000); break;
     case 'relay-lost': outpost.today = outpost.forecast(); say('relay'); modal({ title: '📡 A relay orbiter has failed!', html: `${eventArt('relay-lost', 'A relay orbiter above Mars')}<p>Your messages to Earth usually bounce off orbiters circling Mars. One of them just went silent. Until Earth moves another one into place (about ${outpost.relayDown} sols), you must talk straight to Earth - which needs much more power.</p>${factHTML(F.relay)}` }); break;
     case 'relay-restored': toast('📡 A new relay orbiter is in place - talking to Earth is easy again.'); break;
     case 'rover-salvage': modal({ title: '🤖 You found an old rover!', html: `${factHTML(F.perseverance)}${factHTML(F.moxie)}<p>You carefully salvage <b>8 spare parts</b> for your workbench.</p>` }); break;
@@ -1051,11 +1064,17 @@ function collect(n) {
     modal({title:titles[key],html:`<p>${notes[key]}</p><p>${first?'Survey complete: +8 science stored for transmission to Earth.':'This survey has already been logged.'}</p>`,choices:[{label:'Continue',primary:true}]});return;
   }
 
+  if (n.type === 'door' && outpost.leak) return modal({ title: '💨 Air leak at the walkway seal', html: '<p>The leak is right here. Patch it before going in?</p>',
+    choices: [{ label: 'Patch it now', cost: 'Uses 1 part', primary: true, onPick: patchLeak }, { label: 'Go inside', onPick: () => startAirlock('in',()=>goInside(n.entrance)) }] });
   if (n.type === 'door') return startAirlock('in',()=>goInside(n.entrance));
   if (n.type === 'ship') return startAirlock('in',()=>goInShip());
   if (n.type === 'ghdoor') return startAirlock('in',()=>goInGreenhouse('out'));
   if (n.type === 'ore') { mine(n.deposit); return; }
   if (n.type === 'greenhouse') return openGreenhouse(n.house);
+  if (n.type === 'sev' && outpost.roverStuck) {
+    return modal({ title: '🚙 Rover stuck in sand', html: '<p>Dig out the sand in front of the wheels, lay traction boards behind them, then back out slowly, the way you came in.</p>',
+      choices: [{ label: 'Dig it out', primary: true, onPick: () => { outpost.roverStuck = false; saveGame(); filmThen(['failure_rover_stuck', 'rover_freed'], () => toast('🚙 The rover is free!', 4000)); } }, { label: 'Not now' }] });
+  }
   if (n.type === 'sev') {
     world.enterRover(); roverFrom = world.sev.pos.clone();
     if (!world.sevShown) { world.sevShown = true; modal({ pause: true, title: '🚙 The crew rover', html: `<p>This is NASA's <b>Space Exploration Vehicle</b> - a real design for a small rover the crew can live in. Inside, the air is like the outpost's, so you take off your helmet and your <b>suit air refills</b>. Astronauts get in and out through <b>suitports</b> at the back: the spacesuits stay docked outside, so no dust comes in.</p><p><b>${keyWord('W / S', 'Left thumb up / down')}</b> to drive, <b>${keyWord('A / D', 'left / right')}</b> to steer, <b>${keyWord('E', 'Action')}</b> to climb out. Driving uses the rover's <b>battery</b>: park it in your connected charging bay to charge it.</p><p class="source">Real NASA 3D model (NASA 3D Resources). In the game it drives faster than the real one so trips are short.</p>`, choices: [{ label: "Let's drive!", primary: true }] }); }
@@ -1063,6 +1082,12 @@ function collect(n) {
     return;
   }
   if (n.type === 'sev-exit') { world.exitRover(); toast('🧑‍🚀 Out through the suitport at the back of the rover.'); return; }
+  if (n.type === 'panels' && outpost.panelFault) {
+    if (outpost.parts < 1) return toast('You need 1 spare part to swap the broken tracker motor.');
+    outpost.parts -= 1; outpost.panelFault = 0; outpost.today = outpost.forecast(); saveGame();
+    filmThen(['failure_solar_panel', 'panel_repair'], () => toast('☀️ Tracker fixed: full solar power again.', 5000));
+    return;
+  }
   if (n.type === 'panels') {
     if(outpost.clean>=.999)return toast('Solar panels are already clean.');
     outpost.cleanPanels(); world.setPanelDust(1); world.panelsDirty = false; earn('dust');
@@ -1091,10 +1116,20 @@ function collect(n) {
   if(p.kind==='pod')saveGame();
 }
 
+// A breakdown film (outside only), then its pop-up. film: [file, clip] or null.
+function filmThen(film, then) { (film ? playCinematic(film[0], { clip: film[1], world }) : Promise.resolve()).then(then); }
+function patchLeak() {
+  if (!outpost.leak) return;
+  if (outpost.parts < 1) return toast('You need 1 spare part to patch the leak.');
+  outpost.parts -= 1; outpost.leak = 0; saveGame();
+  filmThen(inside ? null : ['failure_air_leak', 'leak_patched'], () => toast('💨 Leak patched. The crew tops the air back up from the tanks.', 5000));
+}
+
 function endMission() {
   clearSave();   // the mission is over, so there is nothing to resume
   document.exitPointerLock?.();
   const o = outpost.over;
+  if (o.win && !endMission.film) { endMission.film = true; playCinematic('ascent_mars', { world }).then(endMission); return; }   // liftoff first
   if (o.win) earn('complete');
   say(o.win ? 'win' : 'lose');
   const why = {
@@ -1219,8 +1254,13 @@ onLayout((mode, used) => {
 $('#cine-btn').onclick = () => {
   if (inside) return toast('Go outside to watch a cutscene.');
   modal({ title: 'Cutscenes', html: '<p>Watch the big moments again. Click, Space or Esc skips them.</p>', choices: [
-    { label: 'Mars landing', primary: true, onPick: () => { playLanding(world).catch(() => {}); } },
-    { label: 'Dust storm', onPick: () => { playStorm(world).catch(() => {}); } }, { label: 'Close' }] });
+    { label: 'Mars landing (here)', primary: true, onPick: () => { playLanding(world).catch(() => {}); } },
+    { label: 'Dust storm (here)', onPick: () => { playStorm(world).catch(() => {}); } },
+    ...[['Mission briefing', 'briefing_mission'], ['Launch from Earth', 'launch_earth'], ['Trip to Mars', 'cruise_loop'], ['Arriving at Mars', 'mars_approach'],
+      ['Crew landing', 'edl_mars', 'descent_landing'], ['26 months of building', 'outpost_26_months'], ['Dust storm film', 'dust_storm'],
+      ['Solar panel failure', 'failure_solar_panel', 'panel_failure'], ['Rover stuck in sand', 'failure_rover_stuck', 'rover_stuck'], ['Air leak', 'failure_air_leak', 'air_leak'],
+      ['Leaving Mars', 'ascent_mars']].map(([label, name, clip]) => ({ label, onPick: () => { playCinematic(name, { clip, world }); } })),
+    { label: 'Close' }] });
 };
 $('#menu-btn').onclick = () => $('#hud').classList.toggle('menu-open');
 $('#information-btn').onclick=()=>openSettings({tab:'information'});
@@ -1319,6 +1359,9 @@ function drawHUD() {
   const list = [];
   if (o.storm) list.push({ text: `☀️ Solar storm! ${o.shelter ? (inside ? 'Sheltering - stay inside' : 'Get back inside!') : 'Get inside or shield up!'}` });
   if (o.dust) list.push({ text: `🌪 Dust storm: ${o.dust} sols left` });
+  if (o.panelFault) list.push({ text: '⚠️ Solar tracker broken: fix it at the panels' });
+  if (o.roverStuck) list.push({ text: '🚙 Rover stuck in sand: dig it out' });
+  if (o.leak) list.push({ text: '💨 Air leak: patch it at an airlock door' });
   if (f.o2Net < 0 && o.o2 / -f.o2Net < 8) list.push({ text: '🫁 Oxygen running low - more power to life support!' });
   if (world.driving && world.sev.battery < 0.25) list.push({ text: world.sev.battery > 0 ? '🔋 Rover battery low - drive to the connected charging bay' : '🔋 Rover battery flat - crawling home slowly' });
   if (!inside && !world.driving && suit < 0.3) list.push({ text: '🧑‍🚀 Suit air low - go back inside!' });

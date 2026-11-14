@@ -1,6 +1,6 @@
 """4. The outpost grows over 26 months, starting from just the two landing pods.
-26 months is the real gap between Earth-Mars launch windows (the planets line up again every ~26 months), so
-the crew must build, live, and make propellant for the trip home before the next window.
+26 months is the real gap between Earth-Mars launch windows (the planets line up again every ~26 months), so the
+outpost must be ready - and the ascent vehicle fuelled - by the time the next ships can set out.
 1.125 s per month (month m starts at frame 24 + 27m). The empty 'month_counter' carries the month number in its scale.x, so the game can read
 the current month while the clip plays."""
 import sys, os, math, random
@@ -37,8 +37,10 @@ grow(sev, 0.6, 1.0)
 stops = [(1.0, (40, 24), 200), (1.6, (12, -10), 230), (2.6, (-45, -38), 180), (3.6, (60, 50), 40), (4.4, (100, 80), 45),
          (5.5, (-10, 10), 210), (7.2, (55, -30), 300), (9.0, (6, 12), 120), (11.5, (30, 50), 80), (14.0, (-30, 40), 160),
          (16.0, (-40, -14), 200), (18.5, (-60, -60), 250), (21.0, (50, -50), 310), (23.5, (35, 18), 30), (26.0, (25, 10), 20)]
+pts = []
 for m, (x, y), h in stops:
-    A.key(sev, mf(m), loc=(x, y, 0), rot=(0, 0, h))
+    pts += [(mf(m), (x, y))] + ([(mf(m) + 5, (x, y))] if m < 26 else [])   # park a moment at each stop
+rover_path(sev, pts)
 
 # ---------- month 1-3: solar trackers, 3 rows of 5 (2 more rows in month 17-19)
 trackers = []
@@ -142,7 +144,7 @@ caps = [(0, 'Sol 1: just the two landing pods'), (1, 'Month 1: the pressurised r
         (8.6, 'Month 9: a pressurised walkway joins the pod and the habitat'), (11, 'Month 12: a second habitat'),
         (13.5, 'Month 14: walls of bagged soil block some of the radiation'), (15, 'Month 16: a big dish to talk to Earth'),
         (17, 'Month 18: more solar power'), (20, 'Month 21: the ascent vehicle\'s tanks keep filling'),
-        (24, 'Month 26: Earth and Mars line up again - time to go home')]
+        (24, 'Month 26: Earth and Mars line up again - the next ships can launch')]
 for i, (m, t) in enumerate(caps):
     caption(cam, t, mf(m), mf(caps[i + 1][0]) if i + 1 < len(caps) else END + 1)
 

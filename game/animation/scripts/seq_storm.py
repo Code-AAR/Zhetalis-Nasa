@@ -46,9 +46,7 @@ while f < END - 4:
 
 # ---------- the crew heads in: rover parks by habitat 2, an astronaut walks to the pod
 sev = rover('sev', (-40, -14, 0), rot_z=200)
-A.key(sev, 40, loc=(-40, -14, 0), rot=(0, 0, 200))
-A.key(sev, 150, loc=(-5, 8, 0), rot=(0, 0, 250))
-A.key(sev, 230, loc=(30, 24, 0), rot=(0, 0, 230))
+rover_path(sev, [(40, (-40, -14)), (150, (-5, 8)), (230, (30, 24))])
 astro = astronaut('astronaut_0', (-30, -20, 0), rot_z=60)
 A.key(astro, 20, loc=(-30, -20, 0), rot=(0, 0, 60), scale=(1, 1, 1))
 A.key(astro, 160, loc=(-3, -2, 0), rot=(0, 0, 40), scale=(1, 1, 1))

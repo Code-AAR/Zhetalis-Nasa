@@ -1,0 +1,46 @@
+{
+ "clips": [
+  {
+   "name": "air_leak",
+   "start": 0.0,
+   "end": 7.5
+  },
+  {
+   "name": "leak_patched",
+   "start": 7.5,
+   "end": 14.958
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 1.67,
+   "text": "All quiet at the outpost..."
+  },
+  {
+   "t0": 1.67,
+   "t1": 4.58,
+   "text": "Leak! A seal fails where the walkway meets the habitat"
+  },
+  {
+   "t0": 4.58,
+   "t1": 7.5,
+   "text": "Mars air is so thin that cabin air rushes out, and its moisture freezes"
+  },
+  {
+   "t0": 7.5,
+   "t1": 11.67,
+   "text": "Repair: find the leak and seal it"
+  },
+  {
+   "t0": 11.67,
+   "t1": 13.54,
+   "text": "Patch pressed on: the leak stops"
+  },
+  {
+   "t0": 13.54,
+   "t1": 15.0,
+   "text": "The crew tops the air back up from the tanks. Green light"
+  }
+ ]
+}

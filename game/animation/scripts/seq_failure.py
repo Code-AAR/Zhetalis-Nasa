@@ -58,8 +58,8 @@ for k in range(0, 25, 4):
     A.key(bolt, F_SNAP + k, loc=(-59.7 + 0.3 * t, -28.2, max(0.05, 1.8 - 0.5 * 3.71 * t * t)), rot=(0, 120 * t, 0), interp='LINEAR')
 
 # warning beacon on the post: red flashing from the stall, green once fixed
-red = sphere('beacon_red', 0.14, loc=(-60, -28 - 0.2, 1.2), m=mat('beacon_red', (1, 0.1, 0.05), emit=(1, 0.1, 0.05), strength=25))
-grn = sphere('beacon_green', 0.14, loc=(-60, -28 - 0.2, 1.2), m=mat('beacon_green', (0.1, 1, 0.3), emit=(0.1, 1, 0.3), strength=20))
+red = sphere('beacon_red', 0.14, loc=(-60, -28 - 0.2, 1.2), m=mat('beacon_red', (1, 0.1, 0.05), emit=(1, 0.1, 0.05), strength=6))
+grn = sphere('beacon_green', 0.14, loc=(-60, -28 - 0.2, 1.2), m=mat('beacon_green', (0.1, 1, 0.3), emit=(0.1, 1, 0.3), strength=5))
 A.key(red, 0, scale=(0.001,) * 3, interp='CONSTANT')
 for f in range(F_STALL + 6, F_OK, 16):
     A.key(red, f, scale=(1, 1, 1), interp='CONSTANT'); A.key(red, f + 8, scale=(0.001,) * 3, interp='CONSTANT')
@@ -68,9 +68,7 @@ A.key(grn, 0, scale=(0.001,) * 3, interp='CONSTANT'); A.key(grn, F_OK, scale=(1,
 
 # ---------- the repair: rover drives up with the spare, astronaut carries it to the post
 sev = rover('sev', (40, -60, 0), rot_z=90)
-A.key(sev, F_ROVER, loc=(40, -70, 0), rot=(0, 0, 90))
-A.key(sev, F_ROVER + 40, loc=(-30, -46, 0), rot=(0, 0, 100))
-A.key(sev, F_WALK, loc=(-52, -42, 0), rot=(0, 0, 90))
+rover_path(sev, [(F_ROVER, (40, -70)), (F_ROVER + 40, (-30, -46)), (F_WALK, (-52, -42))])
 astro = astronaut('astronaut_0', (-52, -39, 0), rot_z=0)
 A.key(astro, F_WALK - 1, loc=(-52, -38.5, 0), scale=(0.001,) * 3, interp='CONSTANT')
 A.key(astro, F_WALK, loc=(-52, -38.5, 0), rot=(0, 0, -40), scale=(1, 1, 1))

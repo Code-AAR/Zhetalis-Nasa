@@ -1,0 +1,46 @@
+{
+ "clips": [
+  {
+   "name": "launch_earth",
+   "start": 0.0,
+   "end": 22.958
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 1.67,
+   "text": "Kennedy Space Center, Pad 39B - SLS rocket, 98 m tall"
+  },
+  {
+   "t0": 1.67,
+   "t1": 4.0,
+   "text": "T-6 s: the four RS-25 engines start"
+  },
+  {
+   "t0": 4.0,
+   "t1": 8.33,
+   "text": "T-0: both solid rocket boosters light - liftoff!"
+  },
+  {
+   "t0": 8.33,
+   "t1": 11.0,
+   "text": "Clearing the 116 m launch tower"
+  },
+  {
+   "t0": 11.0,
+   "t1": 17.62,
+   "text": "Faster than sound after about a minute (shown 19x faster)"
+  },
+  {
+   "t0": 17.62,
+   "t1": 20.71,
+   "text": "T+2 min 12 s: boosters drop away, about 47 km up"
+  },
+  {
+   "t0": 20.71,
+   "t1": 23.0,
+   "text": "T+3 min 11 s: the launch abort tower is jettisoned"
+  }
+ ]
+}

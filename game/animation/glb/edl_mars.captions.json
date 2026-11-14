@@ -1,0 +1,46 @@
+{
+ "clips": [
+  {
+   "name": "entry",
+   "start": 0.0,
+   "end": 8.333
+  },
+  {
+   "name": "descent_landing",
+   "start": 8.333,
+   "end": 25.958
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 4.58,
+   "text": "Entry at about 20,000 km/h: the heat shield glows at over 1,300 C"
+  },
+  {
+   "t0": 4.58,
+   "t1": 8.33,
+   "text": "Mars air is thin, but it still takes away most of the speed"
+  },
+  {
+   "t0": 8.33,
+   "t1": 13.75,
+   "text": "Too heavy for a parachute: the shell opens and the engine fires while still supersonic"
+  },
+  {
+   "t0": 13.75,
+   "t1": 17.92,
+   "text": "Rocket-powered descent: about 7 minutes from the top of the air to the ground"
+  },
+  {
+   "t0": 17.92,
+   "t1": 22.5,
+   "text": "Landing legs out"
+  },
+  {
+   "t0": 22.5,
+   "t1": 26.0,
+   "text": "Touchdown! The engine blast throws up dust"
+  }
+ ]
+}

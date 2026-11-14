@@ -3,7 +3,7 @@ Finds Blender at the usual Windows install path, or set BLENDER=path\\to\\blende
 import glob, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SEQS = ['launch', 'cruise', 'edl', 'outpost', 'storm', 'failure', 'ascent']
+SEQS = ['briefing', 'launch', 'cruise', 'approach', 'edl', 'outpost', 'storm', 'failure', 'rover_stuck', 'leak', 'ascent']
 
 
 def blender():

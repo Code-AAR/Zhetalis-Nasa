@@ -118,7 +118,7 @@ export class Outpost {
   }
   delayMinutes(sol = this.sol) { return this.distanceKm(sol) / C / 60; }
 
-  solar() { if(this.powerStep<6 || this.baseConnected===false)return 0; return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1); }
+  solar() { if(this.powerStep<6 || this.baseConnected===false)return 0; return this.panels * TUNED.kWhPerPanel * this.s.solar * this.clean * (this.dust > 0 ? 0.35 : 1) * (this.panelFault > 0 ? 0.8 : 1); }   // a broken tracker: one panel in five sags out of the sunlight
   chargerAllocation() { return this.chargerStep>=3 ? Math.max(0,this.energy()-TUNED.heaterKWh)*.15 : 0; }
   emergencyDraw() { return this.baseConnected ? 0 : Math.min(12, Math.max(0, this.emergencyKWh || 0)); }
   energy() { return this.solar() + this.reactors * TUNED.reactorKWh + this.emergencyDraw(); }
@@ -164,6 +164,7 @@ export class Outpost {
     this.sol += 1;
 
     this.o2 = Math.max(0, this.o2 + f.o2Net);
+    if (this.leak > 0) this.o2 = Math.max(0, this.o2 - this.o2Need * 0.25);   // an air leak: cabin air lost to Mars
     const fed = this.food >= this.crew;
     this.food = Math.max(0, this.food + f.foodNet);
     if (f.cold) events.push({ type: 'cold-night' });
@@ -189,6 +190,9 @@ export class Outpost {
     if (this.dust > 0 && --this.dust === 0) events.push({ type: 'dust-end' });
     if (this.blackout > 0 && --this.blackout === 0) events.push({ type: 'blackout-end' });
     if (this.relayDown > 0 && --this.relayDown === 0) events.push({ type: 'relay-restored' });
+    // Breakdowns the player should fix (main.js); if nobody does, the rest of the crew gets to them in the end.
+    if (this.panelFault > 0 && --this.panelFault === 0) events.push({ type: 'fault-fixed-by-crew', what: 'panel' });
+    if (this.leak > 0 && --this.leak === 0) events.push({ type: 'fault-fixed-by-crew', what: 'leak' });
 
     if (this.sol >= this.nextSupply) {
       this.nextSupply = this.sol + TUNED.supplyEvery;
@@ -215,6 +219,10 @@ export class Outpost {
     if (!this.storm && !pendingKind('solar') && r < 0.06 * rate) this.hazards.push({ kind: 'solar', at: this.sol + lead, found: this.sol, seen: false });
     else if (this.dust === 0 && !pendingKind('dust') && r > 1 - 0.03 * rate * this.s.dust) this.hazards.push({ kind: 'dust', at: this.sol + lead, found: this.sol, sols: 4 + Math.floor(rng() * 5), seen: false });
     else if (this.relayDown === 0 && this.sol > 8 && r > 0.5 && r < 0.5 + 0.012 * rate) { this.relayDown = 15; events.push({ type: 'relay-lost' }); }
+    // Random breakdowns (same roll, ranges no other event uses, so older seeds still give the same storms)
+    else if (!this.panelFault && this.sol > 5 && r > 0.30 && r < 0.30 + 0.010 * rate) { this.panelFault = 8; events.push({ type: 'panel-fault' }); }
+    else if (!this.roverStuck && this.sol > 5 && r > 0.33 && r < 0.33 + 0.008 * rate) { this.roverStuck = true; events.push({ type: 'rover-stuck' }); }
+    else if (!this.leak && this.sol > 8 && r > 0.36 && r < 0.36 + 0.006 * rate) { this.leak = 5; events.push({ type: 'air-leak' }); }
     if (this.hazards.some(h => !h.seen)) events.push({ type: 'hazard-detected' });
 
     if (this.o2 <= 0) this.over = { win: false, why: 'oxygen' };
