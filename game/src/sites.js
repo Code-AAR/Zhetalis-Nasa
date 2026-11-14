@@ -107,7 +107,7 @@ class DustDevils {
       const p = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#c9a27c', map: puff, size: 2.4 + size * 1.1, transparent: true, opacity: .26, depthWrite: false, fog: true }));
       p.frustumCulled = false; world.scene.add(p);
       // base radius (metres) and height: the column is narrow near the ground and fans out above
-      return Object.assign(p, { size, n, rb: .5 + 1.4 * size, H: 22 + 30 * size, opacity: .18 + .07 * size });
+      return Object.assign(p, { size, n, rb: .5 + 1.4 * size, H: 22 + 30 * size, opacity: .22 + .09 * size });
     });
   }
   centre(i, t) { const [ax, az, ph] = this.anchors[i]; const k = 1 / Math.sqrt(this.devils?.[i]?.size || 1); return [ax + Math.sin(t * .02 * k + ph) * 80, az + Math.cos(t * .017 * k + ph * 1.3) * 70]; }

@@ -2,8 +2,8 @@
    Palette from the subject: basalt panel, butterscotch Martian sky for Mars, the blue of a Martian sunset for Earth. */
 #real-mars {
   --rm-basalt: #241d1f; --rm-edge: #4a3a33; --rm-sky: #e0a86a; --rm-sunset: #7fa8e8; --rm-ink: #f3ece4; --rm-muted: #c9b8a8;
-  position: fixed; z-index: 13; left: calc(16px + env(safe-area-inset-left)); top: calc(var(--top-clear, 96px) + 52px);
-  width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - var(--top-clear, 96px) - 200px); overflow: auto; overscroll-behavior: contain;
+  position: fixed; z-index: 13; left: calc(16px + env(safe-area-inset-left)); top: calc(var(--top-clear, 96px) + 8px);
+  width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - var(--top-clear, 96px) - 150px); overflow: auto; overscroll-behavior: contain;
   padding: 16px 18px 14px; border-radius: 18px; background: rgba(36, 29, 31, .96); border: 1px solid var(--rm-edge);
   color: var(--rm-ink); font-family: Poppins, system-ui, sans-serif; box-shadow: 0 18px 40px rgba(10, 4, 2, .45);
   opacity: 0; transform: translateX(-14px); transition: opacity .22s ease-out, transform .22s cubic-bezier(.2, .8, .2, 1);
