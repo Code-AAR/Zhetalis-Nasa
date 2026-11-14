@@ -77,13 +77,39 @@ export function makeGroundDust(heightAt) {
   const material=new THREE.PointsMaterial({map:new THREE.CanvasTexture(c),color:'#b49a7a',size:1.6,opacity:.12,transparent:true,depthWrite:false,fog:true});
   const points=new THREE.Points(geometry,material);points.name='Ground dust';points.frustumCulled=false;
   points.userData.update=(cam,t,storm,night)=>{
-    material.opacity=(storm?.26:.07)*(1-night*.85);material.size=storm?2.4:1.4;
+    material.opacity=(storm?.4:.07)*(1-night*.85);material.size=storm?3:1.4;
     for(let i=0;i<n;i++) {
-      const x=cam.x+((i*39.713+t*(storm?4:1.1)-cam.x)%100+100)%100-50;
+      const x=cam.x+((i*39.713+t*(storm?9:1.1)-cam.x)%100+100)%100-50;
       const z=cam.z+((i*23.371+t*.21-cam.z)%100+100)%100-50;
       data[i*3]=x;data[i*3+1]=heightAt(x,z)+.25+(i%4)*.14;data[i*3+2]=z;
     }
     geometry.attributes.position.needsUpdate=true;
+  };
+  return points;
+}
+
+// Wind-blown dust in a storm: fine grains streaming past at storm speed. Real storm dust is about 1-2 micrometres
+// across, finer than flour, and storm winds reach 17-30 m/s (NASA Mars Fact Sheet, Viking). The air is so thin that
+// those winds push on you only gently, so the danger is darkness, not force. One draw call, only during storms.
+export function makeStormDust(heightAt) {
+  const n = SURFACE_DETAIL.dust > 420 ? 420 : 220, data = new Float32Array(n * 3), seed = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { seed[i * 3] = Math.random() * 80; seed[i * 3 + 1] = Math.random() * 12; seed[i * 3 + 2] = Math.random() * 80; }
+  const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(data, 3));
+  const c = document.createElement('canvas'); c.width = 64; c.height = 16;
+  const g = c.getContext('2d'), a = g.createLinearGradient(0, 0, 64, 0);   // a short streak: grains blur along the wind
+  a.addColorStop(0, 'rgba(255,255,255,0)'); a.addColorStop(.6, 'rgba(255,255,255,.75)'); a.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = a; g.fillRect(0, 5, 64, 6);
+  const material = new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), color: '#c4895a', size: .45, opacity: .5, transparent: true, depthWrite: false, fog: true });
+  const points = new THREE.Points(geometry, material); points.name = 'Storm dust'; points.frustumCulled = false; points.visible = false;
+  const WIND = 14;   // game metres per second, along +x with a slight swirl
+  points.userData.update = (cam, t, storm, night) => {
+    points.visible = !!storm; if (!storm) return;
+    material.opacity = .5 * (1 - night * .7);
+    for (let i = 0; i < n; i++) {
+      const x = cam.x + ((seed[i * 3] + t * WIND - cam.x) % 80 + 80) % 80 - 40;
+      const z = cam.z + ((seed[i * 3 + 2] + Math.sin(t * .4 + i) * 3 - cam.z) % 80 + 80) % 80 - 40;
+      data[i * 3] = x; data[i * 3 + 1] = heightAt(x, z) + .3 + seed[i * 3 + 1] * (.4 + .6 * ((i * 7) % 5) / 5); data[i * 3 + 2] = z;
+    }
+    geometry.attributes.position.needsUpdate = true;
   };
   return points;
 }

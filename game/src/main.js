@@ -67,6 +67,7 @@ import { initTouch, isTouch } from './touch.js';
 import { earthGlobe, moonGlobe } from './globe.js';
 import { Colony, newColony, ORES, TOOLS, CROPS, SHOP, GREENHOUSE, BAG, JUG_L, priceWords } from './colony.js';
 import { initMissionMenu } from './menu.js';
+import { showRealMars } from './real-mars.js';
 import { Coop, CoopHud, openCoopDialog } from './coop.js';
 import { RemotePlayers } from './remote-players.js';
 import { nightVote, canSleepAt, morningClock } from './night-vote.js';
@@ -108,6 +109,7 @@ let capsule, ghRoom, ghTipShown = false, room;   // room: the indoor place you a
 const coop = new Coop();
 let remote = null, coopHud = null, guestMission = false, sleepBunk = null, myVote = false, skipTimer = 0, sleepFade = 0, poseT = 0, shareT = 0, hudT = 0;
 const sharedSeen = new Map(), snapshotWaiting = new Set();
+const dustVeil = Object.assign(document.createElement('div'), { id: 'dust-veil' }); document.body.appendChild(dustVeil); let dustVeilShown = '';
 let world, launch, interior, outpost, solClock = TUNED.solSeconds * 0.3, suit = 1, inside = false, pending = [], tutorialStep = 0;   // you land in the morning
 const queue = [];   // simulation events wait here so pop-ups never land on top of each other
 
@@ -360,7 +362,11 @@ function buildWorld() {
     new Sites(world, { toast, modal,
       onVisit: (s, n, total) => { outpost.science += s.points; logFact({ id: 'site-' + s.id, kid: s.kid, source: s.source, url: s.url }); toast(`${s.name}: +${s.points} science. ${n} of ${total} stops visited.`, 4500); if (n >= 3 && earn('geologist')) toast('Patch earned: Field geologist', 5000); if (n === total && earn('footsteps')) toast('Patch earned: In Spirit\'s footsteps', 5000); },
       onApproach: s => discover('site-' + s.id, { eyebrow: "SPIRIT'S STOP", title: s.name.toUpperCase(), sub: 'Press E to look', accent: '#7fd4e8' }),
-      onDevil: () => { outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
+      onDevilClean: amount => {   // a dust devil crossed the solar panels and blew dust off them (as for Spirit, 2005)
+        const before = outpost.clean; outpost.clean = Math.min(1, outpost.clean + amount); world.setPanelDust(outpost.clean); world.panelsDirty = outpost.clean < 0.97;
+        if (outpost.clean - before > .01) toast(`A dust devil swept over your solar panels and blew dust off them: ${Math.round(before * 100)}% to ${Math.round(outpost.clean * 100)}% clean. Spirit and Opportunity got lucky cleanings like this.`, 6500);
+      },
+      onDevil: () => { if (!isModalOpen()) showRealMars('dust-devil'); outpost.science += 1; logFact({ id: 'site-devils-seen', kid: 'You spotted a dust devil! These swirling columns of dust cross Gusev\'s floor. NASA\'s Spirit photographed them from the ground.', source: 'Wikipedia: Gusev', url: 'https://en.wikipedia.org/wiki/Gusev_(Martian_crater)' }); toast('A dust devil! They wander the plain. +1 science', 5000); if (earn('devil')) toast('Patch earned: Devil spotter', 5000); } });
     // the crater map: charted ground, trail, flags, survey finds, Ingenuity scout flights, Gusev landmarks
     const ms = new MapState(world, {
       toast, modal,
@@ -1673,6 +1679,10 @@ renderer.setAnimationLoop(() => {
     }
     if (!isModalOpen() && !world.cinematic && queue.length && !outpost.over) handle(queue.shift());   // wait until no pop-up is open, so events never replace one
     world.setTime(solClock / TUNED.solSeconds);
+    // dust on the visor: inside a dust devil (sites.js), or out in a storm; the first storm brings its Real Mars card
+    { const veil = !inside ? Math.max(world.devilVeil || 0, outpost.dust ? (world.driving ? .06 : .16) : 0) : 0, v = veil.toFixed(2);
+      if (v !== dustVeilShown) { dustVeilShown = v; dustVeil.style.setProperty('--veil', v); } }
+    if (outpost.dust && !isModalOpen() && !world.cinematic) showRealMars('dust-storm');
     sleepTick(dt); coopTick(dt);
     remote?.update(dt, inside ? (room === interior ? interior.sharedCamera : room.camera) : world.camera, inside && (room === interior || room === ghRoom));
     if (!sunsetShown && !inside && solClock / TUNED.solSeconds > 0.72 && solClock / TUNED.solSeconds < 0.78) {

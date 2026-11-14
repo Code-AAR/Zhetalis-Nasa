@@ -14,6 +14,12 @@ The new `Downloads/UNITY/game` browser build is merged into this game. See
 
 Up to 4 players can share a mission with a room code (**Play together · co-op** on the title screen). Run `node server/coop-relay.mjs` and open `http://localhost:8790/`. The crew cabins are walk-in rooms: use a bunk at night (E) to skip to morning. In co-op the night is skipped when most of the crew is asleep or votes with N. See [COOP.md](COOP.md).
 
+## Realistic dust devils and dust storms (14 November 2026)
+
+Dust devils now come in several sizes (about 1.5-3.6 m wide at the base, 43-88 m tall) and drift at 1-2 m/s, like the ones Spirit filmed in Gusev Crater. They form only in the warm middle of the sol and never during a storm. Because Mars air is about 1.3% as dense as Earth's (NASA Mars Fact Sheet), a dust devil cannot lift or push you. Walking into one fills your visor with dust and you lean slightly into the gust. One that crosses your solar panels blows dust off them, as dust devils did for Spirit and Opportunity.
+
+Dust storms use a regional-storm optical depth of 4. The direct Sun drops to about 14%, so shadows fade, the haze closes in within tens of metres, and fine dust streams past on the wind. The first dust devil and the first storm each show a short "Real Mars" card (`src/real-mars.js`) with an Earth-vs-Mars comparison and a NASA source.
+
 ## Hands-on first base mission
 
 New Mars missions begin in first person (V switches view). Collect the landed kits at the locker, open the workbench and fit the three parts into their matching highlighted slots in order. At the remote power field, equip the pickaxe (1), clear four marked rocks, then place the three panels. Assemble and place the battery, select Solar OUT then Battery IN, and connect Battery OUT to Base IN. Use E, click, or the touch Action button; R or the Drop button releases a held part/cable without losing fitted parts.
