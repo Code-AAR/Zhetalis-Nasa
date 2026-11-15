@@ -23,7 +23,7 @@ base = finished_outpost()
 a, b = Vector((*HAB1, 0)), Vector((*HAB2, 0))   # the walkway from habitat 1 to habitat 2
 along = (b - a).normalized()
 out = Vector((along.y, -along.x, 0))            # sideways, toward the camera
-SEAM = a + along * (hab_wall_radius() + 1.3) + out * 1.75 + Vector((0, 0, 1.9))   # just outside habitat 1's collar
+SEAM = a + along * (BERM_OUT + 1.6) + out * 1.75 + Vector((0, 0, 1.9))   # a walkway joint just past the soil wall
 frost = Puffs('leak_frost', 50, (0.95, 0.96, 1.0), alpha=0.55)
 rnd = random.Random(12)
 f = F_CRACK
@@ -82,11 +82,13 @@ look(cam, F_CRACK + 30, tuple(view), tuple(SEAM))
 look(cam, F_SPLIT - 1, tuple(view + Vector((0, 0, -1))), tuple(SEAM), interp='CONSTANT')
 look(cam, F_SPLIT, tuple(SEAM + out * 22 + Vector((0, 0, 9)) - along * 14), tuple(SEAM - along * 6), interp='CONSTANT')
 look(cam, F_ARRIVE - 10, tuple(view), tuple(SEAM - Vector((0, 0, 0.8))))
+look(cam, F_ARRIVE - 9, tuple(SEAM + out * 4.8 + along * 2.4 + Vector((0, 0, 0.6))), tuple(SEAM - Vector((0, 0, 0.2))), interp='CONSTANT')   # close-up: the patch going on
+look(cam, F_SEALED + 30, tuple(SEAM + out * 5.2 + along * 2.8 + Vector((0, 0, 0.7))), tuple(SEAM - Vector((0, 0, 0.2))))
 look(cam, END, tuple(view + out * 3), tuple(SEAM - Vector((0, 0, 0.8))))
 
 mars_world()
 caption(cam, 'All quiet at the outpost...', 0, F_CRACK)
-caption(cam, 'Leak! A seal fails where the walkway meets the habitat', F_CRACK, 110)
+caption(cam, 'Leak! A walkway seal fails', F_CRACK, 110)
 caption(cam, 'Mars air is so thin that cabin air rushes out, and its moisture freezes', 110, F_SPLIT)
 caption(cam, 'Repair: find the leak and seal it', F_SPLIT, F_PATCH)
 caption(cam, 'Patch pressed on: the leak stops', F_PATCH, F_SEALED + 20)

@@ -42,7 +42,16 @@ def args():
 
 # ---------------------------------------------------------------- scene
 def reset(name, seconds):
-    bpy.ops.wm.read_factory_settings(use_empty=True)
+    if os.environ.get('ANIM_LIVE'):
+        # live Blender (driven through the Blender MCP): empty the file but keep add-ons loaded
+        for coll in (bpy.data.objects, bpy.data.meshes, bpy.data.materials, bpy.data.actions, bpy.data.images, bpy.data.cameras,
+                     bpy.data.lights, bpy.data.curves, bpy.data.armatures, bpy.data.worlds, bpy.data.node_groups):
+            for d in list(coll):
+                coll.remove(d)
+        for extra in [s_ for s_ in bpy.data.scenes if s_ != bpy.context.scene]:
+            bpy.data.scenes.remove(extra)
+    else:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene
     sc.name = name
     sc.render.fps = FPS
@@ -347,13 +356,13 @@ def caption(cam, text, f_in, f_out, who=None, phase=None):
     """Subtitle from frame f_in to f_out, optionally with a speaker and a phase title (top left).
     Burnt into the preview video by the Video Sequencer and written to <name>.captions.json for the game."""
     if len(text) > 58:
-        best = max(((text.rfind(sep, 20, len(text) - 12), sep) for sep in ('. ', ': ', ' - ', ', ', '; ')), key=lambda t: t[0])
-        if best[0] < 0:
-            cut = text.rfind(' ', 0, len(text) // 2 + 8); a, b = text[:cut], text[cut:]
-        elif best[1] == ' - ':
-            a, b = text[:best[0]], text[best[0] + 3:]          # drop the dash at the break
+        mid = len(text) / 2
+        cands = [(i, sep) for sep in ('. ', ': ', ' - ', '; ', ', ') for i in range(20, len(text) - 12) if text.startswith(sep, i)]
+        if cands:
+            i, sep = min(cands, key=lambda c: abs(c[0] - mid) + (0 if c[1] in ('. ', ': ') else 6))   # prefer full stops near the middle
+            a, b = (text[:i], text[i + 3:]) if sep == ' - ' else (text[:i + 1], text[i + 2:])
         else:
-            a, b = text[:best[0] + 1], text[best[0] + 2:]
+            cut = text.rfind(' ', 0, len(text) // 2 + 8); a, b = text[:cut], text[cut:]
         a, b = a.strip(), b.strip()
         if a and b:
             f_mid = int(f_in + (f_out - f_in) * len(a) / (len(a) + len(b)))
@@ -517,6 +526,9 @@ def soft_card_mesh(name, r=1.0, cards=3, res=10, seed=0, lumpy=0.35):
                     a = max(0.0, 1 - d) ** 1.6
                     loop[ca] = (1, 1, 1, a)
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    ca = me.color_attributes['Col']                 # make it the active and render colour, so glTF writes it as COLOR_0
+    me.color_attributes.active_color = ca
+    me.color_attributes.render_color_index = me.color_attributes.find('Col')
     return me
 
 

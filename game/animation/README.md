@@ -30,8 +30,8 @@ Blender's timeline runs at 24 fps; the GLB clips are sampled at 12 fps (three.js
 | `dust_storm.glb` (1.1 MB) | `dust_storm` | 23.9 s | 4. Random event: a regional dust storm. The front reaches the base at 7.9 s. The empty `sun_factor` holds the sunlight fraction in `scale.x` (1.0 → 0.35, matching the game's "about a third" power). |
 | `failure_solar_panel.glb` (0.7 MB) | `panel_failure` | 10.7 s | 4. Random failure: a tracker motor stalls (2.9 s), the bracket gives and the panel sags (5.0 s), red beacon flashing. The empty `row_power` holds the row's output in `scale.x` (1.0 → 0.8). |
 | | `panel_repair` | 10.6 s | The fix: rover brings a spare unit (NASA's Orbital Replacement Unit model), astronaut swaps it, panel back up, green light at 6.4 s into the clip. |
-| `failure_rover_stuck.glb` | `rover_stuck` | 10.7 s | 4. Random failure: the rover digs into soft sand (Spirit, Troy, 2009). |
-| | `rover_freed` | 11.9 s | The fix: dig out, traction boards, back out slowly (Opportunity, Purgatory dune, 2005). |
+| `failure_rover_stuck.glb` | `rover_stuck` | 12.5 s | 4. Random failure: the rover digs into soft sand (Spirit, Troy, 2009). |
+| | `rover_freed` | 20.8 s | The fix: two astronauts climb out with shovels, kneel and dig, carry and lay traction boards, step clear, and the rover backs out (Opportunity, Purgatory dune, 2005). Timed at natural speed, with close-ups of the stuck wheel, the shovel and the boards. |
 | `failure_air_leak.glb` | `air_leak` | 10.0 s | 4. Random failure: a walkway seal fails and cabin air vents as a frozen plume. The empty `cabin_pressure` holds pressure in `scale.x`. |
 | | `leak_patched` | 9.9 s | The fix: patch the seal, top up the air, green light. |
 | `ascent_mars.glb` (1.1 MB) | `ascent_mars` | 26.6 s | 3. Leaving Mars after 26 months: fixed camera like the Apollo 17 liftoff film, then a chase shot. Ignition at 3.0 s. |
@@ -77,8 +77,24 @@ building and walkway (`route_problems()` in `mars_kit.py`), so nothing drives or
 
 - Space-pack models (landing pods, habitats, transit station, crew capsule) are smooth-shaded with sharp edges kept above 40°,
   instead of flat facets. SLS keeps 60% of its triangles; the SEV rover 7% with 1024 px textures.
-- Every rocket plume has a white-hot inner core tinted to its flame, inside the outer plume.
-- Walking astronauts bounce gently (low-gravity loping).
+- Every rocket plume has a hot inner core tinted to its flame, a soft glow at the nozzle, and shock diamonds in the
+  clean-burning RS-25 and methane/oxygen engines.
+- **Astronauts** wear NASA's Z-2 suit (`assets/models/nasa-spacesuits/z2-suit-web.glb`, a web copy - 12k faces,
+  1024 px textures - of NASA 3D Resources' "Z2 Spacesuit", NASA/LaRC/Advanced Concepts Lab). `scripts/astro_kit.py`
+  rigs it (pelvis, spine, thighs, shins, upper arms, forearms; skin weights from capsules around each bone, because
+  Blender's bone-heat weighting fails on the suit's open seams) and gives it actions: walk (the stride follows the
+  distance actually covered, so feet do not slide), kneel, dig, carry, repair, with a shovel, board or spare unit fixed
+  to the hand. It can also rig the game's player suit (`nasa-astronaut.glb`) exactly like `src/suit.js`.
+- **The SEV rover's six wheels** are cut out of its mesh: they roll by the distance driven (backwards when reversing),
+  spin in place when stuck, the body rides its suspension, and dark tread marks are left behind (`rover_motion()`).
+- **Dust, steam and smoke** are crossed soft cards whose vertex alpha fades to nothing at a lumpy rim, in three
+  shapes and tints. Unlike a Blender-only shader trick, this survives glTF export (three.js multiplies alpha by
+  `COLOR_0.a`). The air leak adds a directional jet.
+- The soil texture tiles every 11 m and the ground carries broad colour patches, so the tiling does not show.
+- Long captions are split in two automatically (no line over ~58 characters), and the in-game subtitles are larger,
+  at most three lines, and kept clear of the phone's safe areas.
+- Every rover and astronaut route is checked against buildings and walkways, and the films with both were checked
+  for rover-astronaut clearance (at least 3 m) through the live Blender MCP.
 - Previews render with EEVEE ray tracing (soft reflections, contact shadows, ambient light) at 32 samples.
 
 ## Captions for the game
@@ -129,6 +145,23 @@ Heat shield, backshell, solar trackers, fission units, propellant plant, dish, s
 simple shapes made by the scripts. Large NASA meshes are decimated (SLS to 35%, SEV to 5% with 512 px textures)
 to keep the GLBs small. All eleven GLBs together are about 11 MB.
 
+## Crew in the Ares VI briefing
+
+Blender's glTF round trip breaks the game's Mixamo crew rigs (even importing `assets/crew/ch22.glb` and exporting it
+again, unchanged, flips the limbs in three.js). So the briefing GLB does not contain the people: it carries one
+**crew slot** per person - an empty named `crewslot_<name>` with extras `crew_char`, `crew_clip`, `crew_offset`,
+`crew_speed`, `crew_height` and an optional clothing tint - plus Director Hale's movement. `src/cinematic.js` loads
+the real character at each slot and retargets the clip exactly like `src/hab-crew.js` does in the hab.
+Limitation: Hale's pointing and talking gestures and the crew's nods and glances are in the preview video (Blender)
+but not yet in the game version, which plays the base idle/sit clips.
+
+The Z-2 astronauts are rigged in Blender itself and export correctly (checked in three.js r0.160).
+
+## Timing
+
+The rover repair film is timed at natural speed (`set_stretch(1.0)`): every action takes real time and the explanation
+beats are held by the script's own frames. The other films still play 4/3 slower than their script frame numbers.
+
 ## Rebuild
 
 ```
@@ -138,6 +171,7 @@ python build_all.py storm        # just one
 python build_all.py --no-video   # .blend + GLB only
 ```
 
-For quick checks, run one script with stills:
+For quick checks, run one script with stills, or build it in an open Blender through the Blender MCP
+(set `ANIM_LIVE=1` so `reset()` empties the file instead of a factory reset, which would unload the MCP add-on):
 `blender -b --factory-startup -P seq_storm.py -- --stills 60,200,320 --scale 40` (PNGs go to `stills/`, which is
 not committed).

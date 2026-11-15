@@ -19,18 +19,33 @@
   },
   {
    "t0": 9.46,
+   "t1": 13.29,
+   "text": "Mars needs about 4.1 km/s to reach orbit"
+  },
+  {
+   "t0": 13.29,
    "t1": 16.67,
-   "text": "Mars needs about 4.1 km/s to reach orbit - more than twice the Moon's 1.9 km/s"
+   "text": "more than twice the Moon's 1.9 km/s"
   },
   {
    "t0": 16.67,
+   "t1": 20.21,
+   "text": "That is why this ascent stage carries so"
+  },
+  {
+   "t0": 20.21,
    "t1": 22.79,
-   "text": "That is why this ascent stage carries so much more fuel than Apollo's"
+   "text": "much more fuel than Apollo's"
   },
   {
    "t0": 22.79,
+   "t1": 24.96,
+   "text": "Next stop: the transit ship in orbit,"
+  },
+  {
+   "t0": 24.96,
    "t1": 26.67,
-   "text": "Next stop: the transit ship in orbit, then months of coasting home"
+   "text": "then months of coasting home"
   }
  ]
 }

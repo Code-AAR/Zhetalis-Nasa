@@ -14,23 +14,43 @@
  "captions": [
   {
    "t0": 0.0,
+   "t1": 2.54,
+   "text": "Entry at about 20,000 km/h:"
+  },
+  {
+   "t0": 2.54,
    "t1": 6.12,
-   "text": "Entry at about 20,000 km/h: the heat shield glows at over 1,300 C"
+   "text": "the heat shield glows at over 1,300 C"
   },
   {
    "t0": 6.12,
+   "t1": 9.17,
+   "text": "Mars air is thin, but it still takes"
+  },
+  {
+   "t0": 9.17,
    "t1": 11.12,
-   "text": "Mars air is thin, but it still takes away most of the speed"
+   "text": "away most of the speed"
   },
   {
    "t0": 11.12,
+   "t1": 13.29,
+   "text": "Too heavy for a parachute:"
+  },
+  {
+   "t0": 13.29,
    "t1": 18.33,
-   "text": "Too heavy for a parachute: the shell opens and the engine fires while still supersonic"
+   "text": "the shell opens and the engine fires while still supersonic"
   },
   {
    "t0": 18.33,
+   "t1": 20.0,
+   "text": "Rocket-powered descent:"
+  },
+  {
+   "t0": 20.0,
    "t1": 23.88,
-   "text": "Rocket-powered descent: about 7 minutes from the top of the air to the ground"
+   "text": "about 7 minutes from the top of the air to the ground"
   },
   {
    "t0": 23.88,

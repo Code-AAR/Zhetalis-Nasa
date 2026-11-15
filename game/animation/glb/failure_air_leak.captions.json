@@ -20,12 +20,17 @@
   {
    "t0": 2.21,
    "t1": 6.12,
-   "text": "Leak! A seal fails where the walkway meets the habitat"
+   "text": "Leak! A walkway seal fails"
   },
   {
    "t0": 6.12,
+   "t1": 8.67,
+   "text": "Mars air is so thin that cabin air rushes out,"
+  },
+  {
+   "t0": 8.67,
    "t1": 10.0,
-   "text": "Mars air is so thin that cabin air rushes out, and its moisture freezes"
+   "text": "and its moisture freezes"
   },
   {
    "t0": 10.0,

@@ -96,7 +96,7 @@ def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, se
         z = z * k + bumps * (0.15 + 0.85 * k)
         for x, y, r in crater_list:                        # bowl, raised rim
             d = np.hypot(X - x, Y - y) / r
-            z = z - np.where(d < 1, 0.22 * r * (1 - d * d), 0) + 0.05 * r * np.exp(-((d - 1) / 0.25) ** 2)
+            z = z - np.where(d < 1, 0.12 * r * (1 - d * d) ** 1.5, 0) + 0.03 * r * np.exp(-((d - 1) / 0.35) ** 2)   # shallow, worn
         return z
 
     # polar grid: 0.6 m rings near the centre, growing 7% per ring further out
@@ -119,8 +119,12 @@ def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, se
     me.update()
     for p in me.polygons: p.use_smooth = True
     g = bpy.data.objects.new('mars_ground', me); link(g)
-    if me.polygons[len(me.polygons) // 2].normal.z < 0:     # make sure the ground faces up
-        me.flip_normals()
+    import bmesh as _bm                                      # one consistent winding, every face pointing up
+    bm = _bm.new(); bm.from_mesh(me)
+    _bm.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0: f.normal_flip()
+    bm.to_mesh(me); bm.free()
     # world-space UVs for the tiled soil (one tile per 7 m)
     uv = me.uv_layers.new(name='UVMap')
     loops = np.zeros(len(me.loops), int); me.loops.foreach_get('vertex_index', loops)
@@ -132,7 +136,7 @@ def mars_ground(size=1400, center=(0, 0), span=960, vscale=0.015, flat_r=110, se
     for k, (fx, fy, amp) in enumerate(((0.013, 0.017, 0.07), (0.041, 0.029, 0.05), (0.11, 0.087, 0.035), (0.29, 0.23, 0.02))):
         shade = shade + amp * np.sin(X * fx + seed * (k + 1)) * np.sin(Y * fy - seed * 0.7 * (k + 2))   # broad patches
     for x, y, rr in crater_list:
-        shade = shade * np.where(np.hypot(X - x, Y - y) / rr < 1.1, 0.88, 1.0)
+        shade = shade * (1 - 0.06 * np.clip(1.1 - np.hypot(X - x, Y - y) / rr, 0, 1))
     ca = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
     ca.data.foreach_set('color', np.stack([shade, shade, shade, np.ones_like(shade)], 1).astype(np.float32).ravel())
     m = bpy.data.materials.new('mars_soil'); m.use_nodes = True; nt = m.node_tree

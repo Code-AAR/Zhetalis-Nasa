@@ -14,8 +14,13 @@
   },
   {
    "t0": 3.33,
+   "t1": 5.12,
+   "text": "Earth and Mars both circle the Sun."
+  },
+  {
+   "t0": 5.12,
    "t1": 6.67,
-   "text": "Earth and Mars both circle the Sun. Mars is farther out and slower"
+   "text": "Mars is farther out and slower"
   },
   {
    "t0": 6.67,

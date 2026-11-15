@@ -7,6 +7,38 @@
 // game always carries on.
 import * as THREE from 'three';
 import { loadModel } from './nasamodels.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+// Crew slots: the Blender films mark where each crew member stands and what they do (empties with crew_* extras);
+// the real Mixamo characters from assets/crew are loaded there and retargeted exactly like src/hab-crew.js does.
+const crewLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const crewCache = new Map();
+const crewFile = f => { if (!crewCache.has(f)) crewCache.set(f, crewLoader.loadAsync('assets/crew/' + f)); return crewCache.get(f); };
+const norm = n => n.replace(/^mixamorig\d*:?/, '').replace(/_\d+$/, '');
+async function fillCrewSlots(root, mixers) {
+  const slots = []; root.traverse(o => { if (o.userData?.crew_char) slots.push(o); });
+  if (!slots.length) return;
+  const clips = (await crewFile('crew-anims.glb')).animations;
+  await Promise.all(slots.map(async slot => {
+    const d = slot.userData, g = await crewFile(d.crew_char + '.glb');
+    const { clone } = await import('three/addons/utils/SkeletonUtils.js');
+    const model = clone(g.scene);
+    model.updateWorldMatrix(true, true);
+    const h = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).y || 1;
+    model.scale.multiplyScalar((d.crew_height || 1.7) / h);
+    const tint = d.crew_tint && new THREE.Color(...d.crew_tint), match = d.crew_tint_match && new RegExp(d.crew_tint_match);
+    model.traverse(o => { if (o.isMesh) { o.frustumCulled = false; if (tint && match.test(o.name)) { o.material = o.material.clone(); o.material.color.multiply(tint); } } });
+    slot.add(model);
+    const byName = {};
+    model.traverse(o => { if (/^mixamorig/.test(o.name) && norm(o.parent?.name ?? '') !== norm(o.name)) (byName[norm(o.name)] ??= []).push(o.name); });
+    const src = THREE.AnimationClip.findByName(clips, d.crew_clip) || clips[0], tracks = [];
+    for (const t of src.tracks) { const i = t.name.lastIndexOf('.'), node = t.name.slice(0, i), prop = t.name.slice(i + 1); for (const target of byName[norm(node)] ?? []) { const k = t.clone(); k.name = target + '.' + prop; tracks.push(k); } }
+    const mixer = new THREE.AnimationMixer(model), act = mixer.clipAction(new THREE.AnimationClip(src.name, src.duration, tracks));
+    act.play(); act.time = (d.crew_offset || 0) * src.duration; mixer.timeScale = d.crew_speed || 1;
+    mixers.push(mixer);
+  }));
+}
 
 const BASE = '../animation/glb/';                     // loadModel() prefixes 'assets/'
 const LOOKS = {                                        // background, hemisphere sky/ground, sun colour
@@ -46,6 +78,8 @@ async function stage(name, parent, { clip, loop = false } = {}) {
   const cam = cams[0] || new THREE.PerspectiveCamera(40, 1, .5, 60000);
   const clips = gltf.animations;
   const c = (clip && THREE.AnimationClip.findByName(clips, clip)) || clips[0];
+  const crewMixers = [];
+  await fillCrewSlots(root, crewMixers).catch(e => console.warn('Crew could not load:', e));
   const mixer = new THREE.AnimationMixer(root);
   const action = mixer.clipAction(c); action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); action.clampWhenFinished = true; action.play();
   const info = caps?.clips?.find(x => x.name === c.name) || { start: 0 };
@@ -54,7 +88,7 @@ async function stage(name, parent, { clip, loop = false } = {}) {
   return {
     duration: c.duration, lines, bars: !!look.bars,
     frame(dt) {
-      mixer.update(dt);
+      mixer.update(dt); for (const m of crewMixers) m.update(dt);
       if (sunFactor) sun.intensity = look.sunI * sunFactor.scale.x;
       const w = parent.clientWidth || innerWidth, h = parent.clientHeight || innerHeight;
       renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();

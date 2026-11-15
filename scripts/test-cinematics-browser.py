@@ -26,7 +26,7 @@ with sync_playwright() as p:
     page = b.new_page(viewport={'width': 1280, 'height': 720})
     errors = []
     page.on('pageerror', lambda e: errors.append(str(e)))
-    page.on('console', lambda m: m.type == 'warning' and 'Cutscene unavailable' in m.text and errors.append(m.text))
+    page.on('console', lambda m: m.type == 'warning' and ('Cutscene unavailable' in m.text or 'Crew could not load' in m.text) and errors.append(m.text))
     page.goto(f'http://127.0.0.1:{server.server_port}/game/#debug', wait_until='networkidle', timeout=90000)
     page.evaluate("async () => { window.__cine = await import('./src/cinematic.js'); }")
     for name, clip in FILMS:
@@ -60,7 +60,20 @@ with sync_playwright() as p:
     page.keyboard.press('Escape')
     page.wait_for_selector('#countdown:not(.hidden)', timeout=20000)
     print('START: Ares VI briefing, orbit plan, then countdown')
+    # phone: subtitles stay on screen, readable and short
+    phone = b.new_page(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
+    phone.on('pageerror', lambda e: errors.append(str(e)))
+    phone.goto(f'http://127.0.0.1:{server.server_port}/game/#debug', wait_until='networkidle', timeout=90000)
+    phone.evaluate("async () => { const m = await import('./src/cinematic.js'); window.__p = m.playCinematic('failure_rover_stuck', { clip: 'rover_freed' }); }")
+    phone.wait_for_selector('.cinematic canvas', timeout=60000)
+    phone.wait_for_function("document.querySelector('.cinematic .cine-cap')?.textContent.length > 0", timeout=60000)
+    cap = phone.evaluate("""() => { const c = document.querySelector('.cinematic .cine-cap'), r = c.getBoundingClientRect(), st = getComputedStyle(c);
+      return { left: r.left, right: r.right, bottom: r.bottom, font: parseFloat(st.fontSize), lines: Math.round(r.height / (parseFloat(st.lineHeight) || parseFloat(st.fontSize) * 1.3)) }; }""")
+    if SHOTS: phone.screenshot(path=str(SHOTS / 'phone-caption.png'))
+    print('PHONE caption', cap)
+    assert cap['left'] >= 0 and cap['right'] <= 390 and cap['bottom'] <= 844 and cap['font'] >= 16 and cap['lines'] <= 4, cap
+    phone.keyboard.press('Escape')
     assert not errors, errors
-    print('All cutscenes load, draw, caption and skip.')
+    print('All cutscenes load, draw, caption and skip; subtitles fit a phone.')
     b.close()
 server.shutdown()
