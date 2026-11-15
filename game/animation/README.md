@@ -20,7 +20,7 @@ Blender's timeline runs at 24 fps; the GLB clips are sampled at 12 fps (three.js
 | GLB | Clip | Length | Game moment |
 |---|---|---|---|
 | `ares_vi_briefing.glb` | `ares_vi_briefing` | 58.6 s | 1. New game, first: **Ares VI: Final Stage Briefing**, built from the team's storyboard (`storyboards/ares-vi-final-stage-briefing.html`): same 7 shots, camera moves and lines. Director Hale and the crew of four are the game's rigged characters (`assets/crew`, animations retargeted like `src/hab-crew.js`); the storyboard's model slots are filled with the Ares VI lander (descent stage + ascent vehicle), habitat, fission unit, solar tracker and ISRU plant as holograms over the table. Captions carry speaker and phase. |
-| `briefing_mission.glb` (0.5 MB) | `briefing_mission` | 34.6 s | 1. New game: the mission plan. Sun, Earth and Mars on real orbits (distances to scale), the launch window (Mars 44° ahead), the 259-day transfer ellipse solved with Kepler's equation, and the 26-month goal. |
+| `briefing_mission.glb` (0.5 MB) | `briefing_mission` | 34.6 s | 1. New game: the mission plan. Sun, Earth and Mars on real orbits (distances to scale). The ship circles Earth in a parking orbit, fires the trans-Mars injection (TMI) burn and leaves on a hyperbolic escape path along Earth's motion, coasts the 259-day Hohmann transfer (solved with Kepler's equation; launch when Mars is 44° ahead), then turns round for the Mars orbit insertion braking burn and is captured. Ends on the 26-month goal. |
 | `launch_earth.glb` (1.7 MB) | `launch_earth` | 30.6 s | 1. The ship launches after landing-site choice: SLS on Mobile Launcher 1 at Pad 39B. RS-25 start at 1.7 s, liftoff at 4.0 s, real time until it clears the tower, then about 19× faster: boosters drop at 17.6 s, abort tower off at 20.7 s. |
 | `cruise_loop.glb` (0.4 MB) | `cruise_loop` | 16.0 s, seamless loop | 2. The seven-month trip as the loading screen (load saves here). The camera circles the transit ship once per loop; the ion-thruster glow and lights repeat exactly. Set `action.setLoop(THREE.LoopRepeat)`. |
 | `mars_approach.glb` (0.4 MB) | `mars_approach` | 18.6 s | 2→3. Arrival: the docked capsule's engine brakes the ship into orbit, then the landing pod undocks. Plays right before you choose where to land. |
@@ -162,6 +162,17 @@ The Z-2 astronauts are rigged in Blender itself and export correctly (checked in
   overhead lift with a lean back, a fast strike that bends the knees, a 70 ms hit-stop as the pick bites, a recoil
   bounce, then recovery. Each strike throws rock chips in the ore's colour (falling in Mars gravity, 3.71 m/s2) and a
   soft puff of dust. Checked by `scripts/test-mining-suit-browser.py`.
+- **Power kit (tutorial):** `scripts/make_power_kit.py` -> `assets/power/*.glb`, modelled after real hardware: an
+  insulated, heated Li-ion battery cabinet with a radiator (the field battery), a cell module with busbars and a BMS
+  board, an MPPT charge controller with a PV+/PV-/BAT+/BAT- terminal block, a PV module with MC4 leads, an aluminium
+  support frame, an MC4 connector pair, a 60 A fuse block, the rover charging post and its plug. Every part shows red +
+  and black - terminals.
+- **Circuit wiring:** every socket is a red + / black - terminal pair (`src/construction.js`, rules in
+  `src/construction-state.js`). Red goes on first and black last, colours must match (+ to - is refused with a
+  reverse-polarity / short-circuit lesson), and one lead alone leaves the circuit open: power flows only when both close
+  the loop. Each completed circuit explains its current with I = P / V. Checked by `scripts/test-circuit-browser.py`.
+- **Transfer diagram:** the mission briefing's Timing step (`src/journey-visual.js`) draws the Hohmann transfer to
+  scale from above the Sun: TMI at Earth, Mars 44° ahead on launch day, orbit insertion at Mars.
 
 ## Timing
 

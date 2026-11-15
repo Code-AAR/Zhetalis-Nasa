@@ -31,6 +31,7 @@ export class JourneyVisual {
       const geometry=new THREE.SphereGeometry(1,56,36),material=new THREE.MeshStandardMaterial({color,roughness:1});const globe=new THREE.Mesh(geometry,material);this.parts[key]=globe;this.group.add(globe);this.owned.push(geometry,material);
       const texture=new THREE.TextureLoader().load('assets/'+map,t=>{assetSettled();if(!this.alive){t.dispose();return;}t.colorSpace=THREE.SRGBColorSpace;material.map=t;material.color.set('#ffffff');material.needsUpdate=true;},undefined,assetSettled);this.textures.push(texture);
     }
+    {const geometry=new THREE.SphereGeometry(1,32,20),material=new THREE.MeshBasicMaterial({color:'#ffd27a'});this.parts.sun=new THREE.Mesh(geometry,material);this.group.add(this.parts.sun);this.owned.push(geometry,material);}
     this.parts.rocket=this.rocket();this.group.add(this.parts.rocket);
     this.parts.craft=this.craft();this.group.add(this.parts.craft);
     this.parts.orion=new THREE.Group();this.group.add(this.parts.orion);
@@ -85,11 +86,12 @@ export class JourneyVisual {
   }
   setMode(mode){this.mode=mode;this.group.rotation.set(0,0,0);for(const part of Object.values(this.parts)){part.visible=false;part.scale.setScalar(1);part.rotation.set(0,0,0);}this.clearRoute();
     const show=(key,x,y,z=0,scale=1)=>{const p=this.parts[key];p.visible=true;p.position.set(x,y,z);p.scale.setScalar(scale);return p;};
-    if(mode==='overview'||mode==='transfer'){
+    if(mode==='transfer')this.hohmann(show);
+    if(mode==='overview'){
       const r=1.15;
       show('earth',-2.8,-.24,0,r);show('mars',3,.14,0,r*marsRatio);
-      if(mode==='overview')show('moon',-1.28,1.04,0,r*moonRatio);
-      const curve=new THREE.QuadraticBezierCurve3(new THREE.Vector3(-1.65,-.35,0),new THREE.Vector3(.35,mode==='transfer'?2.65:1.45,0),new THREE.Vector3(2.41,.34,0));
+      show('moon',-1.28,1.04,0,r*moonRatio);
+      const curve=new THREE.QuadraticBezierCurve3(new THREE.Vector3(-1.65,-.35,0),new THREE.Vector3(.35,1.45,0),new THREE.Vector3(2.41,.34,0));
       this.drawTrajectory(curve,show,.49,.045);
     }
     if(mode==='launch')show('rocket',0,0,0,1.24);
@@ -109,6 +111,27 @@ export class JourneyVisual {
     if(mode==='landing'){show('ground',0,0,0);show('lander',0,-.41,0,1.1);show('heat',0,-1.15,0,.6);}
     if(mode==='signal'){show('earth',-2.55,0,0,1.15);show('mars',2.75,0,0,1.15*marsRatio);this.line([new THREE.Vector3(-1.4,0,0),new THREE.Vector3(2.75-1.15*marsRatio,0,0)]);}
   }
+  // Seen from above the Sun, orbits to scale (planets enlarged): the Hohmann transfer. The trans-Mars injection (TMI)
+  // burn at Earth puts the ship on half an ellipse whose closest point to the Sun is Earth's orbit (1.00 AU) and farthest
+  // point is Mars's (1.52 AU). The half-lap takes ~259 days, so the ship leaves when Mars is ~44 degrees ahead of Earth:
+  // Mars covers 360 x 259/687 = 136 degrees meanwhile and arrives at the far end just as the ship does.
+  hohmann(show){
+    const k=1.5,cx=.3,rE=k,rM=1.524*k,a=(rE+rM)/2,e=(rM-rE)/(rM+rE),dep=Math.PI*1.1;
+    const at=(ang,r)=>new THREE.Vector3(cx+Math.cos(ang)*r,Math.sin(ang)*r,0);
+    const onTransfer=nu=>at(dep+nu,a*(1-e*e)/(1+e*Math.cos(nu)));
+    const ring=(c,r,color,n=128,dashed)=>this.line(Array.from({length:n+1},(_,i)=>c.clone().add(new THREE.Vector3(Math.cos(i/n*Math.PI*2)*r,Math.sin(i/n*Math.PI*2)*r,0))),color,dashed);
+    show('sun',cx,0,0,.2);
+    ring(new THREE.Vector3(cx,0,0),rE,'#5f93db');ring(new THREE.Vector3(cx,0,0),rM,'#d27a4c');
+    this.line(Array.from({length:97},(_,i)=>onTransfer(Math.PI*i/96)),'#ffe2a0');
+    const lead=Math.PI-Math.PI*2*259/687;                               // ~44 degrees
+    show('earth',...onTransfer(0).toArray(),.17);                       // Earth on launch day: the TMI burn happens here
+    show('mars',...onTransfer(Math.PI).toArray(),.17*marsRatio*1.6);   // Mars on arrival day
+    ring(at(dep+lead,rM),.12,'#d27a4c',32,true);                        // where Mars is on launch day
+    this.line([at(dep,rE-.32),at(dep,rE+.32)],'#ff8a3d');               // TMI burn marker
+    this.line([at(dep+Math.PI,rM-.32),at(dep+Math.PI,rM+.32)],'#ff8a3d'); // orbit insertion marker
+    const t=.42,nu=Math.PI*t,p=onTransfer(nu),q=onTransfer(nu+.01).sub(p).normalize();
+    const ship=show('craft',p.x,p.y,0,.05);ship.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),q);
+  }
   clearRoute(){for(const line of this.route.children){line.geometry.dispose();line.material.dispose();}this.route.clear();}
   drawTrajectory(curve,show,t,scale,key='craft'){
     this.line(curve.getPoints(112));
@@ -117,10 +140,10 @@ export class JourneyVisual {
     ship.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),curve.getTangent(t).normalize());
     ship.rotateX(.42);
   }
-  line(points){
+  line(points,color='#c3ac82',dashed=false){
     const geometry=new THREE.BufferGeometry().setFromPoints(points);
-    const material=new THREE.LineBasicMaterial({color:'#c3ac82',transparent:true,opacity:.68});
-    this.route.add(new THREE.Line(geometry,material));
+    const material=dashed?new THREE.LineDashedMaterial({color,dashSize:.05,gapSize:.04,transparent:true,opacity:.8}):new THREE.LineBasicMaterial({color,transparent:true,opacity:.68});
+    const line=new THREE.Line(geometry,material);if(dashed)line.computeLineDistances();this.route.add(line);
   }
   resize(){
     const w=this.canvas.clientWidth,h=this.canvas.clientHeight;

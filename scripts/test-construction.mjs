@@ -32,3 +32,16 @@ assert.equal(nextWiringSocket(fresh,'locker','base-out'),'charger-in');
 fresh.chargerStep=3;assert.equal(nextWiringSocket(fresh,'charger'),null);
 assert.match(socketFeedback(fresh,'charger-in'),/already connected/);
 console.log('Socket destinations, prerequisite messages, wrong cable and restored connection checks passed.');
+
+// Polarity: red + first, matching colours only, power only once the loop is closed.
+import {leadsOn,nextPole,connectLead,leadLesson} from '../game/src/construction-state.js';
+const p={powerStep:5,baseConnected:false,chargerStep:0};
+assert.equal(nextPole(p,0),'+');assert.deepEqual(leadsOn(p,0),[]);
+assert.equal(connectLead(p,0,'+','-').ok,false);                        // reverse polarity refused
+assert.deepEqual(connectLead(p,0,'+','+'),{ok:true,complete:false});assert.equal(nextPole(p,0),'-');
+assert.match(leadLesson(0,'+',false),/open.*loop/);
+assert.deepEqual(connectLead(p,0,'-','-'),{ok:true,complete:true});
+assert.match(leadLesson(1,'-',true),/I = P ÷ V/);
+assert.deepEqual(JSON.parse(JSON.stringify(p)).construction.leads[0],['+','-']);
+assert.deepEqual(leadsOn({powerStep:6},0),['+','-']);                   // older saves count both leads as connected
+console.log('Polarity order, reverse-polarity refusal, closed-loop completion and lessons passed.');
