@@ -24,13 +24,8 @@
   },
   {
    "t0": 6.12,
-   "t1": 8.67,
-   "text": "Mars air is so thin that cabin air rushes out,"
-  },
-  {
-   "t0": 8.67,
    "t1": 10.0,
-   "text": "and its moisture freezes"
+   "text": "Cabin air rushes out into thin Mars air and freezes"
   },
   {
    "t0": 10.0,
@@ -45,7 +40,7 @@
   {
    "t0": 18.04,
    "t1": 20.0,
-   "text": "The crew tops the air back up from the tanks. Green light"
+   "text": "Air topped up from the tanks. Green light!"
   }
  ]
 }

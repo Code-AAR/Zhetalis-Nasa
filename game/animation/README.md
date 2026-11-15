@@ -99,20 +99,12 @@ building and walkway (`route_problems()` in `mars_kit.py`), so nothing drives or
 
 ## Captions for the game
 
-These run in the previews only. The game can show the same lines at the same times.
-
-- **Ares VI briefing** (speaker: Director Hale; phase titles top left): the seven lines from the storyboard. One change for accuracy: "turns regolith into oxygen and water" became "pulls water from icy soil and oxygen from the CO₂ air" (MOXIE on Perseverance makes oxygen from Mars's CO₂ air; water comes from ice in the ground).
-- **Briefing:** Your mission: fly to Mars and build an outpost · Earth and Mars both circle the Sun; Mars is farther out and slower · Launch when Mars is about 44 degrees ahead of Earth · The ship coasts on a curved path around the Sun… and meets Mars about 259 days (8.5 months) later · Earth and Mars line up for launches only every 26 months · Build a working outpost before the next ships arrive
-- **Launch:** Kennedy Space Center, Pad 39B: SLS rocket, 98 m tall · T−6 s: the four RS-25 engines start · T−0: both solid rocket boosters light, liftoff! · Clearing the 116 m launch tower · Faster than sound after about a minute (shown 19× faster) · T+2 min 12 s: boosters drop away, about 47 km up · T+3 min 11 s: the launch abort tower is jettisoned
-- **Cruise:** Seven months to Mars: the ship coasts most of the way · Blue glow: ion engines pushing gently, day after day
-- **Approach:** Mars at last; the ship is still moving at thousands of km/h · Engine burn against the direction of travel: slowing into orbit · The landing pod undocks and drops toward the planet · Choose where to land
-- **EDL:** Entry at about 20,000 km/h: the heat shield glows at over 1,300 °C · Mars air is thin, but it still takes away most of the speed · Too heavy for a parachute: the shell opens and the engine fires while still supersonic · Rocket-powered descent: about 7 minutes from the top of the air to the ground · Landing legs out · Touchdown! The engine blast throws up dust
-- **Outpost:** one line per milestone (pods, rover, solar trackers, fission reactors, first habitat, oxygen/methane plant, walkway, second habitat, soil shielding, dish, more solar, tanks filling, the launch window home). Full text is in `seq_outpost.py`.
-- **Storm:** Its winds reach 17–30 m/s… but Mars air is so thin they push no harder than a breeze · The real danger is darkness: dust blocks the sunlight · Solar power drops to about a third; the fission reactors keep the lights on · A storm can last for weeks; the crew waits inside
-- **Failure:** Every panel turns to follow the Sun… · Fault! One tracker's motor stalls · Its bracket gives way: the panel sags out of the sunlight · Repair: the rover brings a spare drive unit · Swap the unit, lift the panel, check the light · Green light: full power again
-- **Rover stuck:** soft sand under a dust crust · Stuck! The wheels spin and dig in · Spirit got stuck like this in 2009 and never got out · Dig out the wheels and lay traction boards · Back out slowly · Free! Opportunity escaped a dune like this in 2005 after five weeks
-- **Air leak:** A seal fails where the walkway meets the habitat · Mars air is so thin that cabin air rushes out, and its moisture freezes · Find the leak and seal it · Patch pressed on: the leak stops · The crew tops the air back up from the tanks
-- **Ascent:** Month 26: tanks full of oxygen and methane made on Mars · Ignition! The landing stage stays behind as the launch pad · Mars needs about 4.1 km/s to reach orbit, more than twice the Moon's 1.9 km/s · That is why this ascent stage carries so much more fuel than Apollo's · Next stop: the transit ship in orbit, then seven months home
+Every film's subtitles are in `glb/<name>.captions.json` (start and end in seconds, plus `who` and `phase` for the
+Ares VI briefing). The player shows them, and the preview videos have them burnt in. Lines are written short for
+young players and phones: one line each, 55 characters at most; anything longer is split in two at the punctuation
+nearest the middle. One wording change from the storyboard for accuracy: the ISRU line says it "pulls water from
+icy soil and oxygen from the CO₂ air" (MOXIE on Perseverance makes oxygen from Mars's CO₂ air; water comes
+from ice in the ground).
 
 ## Real Mars notes (what is real, what is squeezed)
 
@@ -156,6 +148,20 @@ Limitation: Hale's pointing and talking gestures and the crew's nods and glances
 but not yet in the game version, which plays the base idle/sit clips.
 
 The Z-2 astronauts are rigged in Blender itself and export correctly (checked in three.js r0.160).
+
+## Used in gameplay too
+
+- **Player suit:** `src/suit.js` now dresses the player (and co-op crewmates and the suit on the rack) in the same
+  NASA Z-2 suit, rigged at runtime with capsule skin weights. Its arm bones are bound already turned from "arm out" to
+  the Z-2's forward-hanging arms, so every pose written for the classic suit (walk, run, jump, crouch, pickaxe) drives
+  it unchanged. If the Z-2 cannot load, the classic `nasa-astronaut.glb` suit is used.
+- **Pickaxe:** a geologist's rock pick modelled in Blender (`scripts/make_rock_pick.py` -> `assets/tools/rock-pick.glb`,
+  59 KB): forged steel head with hammer face and pick, fibreglass handle, ridged rubber grip and a tether loop. It
+  replaces NASA's Hammer model.
+- **Mining:** one swing curve (`swingCurve()` in `src/suit.js`) drives the body and the first-person view: wind-up,
+  overhead lift with a lean back, a fast strike that bends the knees, a 70 ms hit-stop as the pick bites, a recoil
+  bounce, then recovery. Each strike throws rock chips in the ore's colour (falling in Mars gravity, 3.71 m/s2) and a
+  soft puff of dust. Checked by `scripts/test-mining-suit-browser.py`.
 
 ## Timing
 

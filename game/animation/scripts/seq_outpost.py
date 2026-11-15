@@ -144,13 +144,13 @@ for f in range(0, END + 1, 8):
     look(cam, f, (math.cos(a) * r + 10, math.sin(a) * r + 15, 48 + 12 * math.sin(math.pi * f / END)), (12, 12, 2), interp='LINEAR')
 
 mars_world()
-caps = [(0, 'Sol 1: just the two landing pods'), (1, 'Month 1: the pressurised rover rolls off the cargo pod'),
-        (2, 'Month 2: solar trackers go up'), (3, 'Month 3: small fission reactors give power day and night, even in storms'),
-        (4.4, 'Month 5: the first big habitat'), (6.2, 'Month 7: the plant starts making oxygen and methane from CO2 air and ice'),
-        (7.6, 'Month 8: a greenhouse, and in month 9 a sealed walkway to it'), (11, 'Month 12: a second habitat, linked in month 13'),
-        (13.5, 'Month 14: walls of bagged soil block some of the radiation'), (15, 'Month 16: a big dish to talk to Earth'),
+caps = [(0, 'Sol 1: just the two landing pods'), (1, 'Month 1: the rover rolls off the cargo pod'),
+        (2, 'Month 2: solar trackers go up'), (3, 'Month 3: reactors for power day, night and in storms'),
+        (4.4, 'Month 5: the first big habitat'), (6.2, 'Month 7: making oxygen and fuel from air and ice'),
+        (7.6, 'Month 8: a greenhouse, linked by a sealed walkway'), (11, 'Month 12: a second habitat, linked in month 13'),
+        (13.5, 'Month 14: soil walls block some radiation'), (15, 'Month 16: a big dish to talk to Earth'),
         (17, 'Month 18: more solar power'), (20, 'Month 21: the ascent vehicle\'s tanks keep filling'),
-        (24, 'Month 26: Earth and Mars line up again - the next ships can launch')]
+        (24, 'Month 26: the next launch window opens on Earth')]
 for i, (m, t) in enumerate(caps):
     caption(cam, t, mf(m), mf(caps[i + 1][0]) if i + 1 < len(caps) else END + 1)
 

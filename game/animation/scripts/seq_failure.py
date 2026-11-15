@@ -103,14 +103,14 @@ look(cam, F_SPLIT - 1, (-70, -42, 3.0), (-60, -28, 1.6))
 look(cam, F_SPLIT, (-20, -80, 9), (-40, -46, 1), interp='CONSTANT')
 look(cam, F_WALK, (-60, -60, 6), (-52, -40, 1))
 look(cam, F_SWAP - 1, (-63, -38, 2.4), (-60, -29.5, 1.3), interp='CONSTANT')
-look(cam, F_SWAP, (-62.6, -31.4, 1.65), (-60.0, -28.6, 1.35))             # close-up: hands on the drive unit
-look(cam, F_OK + 20, (-62.9, -31.0, 1.7), (-60.0, -28.4, 1.5))
+look(cam, F_SWAP, (-63.4, -32.6, 1.45), (-60.0, -28.7, 1.3))             # close-up: hands on the drive unit
+look(cam, F_OK + 20, (-64.5, -33.8, 1.8), (-60.0, -28.4, 1.6))
 look(cam, END, (-71, -42, 3.2), (-59, -28, 1.8))
 
 mars_world()
 caption(cam, 'Every panel turns to follow the Sun...', 0, F_STALL)
 caption(cam, 'Fault! One tracker\'s motor stalls', F_STALL, F_SNAP)
-caption(cam, 'Its bracket gives way: the panel sags out of the sunlight', F_SNAP, F_SPLIT)
+caption(cam, 'Its bracket breaks and the panel sags out of the Sun', F_SNAP, F_SPLIT)
 caption(cam, 'Repair: the rover brings a spare drive unit', F_SPLIT, F_WALK)
 caption(cam, 'Swap the unit, lift the panel, check the light', F_WALK, F_OK)
 caption(cam, 'Green light: full power again', F_OK, END + 1)

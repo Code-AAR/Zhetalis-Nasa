@@ -67,8 +67,8 @@ for f in range(F_UNDOCK, END + 1, 4):
 
 sun(4.5, color=(1, 0.97, 0.92), rot=(55, 0, 150), angle=0.53)
 world_sky((0, 0, 0), (0, 0, 0), (0, 0, 0), strength=1.0, stars=0.9)
-caption(cam, 'Mars at last. The ship is still moving at thousands of km/h', 0, F_BURN0)
-caption(cam, 'Engine burn against the direction of travel: slowing into orbit', F_BURN0, F_BURN1 + 10)
+caption(cam, 'Mars at last - still moving at thousands of km/h', 0, F_BURN0)
+caption(cam, 'A braking burn slows the ship into orbit', F_BURN0, F_BURN1 + 10)
 caption(cam, 'The landing pod undocks and drops toward the planet', F_BURN1 + 10, 280)
 caption(cam, 'Choose where to land', 280, END + 1)
 

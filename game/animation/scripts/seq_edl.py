@@ -108,7 +108,7 @@ for f in range(0, F_SEP, 2):                    # chase alongside during entry
 for f in range(F_SEP, 330, 2):                  # below and beside: shell opens, engine lights
     p = path[f]; look(cam, f, tuple(p + Vector((-55, -80, -35))), tuple(p + Vector((0, 0, 4))), interp='LINEAR')
 for f in range(330, 470, 2):                    # from the ground, looking up as it comes down
-    p = path[f]; look(cam, f, (p.x + 70, p.y - 110, max(8.0, p.z - 55)), tuple(p + Vector((0, 0, -6))), interp='LINEAR')
+    p = path[f]; look(cam, f, (p.x + 28, p.y - 46, max(6.0, p.z - 20)), tuple(p + Vector((0, 0, -4))), interp='LINEAR')   # close chase
 for f in range(470, END + 1, 2):                # close for touchdown
     p = path[f]; k = (f - 470) / (END - 470)
     look(cam, f, (85 - 10 * k, -115 + 12 * k, 4), (p.x * 0.6, 0, max(5, p.z * 0.6 + 5)), interp='LINEAR')
@@ -118,10 +118,10 @@ mars_world()
 strength, ramp = bpy.context.scene.world.node_tree.nodes['Background'].inputs['Strength'], None
 for f, v in ((0, 0.45), (F_SEP, 0.7), (330, 0.9)):
     key_value(strength, f, v)
-caption(cam, 'Entry at about 20,000 km/h: the heat shield glows at over 1,300 C', 0, 110)
-caption(cam, 'Mars air is thin, but it still takes away most of the speed', 110, F_SEP)
-caption(cam, 'Too heavy for a parachute: the shell opens and the engine fires while still supersonic', F_SEP, 330)
-caption(cam, 'Rocket-powered descent: about 7 minutes from the top of the air to the ground', 330, F_LEGS)
+caption(cam, 'Entry at 20,000 km/h - the heat shield tops 1,300 °C', 0, 110)
+caption(cam, 'Thin air still takes away most of the speed', 110, F_SEP)
+caption(cam, 'Too heavy for parachutes: rockets fire while supersonic', F_SEP, 330)
+caption(cam, 'Top of the air to the ground: about 7 minutes', 330, F_LEGS)
 caption(cam, 'Landing legs out', F_LEGS, F_TOUCH - 20)
 caption(cam, 'Touchdown! The engine blast throws up dust', F_TOUCH - 20, END + 1)
 

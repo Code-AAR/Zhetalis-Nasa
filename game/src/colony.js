@@ -18,7 +18,7 @@ export const ORES = {
   carbonate:{ name: 'Carbonate rock', color: '#9c6b4a', fact: 'carbonate', hits: 3, yield: 1, desc: 'Rock soaked by water that was not acid. Rare, and worth a lot of science.' },
 };
 export const TOOLS = {
-  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'Breaks ore out of rocks (NASA’s Hammer 3D model). Hold it and press Action next to a mineral rock.' },
+  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'A geologist’s rock pick: hammer face on one side, a hard steel pick on the other. Hold it and press Action next to a mineral rock.' },
   builder: { name: 'Builder', icon: '🛠', desc: 'NASA’s Pistol Grip Tool, the power drill astronauts use on spacewalks. Puts kits together into buildings, like a greenhouse.' },
   jug:     { name: 'Water jug', icon: '💧', desc: 'Carries 10 L of water from the base tank to your plants.' },
 };
@@ -161,10 +161,11 @@ function fillPlants(group, crop, grown) {
 
 // The tools, built to be held. In the hand they hang from the glove along the forearm; in first person they
 // sit at the bottom right of your view.
-// Real NASA tools (NASA 3D Resources): the Hammer is the pickaxe, the Pistol Grip Tool - the battery
-// power drill astronauts use on spacewalks - is the builder. Drawn about 1.5x real size so you can see them.
+// The pickaxe is a geologist's rock pick modelled for the game in Blender (animation/scripts/make_rock_pick.py):
+// forged steel head, hammer face and pick, ridged rubber grip and a tether loop. The builder is NASA's Pistol Grip
+// Tool (NASA 3D Resources) - the battery power drill astronauts use on spacewalks. Drawn about 1.5x real size.
 const NASA_TOOL = {
-  pickaxe: { file: 'hammer.glb', length: 0.55, upright: true, grip: 0.12 },
+  pickaxe: { file: 'tools/rock-pick.glb', length: 0.62, upright: true, grip: 0.06, keepColours: true },
   builder: { file: 'pistol-grip-tool.glb', length: 0.42, upright: false, grip: 0 },
 };
 async function nasaTool(kind) {
@@ -177,6 +178,7 @@ async function nasaTool(kind) {
     // NASA's files are plain white, which disappears against a white spacesuit - so colour them like real tools
     const mats = [].concat(o.material).map(mt => {
       const c = mt.clone(), name = (mt.name || '').toLowerCase();
+      if (spec.keepColours) return c;                                                    // modelled with real materials already
       c.metalness = Math.min(c.metalness ?? 0, 0.35); c.roughness = Math.max(c.roughness ?? 1, 0.45);
       if (name.includes('grip')) c.color.set('#e2622f');                                   // rubber grip
       else if (name.includes('head')) { c.color.set('#b9bec6'); c.metalness = 0.6; c.roughness = 0.35; }   // steel head

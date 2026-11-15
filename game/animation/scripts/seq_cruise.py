@@ -36,7 +36,7 @@ for f in range(0, LOOP + 1, 24):
 
 sun(4.5, color=(1, 0.97, 0.92), rot=(60, 0, 120), angle=0.53)
 world_sky((0, 0, 0), (0, 0, 0), (0, 0, 0), strength=1.0, stars=0.9)
-caption(cam, 'About 8 months to Mars: the ship coasts most of the way', 0, 144)
+caption(cam, 'About 8 months to Mars, coasting most of the way', 0, 144)
 caption(cam, 'Blue glow: ion engines pushing gently, day after day', 144, 288)
 
 run([('cruise_loop', 0, LOOP)], opts, NAME)

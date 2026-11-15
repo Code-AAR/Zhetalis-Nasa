@@ -14,13 +14,8 @@
   },
   {
    "t0": 3.33,
-   "t1": 5.12,
-   "text": "Earth and Mars both circle the Sun."
-  },
-  {
-   "t0": 5.12,
    "t1": 6.67,
-   "text": "Mars is farther out and slower"
+   "text": "Earth and Mars both circle the Sun; Mars is slower"
   },
   {
    "t0": 6.67,
@@ -40,7 +35,7 @@
   {
    "t0": 24.46,
    "t1": 30.0,
-   "text": "Earth and Mars line up for launches only every 26 months"
+   "text": "Launch windows to Mars come every 26 months"
   },
   {
    "t0": 30.0,

@@ -155,11 +155,11 @@ for f, zen, hor, stv in ((F_FAST, (0.18, 0.38, 0.85), (0.72, 0.82, 0.95), 1.2), 
     el[1].color = (*zen, 1); el[1].keyframe_insert('color', frame=f * STRETCH)
     el[2].color = (*hor, 1); el[2].keyframe_insert('color', frame=f * STRETCH)
     key_value(strength, f, stv)
-caption(cam, 'Kennedy Space Center, Pad 39B - SLS rocket, 98 m tall', 0, 40)
+caption(cam, 'Pad 39B, Kennedy Space Center: SLS, 98 m tall', 0, 40)
 caption(cam, 'T-6 s: the four RS-25 engines start', 40, 96)
 caption(cam, 'T-0: both solid rocket boosters light - liftoff!', 96, 200)
 caption(cam, 'Clearing the 116 m launch tower', 200, F_FAST)
-caption(cam, f'Faster than sound after about a minute (shown {round(208 / ((END - F_FAST) / FPS) / STRETCH)}x faster)', F_FAST, F_SRB)
+caption(cam, f'Supersonic after about a minute (shown {round(208 / ((END - F_FAST) / FPS) / STRETCH)}x faster)', F_FAST, F_SRB)
 caption(cam, 'T+2 min 12 s: boosters drop away, about 47 km up', F_SRB, F_LAS)
 caption(cam, 'T+3 min 11 s: the launch abort tower is jettisoned', F_LAS, END + 1)
 

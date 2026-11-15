@@ -15,7 +15,7 @@
   {
    "t0": 2.83,
    "t1": 4.33,
-   "text": "Month 1: the pressurised rover rolls off the cargo pod"
+   "text": "Month 1: the rover rolls off the cargo pod"
   },
   {
    "t0": 4.33,
@@ -24,13 +24,8 @@
   },
   {
    "t0": 5.83,
-   "t1": 7.5,
-   "text": "Month 3: small fission reactors give power day and night,"
-  },
-  {
-   "t0": 7.5,
    "t1": 7.96,
-   "text": "even in storms"
+   "text": "Month 3: reactors for power day, night and in storms"
   },
   {
    "t0": 7.96,
@@ -39,23 +34,13 @@
   },
   {
    "t0": 10.62,
-   "t1": 11.88,
-   "text": "Month 7: the plant starts making oxygen and"
-  },
-  {
-   "t0": 11.88,
    "t1": 12.71,
-   "text": "methane from CO2 air and ice"
+   "text": "Month 7: making oxygen and fuel from air and ice"
   },
   {
    "t0": 12.71,
-   "t1": 14.62,
-   "text": "Month 8: a greenhouse,"
-  },
-  {
-   "t0": 14.62,
    "t1": 17.83,
-   "text": "and in month 9 a sealed walkway to it"
+   "text": "Month 8: a greenhouse, linked by a sealed walkway"
   },
   {
    "t0": 17.83,
@@ -65,7 +50,7 @@
   {
    "t0": 21.54,
    "t1": 23.83,
-   "text": "Month 14: walls of bagged soil block some of the radiation"
+   "text": "Month 14: soil walls block some radiation"
   },
   {
    "t0": 23.83,
@@ -84,13 +69,8 @@
   },
   {
    "t0": 37.33,
-   "t1": 40.5,
-   "text": "Month 26: Earth and Mars line up again"
-  },
-  {
-   "t0": 40.5,
    "t1": 42.67,
-   "text": "the next ships can launch"
+   "text": "Month 26: the next launch window opens on Earth"
   }
  ]
 }

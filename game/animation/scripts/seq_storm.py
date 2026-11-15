@@ -75,9 +75,9 @@ look(cam, 291, (-30, -36, 3.5), (8, 20, 6))                   # on the ground in
 look(cam, END, (-24, -30, 3.5), (8, 22, 6))
 
 caption(cam, 'A dust storm is coming. Its winds reach 17-30 m/s...', 0, 100)
-caption(cam, '...but Mars air is so thin they push no harder than a breeze', 100, F_HIT)
+caption(cam, '...but in thin Mars air they push like a breeze', 100, F_HIT)
 caption(cam, 'The real danger is darkness: dust blocks the sunlight', F_HIT, F_DARK)
-caption(cam, 'Solar power drops to about a third. The fission reactors keep the lights on', F_DARK, 370)
+caption(cam, 'Solar power drops to a third; reactors keep lights on', F_DARK, 370)
 caption(cam, 'A storm can last for weeks. The crew waits inside', 370, END + 1)
 
 run([('dust_storm', 0, END)], opts, NAME)

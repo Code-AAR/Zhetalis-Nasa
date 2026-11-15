@@ -791,7 +791,11 @@ function mine(dep) {
   if (colony.bagCount() >= BAG) return toast(`🎒 Your sample bag is full (${BAG}). Unload it at the storage locker inside the base.`);
   world.swingTool(() => {
     footstep(1);
-    const r = colony.strike(dep), o = ORES[dep.ore];
+    const o = ORES[dep.ore];
+    { const b = new THREE.Box3().setFromObject(dep.group), p = world.player.position;   // the near, upper side of the rock
+      const c = b.getCenter(new THREE.Vector3()), d = new THREE.Vector3(p.x - c.x, 0, p.z - c.z).normalize().multiplyScalar(Math.min(0.6, (b.max.x - b.min.x) * 0.35));
+      world.mineImpact(new THREE.Vector3(c.x + d.x, b.max.y - 0.05, c.z + d.z), o.color); }
+    const r = colony.strike(dep);
     if(r.broke){recordLesson(colony.s,'mine');saveGame();}
     toolbarKey = '';
     if (r.full) return toast(`🎒 Your sample bag is full (${BAG}). Unload it at the storage locker inside the base.`);

@@ -9,23 +9,13 @@
  "captions": [
   {
    "t0": 0.0,
-   "t1": 2.04,
-   "text": "Mars at last. The ship is still"
-  },
-  {
-   "t0": 2.04,
    "t1": 3.88,
-   "text": "moving at thousands of km/h"
+   "text": "Mars at last - still moving at thousands of km/h"
   },
   {
    "t0": 3.88,
-   "t1": 8.21,
-   "text": "Engine burn against the direction of travel:"
-  },
-  {
-   "t0": 8.21,
    "t1": 10.0,
-   "text": "slowing into orbit"
+   "text": "A braking burn slows the ship into orbit"
   },
   {
    "t0": 10.0,

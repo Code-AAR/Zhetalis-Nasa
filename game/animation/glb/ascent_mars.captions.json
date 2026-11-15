@@ -15,37 +15,22 @@
   {
    "t0": 4.0,
    "t1": 9.46,
-   "text": "Ignition! The landing stage stays behind as the launch pad"
+   "text": "Ignition! The landing stage stays as the launch pad"
   },
   {
    "t0": 9.46,
-   "t1": 13.29,
-   "text": "Mars needs about 4.1 km/s to reach orbit"
-  },
-  {
-   "t0": 13.29,
    "t1": 16.67,
-   "text": "more than twice the Moon's 1.9 km/s"
+   "text": "Orbit needs 4.1 km/s: over twice the Moon's 1.9 km/s"
   },
   {
    "t0": 16.67,
-   "t1": 20.21,
-   "text": "That is why this ascent stage carries so"
-  },
-  {
-   "t0": 20.21,
    "t1": 22.79,
-   "text": "much more fuel than Apollo's"
+   "text": "So it carries far more fuel than Apollo's ascent stage"
   },
   {
    "t0": 22.79,
-   "t1": 24.96,
-   "text": "Next stop: the transit ship in orbit,"
-  },
-  {
-   "t0": 24.96,
    "t1": 26.67,
-   "text": "then months of coasting home"
+   "text": "Next: dock with the ship in orbit, then fly home"
   }
  ]
 }

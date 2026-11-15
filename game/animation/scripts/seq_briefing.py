@@ -100,11 +100,11 @@ lo = bpy.data.objects.new('sunlight', ld); link(lo); lo['preview_only'] = True
 world_sky((0, 0, 0), (0, 0, 0), (0, 0, 0), strength=1.0, stars=0.9)
 
 caption(cam, 'Your mission: fly to Mars and build an outpost', 0, 60)
-caption(cam, 'Earth and Mars both circle the Sun. Mars is farther out and slower', 60, F_LAUNCH)
+caption(cam, 'Earth and Mars both circle the Sun; Mars is slower', 60, F_LAUNCH)
 caption(cam, 'Launch when Mars is about 44 degrees ahead of Earth', F_LAUNCH, F_LAUNCH + 90)
 caption(cam, 'The ship coasts on a curved path around the Sun...', F_LAUNCH + 90, F_ARRIVE - 80)
 caption(cam, '...and meets Mars about 259 days (8.5 months) later', F_ARRIVE - 80, F_ARRIVE + 20)
-caption(cam, 'Earth and Mars line up for launches only every 26 months', F_ARRIVE + 20, F_ZOOM + 70)
+caption(cam, 'Launch windows to Mars come every 26 months', F_ARRIVE + 20, F_ZOOM + 70)
 caption(cam, 'Build a working outpost before the next ships arrive', F_ZOOM + 70, END + 1)
 
 run([('briefing_mission', 0, END)], opts, NAME)

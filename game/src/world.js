@@ -10,7 +10,8 @@ import * as THREE from 'three';
 import { blockPanel } from './panel-contact.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadModel } from './nasamodels.js';
-import { loadNasaAstronaut, poseAstronaut } from './suit.js';
+import { loadNasaAstronaut, poseAstronaut, swingCurve } from './suit.js';
+import { puffTexture } from './edl.js';
 import { Rover } from './rover.js';
 import { createRockContact } from './rock-contact.js';
 import { createDriveProps } from './drive-props.js';
@@ -887,13 +888,54 @@ export class World {
     this.toolSwing = 0; this.onStrike = onStrike; return true;
   }
   updateSwing(dt) {
-    if (this.toolSwing < 0) { this.viewSlot.rotation.set(0, 0, 0); return; }
+    this.updateImpacts(dt);
+    if (this.toolSwing < 0) { this.viewSlot.rotation.set(0, 0, 0); this.viewSlot.position.set(0, 0, 0); return; }
+    if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.08; }        // a split-second pause as the pick bites the rock
     const before = this.toolSwing;
-    this.toolSwing += dt / 0.75;
-    if (before < 0.55 && this.toolSwing >= 0.55) { this.onStrike?.(); this.onStrike = null; }
-    const k = this.toolSwing, lift = k < 0.45 ? Math.sin(k / 0.45 * Math.PI / 2) : k < 0.6 ? 1 - (k - 0.45) / 0.15 * 1.3 : -0.3 * (1 - (k - 0.6) / 0.4);
-    this.viewSlot.rotation.set(lift * 1.1, 0, -lift * 0.25);       // first person: the pickaxe comes up and chops down
+    this.toolSwing += dt / 0.8;
+    if (before < 0.55 && this.toolSwing >= 0.55) { this.hitStop = 0.07; this.onStrike?.(); this.onStrike = null; }
+    const { lift, crouch } = swingCurve(Math.min(1, this.toolSwing));
+    // first person: the pick comes up past your view, chops down, jolts on the rock and settles back
+    const jolt = this.toolSwing > 0.55 && this.toolSwing < 0.62 ? Math.sin((this.toolSwing - 0.55) / 0.07 * Math.PI) * 0.03 : 0;
+    this.viewSlot.rotation.set(lift * 1.1, lift * 0.12, -lift * 0.25);
+    this.viewSlot.position.set(0, -crouch * 0.12 - jolt, 0);
     if (this.toolSwing >= 1) this.toolSwing = -1;
+  }
+
+  // Rock chips (the ore's own colour, falling in Mars gravity) and a soft puff of dust where the pick struck.
+  mineImpact(at, colour = '#8e98a8') {
+    this.impacts ??= [];
+    const chipGeo = this._chipGeo ??= new THREE.DodecahedronGeometry(0.035, 0);
+    const chipMat = new THREE.MeshStandardMaterial({ color: colour, roughness: 0.8 });
+    for (let i = 0; i < 12; i++) {
+      const m = new THREE.Mesh(chipGeo, chipMat), a = Math.random() * Math.PI * 2, sp = 1.2 + Math.random() * 2.2;
+      m.position.copy(at); m.scale.setScalar(0.5 + Math.random());
+      this.scene.add(m);
+      this.impacts.push({ m, v: new THREE.Vector3(Math.cos(a) * sp, 1.5 + Math.random() * 2.5, Math.sin(a) * sp), spin: Math.random() * 12, life: 1.6, chip: true, mat: chipMat });
+    }
+    const tex = this._puffTex ??= puffTexture();
+    for (let i = 0; i < 5; i++) {
+      const mat = new THREE.SpriteMaterial({ map: tex, color: '#b98a66', transparent: true, depthWrite: false, opacity: 0.55 });
+      const s = new THREE.Sprite(mat); s.position.copy(at).add(new THREE.Vector3((Math.random() - 0.5) * 0.3, 0.1, (Math.random() - 0.5) * 0.3));
+      s.scale.setScalar(0.3); this.scene.add(s);
+      this.impacts.push({ m: s, v: new THREE.Vector3((Math.random() - 0.5) * 0.6, 0.35 + Math.random() * 0.3, (Math.random() - 0.5) * 0.6), life: 1.4, max: 1.4, puff: true, mat });
+    }
+  }
+  updateImpacts(dt) {
+    if (!this.impacts?.length) return;
+    for (const p of this.impacts) {
+      p.life -= dt;
+      if (p.chip) {
+        p.v.y -= 3.71 * dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += p.spin * dt; p.m.rotation.y += p.spin * 0.7 * dt;
+        const g = heightAt(p.m.position.x, p.m.position.z);
+        if (p.m.position.y < g + 0.02) { p.m.position.y = g + 0.02; p.v.multiplyScalar(0.3); p.v.y = Math.abs(p.v.y) * 0.3; p.spin *= 0.5; }
+      } else {
+        p.m.position.addScaledVector(p.v, dt); p.v.multiplyScalar(1 - dt * 1.5);
+        const t = 1 - p.life / p.max; p.m.scale.setScalar(0.3 + t * 1.4); p.mat.opacity = 0.55 * (1 - t);
+      }
+      if (p.life <= 0) { this.scene.remove(p.m); if (p.puff) p.mat.dispose(); }
+    }
+    this.impacts = this.impacts.filter(p => p.life > 0);
   }
 
   clearRocksAround(x,z,radius){
