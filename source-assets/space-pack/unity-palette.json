@@ -1,0 +1,208 @@
+{
+  "entries": [
+    {
+      "name": "Ceramic",
+      "color": "#E8E8DE",
+      "metallic": 0.15,
+      "smoothness": 0.35
+    },
+    {
+      "name": "Silver",
+      "color": "#A5B8C4",
+      "metallic": 0.7,
+      "smoothness": 0.45
+    },
+    {
+      "name": "Graphite",
+      "color": "#202A38",
+      "metallic": 0.35,
+      "smoothness": 0.3
+    },
+    {
+      "name": "Gold",
+      "color": "#D5A657",
+      "metallic": 0.75,
+      "smoothness": 0.5
+    },
+    {
+      "name": "Visor",
+      "color": "#E3B86B",
+      "metallic": 0.85,
+      "smoothness": 0.8
+    },
+    {
+      "name": "SolarBlue",
+      "color": "#1A3C74",
+      "metallic": 0.45,
+      "smoothness": 0.6
+    },
+    {
+      "name": "SolarLine",
+      "color": "#5E96C5",
+      "metallic": 0.55,
+      "smoothness": 0.6
+    },
+    {
+      "name": "Red",
+      "color": "#BE4C38",
+      "metallic": 0.1,
+      "smoothness": 0.3
+    },
+    {
+      "name": "Orange",
+      "color": "#CB6636",
+      "metallic": 0.15,
+      "smoothness": 0.3
+    },
+    {
+      "name": "Cyan",
+      "color": "#68DCE5",
+      "metallic": 0.1,
+      "smoothness": 0.6
+    },
+    {
+      "name": "Engine",
+      "color": "#69BDE9",
+      "metallic": 0.15,
+      "smoothness": 0.5
+    },
+    {
+      "name": "MoonGrey",
+      "color": "#9B9F9F",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "Crater",
+      "color": "#737A80",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "MercuryRock",
+      "color": "#8E8981",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "VenusCloud",
+      "color": "#CEAC70",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "Ocean",
+      "color": "#246299",
+      "metallic": 0.05,
+      "smoothness": 0.45
+    },
+    {
+      "name": "Land",
+      "color": "#668D6C",
+      "metallic": 0,
+      "smoothness": 0.15
+    },
+    {
+      "name": "Desert",
+      "color": "#A8A77B",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "Ice",
+      "color": "#E0F3ED",
+      "metallic": 0,
+      "smoothness": 0.3
+    },
+    {
+      "name": "Cloud",
+      "color": "#BAD9DC",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "MarsDust",
+      "color": "#B15D44",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "MarsDark",
+      "color": "#874A3F",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "JupiterCream",
+      "color": "#D5BA92",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "JupiterBand",
+      "color": "#AE8569",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "JupiterLight",
+      "color": "#EEE0BD",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "JupiterStorm",
+      "color": "#B1654C",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "SaturnGold",
+      "color": "#C3B387",
+      "metallic": 0,
+      "smoothness": 0.2
+    },
+    {
+      "name": "RingLight",
+      "color": "#C5BDA1",
+      "metallic": 0.05,
+      "smoothness": 0.2
+    },
+    {
+      "name": "RingDark",
+      "color": "#827C70",
+      "metallic": 0.05,
+      "smoothness": 0.2
+    },
+    {
+      "name": "UranusIce",
+      "color": "#83C0C6",
+      "metallic": 0,
+      "smoothness": 0.3
+    },
+    {
+      "name": "NeptuneBlue",
+      "color": "#426DAB",
+      "metallic": 0,
+      "smoothness": 0.3
+    },
+    {
+      "name": "SunGold",
+      "color": "#F3B950",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "SunLight",
+      "color": "#FFD67A",
+      "metallic": 0,
+      "smoothness": 0.1
+    },
+    {
+      "name": "BeaconGreen",
+      "color": "#7DFFB2",
+      "metallic": 0,
+      "smoothness": 0.4
+    }
+  ]
+}

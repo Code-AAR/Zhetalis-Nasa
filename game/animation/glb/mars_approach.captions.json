@@ -1,0 +1,31 @@
+{
+ "clips": [
+  {
+   "name": "mars_approach",
+   "start": 0.0,
+   "end": 18.611
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 3.88,
+   "text": "Mars at last - still moving at thousands of km/h"
+  },
+  {
+   "t0": 3.88,
+   "t1": 10.0,
+   "text": "A braking burn slows the ship into orbit"
+  },
+  {
+   "t0": 10.0,
+   "t1": 15.54,
+   "text": "The landing pod undocks and drops toward the planet"
+  },
+  {
+   "t0": 15.54,
+   "t1": 18.67,
+   "text": "Choose where to land"
+  }
+ ]
+}

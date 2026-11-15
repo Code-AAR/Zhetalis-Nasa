@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+const events=[];globalThis.dispatchEvent=e=>events.push(e.type);
+globalThis.CustomEvent=class {constructor(type,options){this.type=type;this.detail=options?.detail;}};
+Object.defineProperty(globalThis,'localStorage',{get(){throw Error('Storage unavailable');}});
+const audio=await import('../game/src/audio-preferences.js');
+audio.setAudioLevel('master',.7);audio.setAudioLevel('music',.3);assert.equal(audio.audioVolume('music'),.21);
+audio.setAudioMuted(true);assert.equal(audio.audioVolume('music'),0);assert.equal(audio.audioVolume('effects'),0);
+audio.setAudioMuted(false);audio.setAudioLevel('effects',999);assert.equal(audio.audioLevels().effects,1);
+audio.setAudioLevel('master',0);assert.equal(audio.audioVolume('voice'),0);
+assert.ok(events.includes('mission-mute'));assert.ok(events.includes('audio-levels'));
+console.log('Mute, channel levels, clamping and blocked-storage behavior passed');

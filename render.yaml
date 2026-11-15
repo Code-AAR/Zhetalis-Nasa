@@ -1,0 +1,10 @@
+# Render blueprint: one free web service that serves the game and runs the co-op relay.
+# On render.com: New -> Blueprint -> pick this repository and branch. See game/COOP.md.
+services:
+  - type: web
+    name: zhetalis-mars
+    runtime: node
+    plan: free
+    buildCommand: echo "No build step: the relay has no dependencies"
+    startCommand: node server/coop-relay.mjs
+    healthCheckPath: /coop/health

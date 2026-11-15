@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<base href="../../">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lunar asset integration harness</title>
+<link rel="stylesheet" href="moon/moon.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<body>
+<canvas id="view"></canvas>
+<section id="menu" class="panel-screen"><div class="menu-inner"><h1>Lunar assets</h1><p>Integration test: real Flyby constructor, optional museum and deferred Moon GLB.</p><div class="menu-row"><button id="start">Start test flyby</button></div></div></section>
+<script type="module">
+import * as THREE from 'three';
+import { Flyby } from './moon/src/flyby.js';
+const renderer = new THREE.WebGLRenderer({canvas:document.querySelector('#view'),antialias:false});
+renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(1);
+window.flyby = new Flyby(renderer);
+let started = false;
+document.querySelector('#start').onclick = () => { started = true; flyby.start('artemis1'); };
+renderer.setAnimationLoop(() => { if (started) { flyby.update(1/60); flyby.render(); } else flyby.backdrop(performance.now()/1000); });
+document.body.dataset.ready = 'true';
+</script>
+</body>
+</html>

@@ -156,13 +156,61 @@ node scripts/snapshot-mars-data.mjs    # saves Curiosity's latest Mars weather +
 node scripts/fetch-nasa-data.mjs    # saves 2 years of NASA DONKI events (when DONKI is online)
 ```
 
-## Life outside the walls (colony.js)
-- **Tools:** the suit belt holds 2 tools (keys 1 and 2, or tap them at the bottom left). You start with the pickaxe; the builder and the water jug wait in the **storage locker** inside the base.
-- **Mining:** mineral rocks sparkle. Hold the pickaxe and press E next to one. Hematite ("blueberries", Opportunity 2004), gypsum veins (Opportunity 2011) and iron meteorites (Opportunity 2005). The sample bag holds 8; unload it at the locker.
-- **Trading:** at the locker, pay Earth with samples for seeds and parts (needs the Earth link). A cargo pod lands about 3 sols later. Earth also posts sample requests for bonus science.
-- **Greenhouses:** hold the builder and press E on flat ground within 75 m of the outpost. Plant lettuce, dwarf wheat or potatoes, carry water from the base tank in the jug, harvest for meals. Hydroponics, because Phoenix found perchlorate in Mars soil. Growing times are shortened (real times are shown in the game).
-- **Hazard monitor (inside):** storms are spotted 2 sols before they arrive. If nobody checks the monitor, a solar storm hits by surprise (extra dose) and a dust storm cakes the panels. Readings use real data: Curiosity RAD and REMS weather, NOAA flares.
-- **First person (V):** the big meters step aside for a slim helmet visor readout; the outside temperature follows Curiosity's real daily high and low.
-- **Sky:** sun halo that turns blue at sunset, floating dust, Phobos (rises in the west) and Deimos at night. Phobos is drawn about twice its real size.
-- **Rover:** top speed 15 m/s (the real concept vehicle is much slower). **Jumps:** legs push off, tuck and reach for the ground.
-- Debug: open with `#debug`, then `game.colony`, `game.outpost.hazards`, `game.station('monitor')`, `game.station('locker')`.
+## Shared Settings and fact library (8 November 2026)
+
+- `src/settings.js` exposes `initSettings({facts,destination,actions,controlsHtml})` and `openSettings({tab,topic})`. `actions.save` runs before graphics reload; optional `sources`, `fullscreen` and `view` wire destination-specific actions.
+- The browser event `open-settings` with `{tab:'information',topic:'moon-gravity'}` opens an article directly. Both destinations share `data/information.json`, Mars facts and Moon facts. Custom discovered facts come from `ui.js`'s logbook.
+- Keep gameplay facts short with `short`, then link the full sourced article. Equations have SI units and assumptions. Course images have separate provenance from NASA media.
+- `audio-preferences.js` owns master/music/ambience/effects/voice and mute. `ambient-music.js` starts on a gesture and advances via `tickMusic`. Music is an original score, not a scientific recording.
+- Default Mars detailed terrain covers the minimap's 240 m span. `test-chunk-plan.mjs` checks circle coverage and bounded residency. `test-audio-preferences.mjs` checks mute and unavailable storage.
+- Never expose `.env` through a static site. NASA image library requests need no API key; keyed feeds must be fetched by local/server scripts and published as dated snapshots.
+
+
+### Full quality, phone Lite and lunar quests (8 Nov)
+Auto graphics selects full quality on computers/tablets and Lite on phones; this is independent of the screen-layout preview. A phone can choose Full quality. See src/device-profile.js and scripts/test-device-profile.mjs. Full NASA Moon geometry/texture is unchanged; phone Lite is a separate asset, never an automatic desktop downgrade. Moon quest logic is in moon/src/quests.js, with grouped log, active map target and auto-collapsing objective. Movement is walk2/sprint4 m/s, jump2.9 m/s launch with lunar gravity. Treat these speeds as game tuning.
+
+
+### Spirit's stops and the bigger map (9 Nov, Ewan)
+- The map is 1,216 m (19 chunks of 64 m). The NASA MOLA crop fills the middle 960 m; past about 420 m the ground fades to invented swells.
+- Five stops from Spirit's trip: `src/site-data.js` (facts, sources, positions) and `src/stop-models.js` (the 3D scenes). `src/sites.js` places them, adds the flag and sign, and handles E.
+- Look at any stop on its own in `stop-viewer.html` (open `http://localhost:8000/game/stop-viewer.html?stop=homeplate`).
+- Home Plate's ragged outline and cliff are in `src/landmarks.js` (`plateRadius`, `plateProfile`). The layered rim is one mesh that follows the ground all the way round.
+- The silica stop is Gertrude Weise (Tyrone was a sulfate soil nearby). Old saves that say `tyrone` load as `gertrude`.
+- Each stop is merged into a few meshes. Past 230 m only the flag, sign and Home Plate's rim are drawn.
+- `src/detail-cull.js` skips drawing any mesh smaller than about 3 px on screen. It switches render layers and never touches `.visible`. It cut draw calls by 35 to 47% away from the base.
+- No emoji on screen: `keepScreenEmojiFree()` in `src/ui.js` strips them from all page text. Arrows like ↗ and ▶ stay.
+
+### Mineral zones and three new map spots (9 Nov, Ewan)
+- Each mineral now sits where Spirit found it: `src/resource-zones.js` (zones, starter cache near camp, soft soil). Rocks still renew daily.
+  - Hematite: West Spur (foot of the hills). Sulfate salt (save key `gypsum`): Paso Robles, Arad, Tyrone. Silica: Silica Valley by Home Plate. Carbonate (rare, +10 science): Comanche. Meteorite iron: Allan Hills meteorites on the west plain.
+- Two new minerals, `silica` and `carbonate`. The extra solar panel now costs 2 hematite, 2 silica and 4 parts (silica makes the cover glass).
+- The water plant can bake 3 L of water out of 1 sulfate salt (game balance). The ice pickups are labelled game balance (Gusev is near the equator).
+- Salty soil slows the rover by up to 55% (`softSoil` in `rover.js`). Arriving in a zone shows its name once.
+- New map spots with fact cards (`src/mapstate.js`): Ma'adim Vallis (the channel through the south rim, from the NASA height data), the Allan Hills meteorites (west plain), and the dust devil plain with dark tracks (`buildDustDevilTracks` in `stop-models.js`).
+- Ore fact cards now describe Spirit's finds (`data/mars-facts.json`: gusevHematite, sulfateSalt, gusevMeteorite, silica, carbonate). The old Opportunity cards are still there.
+- Old saves: mined-rock ids from before the move are dropped, and the new minerals start at 0.
+
+### Real light and dark ground (9 Nov, Ewan)
+- Inside the measured area, the ground colour follows NASA albedo maps (how much sunlight the ground reflects).
+  - Sources: Viking Orbiter colour mosaic (925 m) for the pattern, scaled to Mars Global Surveyor TES albedo for the real values. Both from USGS Astrogeology.
+  - Baked file: `assets/terrain/gusev-albedo-256.bin` (256 x 256 bytes, north row first) plus `.json` (sources, range, scale).
+  - Rebake: `python3 -I scripts/bake-gusev-albedo.py <Viking ClrMosaic tif> <TES albedo tif>`. The tifs are too big for GitHub, so keep them local.
+- `groundAlbedo(x, z)` in `src/world.js` gives dark, bright and a weight. It fades out past the measured area, same as the heights.
+- The contrast is boosted about three times. Real Gusev only spans albedo 0.22 to 0.26, which you could not see on a screen.
+- The darkest real ground is about 200 m north of camp. The dust devil plain and its tracks moved there to match.
+- If the file fails to load, the old made-up colour patches come back. Nothing breaks.
+- Fixed (9 Nov): a double comma in the map's landmark list left a hole, so the landmark count read "of 15". `test-resource-zones.mjs` now checks every file for this.
+- Renamed the real meteorite spot to "Allan Hills meteorites". Zagyu's survey site near camp is still "Meteorite field", so the map no longer has two places with one name.
+
+### Tracks, storm dust, Ma'adim Vallis and the map edge (9 Nov, Ewan)
+- `src/ground-marks.js`: the rover leaves tyre tracks and you leave boot prints (pooled, about 3,800 marks).
+  - Driving through salt zones (Paso Robles, Arad, Tyrone) or Silica Valley leaves bright tracks, as when Spirit's dragged wheel dug up bright soil. The first bright track in each zone gives +3 science and a fact card.
+  - Hidden patch on no map: Troy (`HIDDEN` in `resource-zones.js`). Spirit's wheels dug up sulfate soil there in 2009.
+  - A dust storm fades every mark and wipes them when it ends.
+  - Saved: `outpost.saltFound`.
+- Storm dust: `outpost.dustCover` (sim.js) rises 0.4 per storm sol and falls 0.12 per clear sol. The terrain shader (`terrain-chunks.js`, `aDark` + `uDustCover`) coats NASA's dark ground pale, and the dust devil tracks fade too.
+- Dust devils are soft round puffs now (they drew as squares), and only appear from late morning to late afternoon, never in a storm.
+- Thin water-ice clouds in the sky shader (`makeSky` in `world.js`). They glow blue-white just after sunset and hide in a dust storm.
+- Ma'adim Vallis: a `channel` landmark in `landmarks.js` follows the low line of the NASA height data, about 3 m deep with a sandy floor and ripples. A viewpoint cairn sits on its west bank at (86, 414) (`src/viewpoints.js`, data in `site-data.js` `VIEWPOINTS`, +2 science, saved in `outpost.viewpoints`).
+- Map edge: the NASA grid fade now ends at 476 m. Past 480 m the grid only repeats its edge row, which drew the streaks. Outside, the ground is a very smooth copy of the NASA level plus rolling hills, worn ridges and craters (the cratered highlands outside Gusev).
+- New test: `scripts/test-surface-features.mjs`.

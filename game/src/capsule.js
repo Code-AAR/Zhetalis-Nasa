@@ -1,7 +1,9 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Inside your lander: the crew cabin behind the door at the top of the ladder.
 // Its cockpit, seats and windows are laid out like NASA's Orion capsule (4 seats, 3 big screens).
 // Same shape of class as interior.js (scene, camera, stations, enter, update, nearest), so main.js can switch rooms.
 import * as THREE from 'three';
+import { capsuleWindowShell } from './exterior-view.js';
 
 const FLOOR_R = 2.8, TOP_R = 1.5, H = 3.2;            // cabin: a cone like the lander's nose (metres)
 const SLOPE = Math.atan((FLOOR_R - TOP_R) / H);
@@ -34,16 +36,6 @@ function screen(lines, color = '#7dffb2', bg = '#071823') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-function marsView() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const g = c.getContext('2d'), sky = g.createLinearGradient(0, 0, 0, 80);
-  sky.addColorStop(0, '#b8774f'); sky.addColorStop(1, '#efc9a4'); g.fillStyle = sky; g.fillRect(0, 0, 128, 128);
-  g.fillStyle = '#a85d39'; g.beginPath(); g.moveTo(0, 82);
-  for (let x = 0; x <= 128; x += 8) g.lineTo(x, 76 + Math.sin(x * 0.09) * 6);
-  g.lineTo(128, 128); g.lineTo(0, 128); g.fill();
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-
 // A group stuck flat onto the sloping cone wall at angle a (0 = the hatch side) and height h; its +z points into the cabin.
 function onWall(a, h, inset = 0.03) {
   const g = new THREE.Group(), r = FLOOR_R - (FLOOR_R - TOP_R) * h / H - inset;
@@ -69,7 +61,7 @@ function seat(cushion) {
 export class Capsule {
   constructor() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#14171c');
+    this.scene.background = null;
     this.camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 50);
     this.scene.add(new THREE.HemisphereLight('#f4f7ff', '#3a3f48', 1.1));
     const lamp = new THREE.PointLight('#f2f6ff', 9, 7, 1.5); lamp.position.set(0, H - 0.4, 0); this.scene.add(lamp);
@@ -77,7 +69,7 @@ export class Capsule {
 
     // ---- the pressure shell: cone walls, floor (the aft bulkhead), and the docking tunnel at the top ----
     const shellMat = std('#dfe2e6', { side: THREE.BackSide });
-    this.scene.add(at(new THREE.Mesh(new THREE.CylinderGeometry(TOP_R, FLOOR_R, H, SEG, 6, true), shellMat), 0, H / 2, 0));
+    this.scene.add(capsuleWindowShell(shellMat));
     const floor = new THREE.Mesh(new THREE.CircleGeometry(FLOOR_R, SEG), std('#5d636b')); floor.rotation.x = -Math.PI / 2; this.scene.add(floor);
     const deck = new THREE.Mesh(new THREE.RingGeometry(0.4, WALK_R + 0.1, SEG), std('#70777f')); deck.rotation.x = -Math.PI / 2; deck.position.y = 0.005; this.scene.add(deck);
     const ceiling = new THREE.Mesh(new THREE.RingGeometry(0.55, TOP_R, SEG), std('#cfd3d8', { side: THREE.DoubleSide })); ceiling.rotation.x = Math.PI / 2; ceiling.position.y = H; this.scene.add(ceiling);
@@ -102,9 +94,10 @@ export class Capsule {
 
     // ---- side hatch (the way out), with its own small round window ----
     const hatch = onWall(0, 1.05);
-    hatch.add(rbox(1.0, 1.25, 0.08, 0.18, std('#9aa1aa', { metalness: 0.4, roughness: 0.45 })));
+    const hatchShape=roundRect(.64,.89,.18),hatchHole=new THREE.Path();hatchHole.absarc(0,.25,.17,0,Math.PI*2,true);hatchShape.holes.push(hatchHole);
+    hatch.add(new THREE.Mesh(new THREE.ExtrudeGeometry(hatchShape,{depth:.08,bevelEnabled:false,curveSegments:12}),std('#9aa1aa',{metalness:.4,roughness:.45})));
     hatch.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.035, 12, SEG), std('#2b2f36')), 0, 0.25, 0.09));
-    hatch.add(at(new THREE.Mesh(new THREE.CircleGeometry(0.17, SEG), new THREE.MeshBasicMaterial({ map: marsView() })), 0, 0.25, 0.085));
+    hatch.add(at(new THREE.Mesh(new THREE.CircleGeometry(0.17, SEG), new THREE.MeshBasicMaterial({color:'#b9e4ee',transparent:true,opacity:.035,depthWrite:false})), 0, 0.25, 0.085));
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 10, 24, Math.PI), std('#d9683a')); handle.rotation.z = Math.PI; hatch.add(at(handle, 0, -0.25, 0.12));
     hatch.add(at(rbox(1.12, 0.06, 0.04, 0.03, glow('#7dffb2')), 0, 0.68, 0.06));
     add('ship-exit', 'climb out of the capsule', 0, hatch);
@@ -138,8 +131,9 @@ export class Capsule {
     // ---- windows on both sides, plus the one in the hatch ----
     for (const a of [1.15, -1.15]) {
       const w = onWall(a, 1.75);
-      w.add(rbox(0.5, 0.42, 0.05, 0.12, std('#2b2f36')));
-      w.add(at(new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.32), new THREE.MeshBasicMaterial({ map: marsView() })), 0, 0, 0.06));
+      const windowShape=roundRect(.26,.18,.12),inner=roundRect(.24,.16,.08);windowShape.holes.push(new THREE.Path(inner.getPoints(16).reverse()));
+      w.add(new THREE.Mesh(new THREE.ExtrudeGeometry(windowShape,{depth:.05,bevelEnabled:false,curveSegments:12}),std('#2b2f36')));
+      w.add(at(new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.32), new THREE.MeshBasicMaterial({color:'#b9e4ee',transparent:true,opacity:.035,depthWrite:false})), 0, 0, 0.06));
       this.scene.add(w);
     }
     this.stations.push({ type: 'window', label: 'look out of the window', x: Math.sin(1.15) * (WALK_R - 0.1), z: Math.cos(1.15) * (WALK_R - 0.1) });
@@ -157,9 +151,10 @@ export class Capsule {
   enter() { this.pos = new THREE.Vector3(0, 0, 0.25); this.yaw = Math.PI; this.pitch = 0.05; this.vel = { x: 0, z: 0 }; this.step = 0; }
 
   update(dt, keys, active) {
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     let wx = 0, wz = 0;
     if (active) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? 2.4 : 1.6;   // slow: it's a small cabin
+      const speed = footSpeed(keys,1.6,2.4);   // slow: it's a small cabin
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
@@ -177,7 +172,7 @@ export class Capsule {
     const b = this.seatBox;                            // don't walk through the seats
     if (this.pos.z < b.z1 && this.pos.x > b.x0 && this.pos.x < b.x1) this.pos.z = b.z1;
     const bob = (Math.cos(this.step * 2) - 1) * 0.01 * Math.min(1, sp / 1.6);
-    const eye = new THREE.Vector3(this.pos.x, 1.6 + bob, this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.6 - crouchDrop + bob, this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }

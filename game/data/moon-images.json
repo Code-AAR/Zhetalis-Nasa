@@ -1,0 +1,82 @@
+{
+ "mode": "archived",
+ "retrieved": "2026-11-08",
+ "keyRequired": false,
+ "source": {
+  "name": "NASA Image and Video Library",
+  "api": "https://images-api.nasa.gov",
+  "guidelines": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+ },
+ "items": [
+  {
+   "id": "earthset",
+   "query": "Artemis II Earthset",
+   "why": "Artemis II crew view of Earth setting behind the Moon",
+   "nasaId": "art002e021278",
+   "title": "A Breathtaking Earthset from Orion",
+   "date": "2026-04-06",
+   "center": "JSC",
+   "photographer": "NASA",
+   "description": "art002e021278 (April 6, 2026) – Echoing the iconic Earthrise photo captured by the Apollo 8 astronauts in 1968, during the lunar flyby, the Artemis II crew captured a shot of Earthset as they passed behind the Moon’s far side. It is one of many photos taken during the seven-hour lunar flyby by the Artemis II crew on th",
+   "file": "moon/assets/nasa/earthset.jpg",
+   "remote": "http://images-assets.nasa.gov/image/art002e021278/art002e021278~medium.jpg",
+   "page": "https://images.nasa.gov/details/art002e021278"
+  },
+  {
+   "id": "farside",
+   "query": "Artemis II far side Moon",
+   "why": "Artemis II crewed lunar flyby",
+   "nasaId": "art002e012632",
+   "title": "Over the Moon, Bea",
+   "date": "2026-04-06",
+   "center": "JSC",
+   "photographer": "NASA",
+   "description": "art002e012632 (April 6, 2026) - The Artemis II crew captures the Moon's curved limb during their journey around the far side of the Moon. ",
+   "file": "moon/assets/nasa/farside.jpg",
+   "remote": "http://images-assets.nasa.gov/image/art002e012632/art002e012632~medium.jpg",
+   "page": "https://images.nasa.gov/details/art002e012632"
+  },
+  {
+   "id": "artemis1",
+   "query": "Artemis I Orion Moon",
+   "why": "Artemis I uncrewed Orion at the Moon",
+   "nasaId": "Artemis I FD 17 Orion and a Crescent Moon",
+   "title": "Artemis I FD 17 Orion and a Crescent Moon",
+   "date": "2022-12-03",
+   "center": "JSC",
+   "photographer": null,
+   "description": "art001e001939 (Dec. 2, 2022) A camera mounted on one of Orion’s four solar arrays captured this image of the Moon on flight day 17 of the 25.5-day Artemis I mission from a distance of more than 222,000 miles. Orion has exited the distant lunar orbit and is heading for a Dec. 11 splashdown in the Pacific Ocean.",
+   "file": "moon/assets/nasa/artemis1.jpg",
+   "remote": "http://images-assets.nasa.gov/image/Artemis I FD 17 Orion and a Crescent Moon/Artemis I FD 17 Orion and a Crescent Moon~medium.jpg",
+   "page": "https://images.nasa.gov/details/Artemis%20I%20FD%2017%20Orion%20and%20a%20Crescent%20Moon"
+  },
+  {
+   "id": "bootprint",
+   "query": "Apollo 11 bootprint",
+   "why": "Regolith holds sharp prints - no wind to erase them",
+   "nasaId": "PIA24439",
+   "title": "Apollo Footprint",
+   "date": "2021-04-21",
+   "center": "JPL",
+   "photographer": "NASA",
+   "description": "Buzz Aldrin took this iconic image of a bootprint on the Moon during the Apollo 11 moonwalk on July 20, 1969. https://photojournal.jpl.nasa.gov/catalog/PIA24439",
+   "file": "moon/assets/nasa/bootprint.jpg",
+   "remote": "http://images-assets.nasa.gov/image/PIA24439/PIA24439~medium.jpg",
+   "page": "https://images.nasa.gov/details/PIA24439"
+  },
+  {
+   "id": "polar-ice",
+   "query": "lunar south pole illumination",
+   "why": "LRO maps hydrogen (a sign of water ice) on cold, pole-facing slopes",
+   "nasaId": "GSFC_20171208_Archive_e000796",
+   "title": "NASA's LRO Discovers Lunar Hydrogen More Abundant on Moon's Pole-Facing Slopes",
+   "date": "2017-12-08",
+   "center": "GSFC",
+   "photographer": null,
+   "description": "Space travel is difficult and expensive – it would cost thousands of dollars to launch a bottle of water to the moon. The recent discovery of hydrogen-bearing molecules, possibly including water, on the moon has explorers excited because these deposits could be mined if they are sufficiently abundant, sparing the consi",
+   "file": "moon/assets/nasa/polar-ice.jpg",
+   "remote": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000796/GSFC_20171208_Archive_e000796~thumb.jpg",
+   "page": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000796"
+  }
+ ]
+}

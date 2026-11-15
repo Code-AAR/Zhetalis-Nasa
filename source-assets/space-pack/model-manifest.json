@@ -1,0 +1,235 @@
+{
+  "units": "metres",
+  "up": "Y",
+  "forward": "+Z",
+  "planetRadius": 1,
+  "planetScale": "Display scale; celestial sizes and distances are not physically scaled.",
+  "astronautRig": "Separate static parts; not skinned or humanoid-rigged.",
+  "models": [
+    {
+      "name": "01_ArtemisInspiredRocket",
+      "triangles": 2092,
+      "parts": 33,
+      "boundsMin": [
+        -2.47,
+        0.0,
+        -1.23
+      ],
+      "boundsMax": [
+        2.47,
+        25.1,
+        1.23
+      ]
+    },
+    {
+      "name": "02_ResearchSatellite",
+      "triangles": 952,
+      "parts": 41,
+      "boundsMin": [
+        -3.8,
+        -0.85,
+        -0.85
+      ],
+      "boundsMax": [
+        3.8,
+        2.09,
+        1.14
+      ]
+    },
+    {
+      "name": "03_LunarRover",
+      "triangles": 3560,
+      "parts": 109,
+      "boundsMin": [
+        -1.36,
+        -0.006,
+        -1.329
+      ],
+      "boundsMax": [
+        1.36,
+        2.39,
+        2.26
+      ]
+    },
+    {
+      "name": "04_ExplorerAstronaut",
+      "triangles": 3296,
+      "parts": 39,
+      "boundsMin": [
+        -0.58,
+        0.0,
+        -0.41
+      ],
+      "boundsMax": [
+        0.58,
+        1.925,
+        0.295
+      ]
+    },
+    {
+      "name": "05_OrbitalResearchStation",
+      "triangles": 3972,
+      "parts": 179,
+      "boundsMin": [
+        -9.525,
+        -0.81,
+        -6.85
+      ],
+      "boundsMax": [
+        9.525,
+        2.368,
+        3.55
+      ]
+    },
+    {
+      "name": "06_Mercury",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "07_Venus",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "08_Earth",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "09_Mars",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "10_Jupiter",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "11_Saturn",
+      "triangles": 3744,
+      "parts": 5,
+      "boundsMin": [
+        -2.2,
+        -1.0,
+        -2.2
+      ],
+      "boundsMax": [
+        2.2,
+        1.0,
+        2.2
+      ]
+    },
+    {
+      "name": "12_Uranus",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "13_Neptune",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "14_Moon",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "15_Sun",
+      "triangles": 2208,
+      "parts": 1,
+      "boundsMin": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "boundsMax": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ]
+}

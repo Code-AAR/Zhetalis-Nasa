@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Sequences</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #120d0b; color: #f1e6dc; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #ui { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  select, button { font: inherit; background: #2a1d17; color: inherit; border: 1px solid #5b4134; border-radius: 6px; padding: 6px 10px; }
+  #info { position: fixed; bottom: 12px; left: 12px; right: 12px; opacity: .85; }
+</style>
+</head>
+<body>
+<!-- Dev viewer for game/animation/glb/*.glb: plays each clip with THREE.AnimationMixer through the GLB's own camera
+     (or an orbit camera). Serve the game folder (python serve.py) and open /animation/viewer.html -->
+<div id="ui">
+  <select id="file"></select><select id="clip"></select>
+  <button id="camBtn">Free camera</button>
+</div>
+<div id="info">Loading...</div>
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const FILES = ['launch_earth', 'cruise_loop', 'edl_mars', 'outpost_26_months', 'dust_storm', 'failure_solar_panel', 'ascent_mars'];
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight('#ffe2c4', '#4a2c1e', 1.4));
+const sun = new THREE.DirectionalLight('#fff1dc', 2.6); sun.position.set(-300, 500, 300); scene.add(sun);
+const free = new THREE.PerspectiveCamera(40, 1, 0.5, 200000); free.position.set(120, 80, 160);
+const orbit = new OrbitControls(free, renderer.domElement);
+const info = document.getElementById('info'), fileSel = document.getElementById('file'), clipSel = document.getElementById('clip');
+FILES.forEach(f => fileSel.add(new Option(f, f)));
+let root, mixer, action, gltfCam, useFree = false, sunFactor;
+const draco = new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const loader = new GLTFLoader().setDRACOLoader(draco), clock = new THREE.Clock();
+
+async function load(name) {
+  info.textContent = 'Loading ' + name + '...';
+  if (root) scene.remove(root);
+  const t0 = performance.now();
+  const gltf = await loader.loadAsync(`glb/${name}.glb`);
+  root = gltf.scene; scene.add(root);
+  mixer = new THREE.AnimationMixer(root);
+  gltfCam = gltf.cameras[0] || null;
+  sunFactor = root.getObjectByName('sun_factor');
+  scene.background = new THREE.Color(name.startsWith('cruise') ? '#000' : name.startsWith('launch') ? '#8fb1dc' : '#b58e72');
+  clipSel.innerHTML = '';
+  gltf.animations.forEach((c, i) => clipSel.add(new Option(`${c.name} (${c.duration.toFixed(1)} s)`, i)));
+  window.__clips = gltf.animations.map(c => ({ name: c.name, duration: +c.duration.toFixed(3), tracks: c.tracks.length }));
+  window.__loadMs = Math.round(performance.now() - t0);
+  play(gltf.animations, 0);
+  clipSel.onchange = () => play(gltf.animations, +clipSel.value);
+}
+function play(clips, i) {
+  mixer.stopAllAction();
+  action = mixer.clipAction(clips[i]); action.play();
+  info.textContent = `${fileSel.value}: clip "${clips[i].name}", ${clips[i].duration.toFixed(1)} s, ${clips[i].tracks.length} tracks`;
+}
+document.getElementById('camBtn').onclick = e => { useFree = !useFree; e.target.textContent = useFree ? 'Sequence camera' : 'Free camera'; };
+fileSel.onchange = () => load(fileSel.value);
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  mixer?.update(dt);
+  if (sunFactor) sun.intensity = 2.6 * sunFactor.scale.x;
+  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false);
+  let cam = free;
+  if (gltfCam && !useFree) { cam = gltfCam; cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  else { free.aspect = w / h; free.updateProjectionMatrix(); orbit.update(); }
+  renderer.render(scene, cam);
+  requestAnimationFrame(frame);
+}
+const q = new URLSearchParams(location.search).get('f');
+if (q) fileSel.value = q;
+load(fileSel.value).catch(e => { info.textContent = 'Failed: ' + e.message; window.__error = e.message; });
+frame();
+</script>
+</body>
+</html>

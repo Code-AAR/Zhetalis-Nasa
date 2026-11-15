@@ -1,18 +1,24 @@
 // Life outside the walls: the tools you carry, the ores you mine with your pickaxe, trading samples with Earth,
 // and the greenhouses you build and farm. The real science behind each part is in data/mars-facts.json
-// (hematite, gypsum, meteorites, perchlorate soil, NASA's Veggie garden). Numbers marked "game" are balance.
+// (hematite, sulfate salt, silica, carbonate, meteorites, perchlorate soil, NASA's Veggie garden). Numbers marked "game" are balance.
 import * as THREE from 'three';
+import {renewDeposits} from './builder-recipes.js';
+import { placeDeposits, ID_BASE } from './resource-zones.js';
 import { heightAt } from './world.js';
 import { loadModel } from './nasamodels.js';
+import { mergeStatic } from './static-merge.js';
+import { createRockContact } from './rock-contact.js';
 
-// Three real Mars minerals that rovers have found.
+// Five real Mars minerals that Spirit found in Gusev Crater (the 'gypsum' key is sulfate salt; kept for old saves).
 export const ORES = {
-  hematite: { name: 'Hematite', color: '#8e98a8', fact: 'hematite', hits: 3, yield: 2, desc: 'An iron mineral. Its little grey "blueberries" formed in water long ago.' },
-  gypsum:   { name: 'Gypsum', color: '#f4efe2', fact: 'gypsum', hits: 2, yield: 2, desc: 'A soft white mineral with water locked inside it.' },
-  iron:     { name: 'Meteorite iron', color: '#7a6f66', fact: 'meteorite', hits: 4, yield: 1, desc: 'Iron and nickel from a meteorite - almost pure metal.' },
+  hematite: { name: 'Hematite', color: '#8e98a8', fact: 'gusevHematite', hits: 3, yield: 2, desc: 'An iron mineral. Spirit found it, with goethite, in Columbia Hills rocks that water once soaked.' },
+  gypsum:   { name: 'Sulfate salt', color: '#efe3c2', fact: 'sulfateSalt', hits: 2, yield: 2, desc: 'Bright, salty soil with water locked inside. The water plant can bake the water out.' },
+  iron:     { name: 'Meteorite iron', color: '#7a6f66', fact: 'gusevMeteorite', hits: 4, yield: 1, desc: 'Iron and nickel from a meteorite - almost pure metal.' },
+  silica:   { name: 'Silica', color: '#e6e1d6', fact: 'silica', hits: 2, yield: 2, desc: 'Almost pure silica, the stuff glass is made from. Solar panels need glass.' },
+  carbonate:{ name: 'Carbonate rock', color: '#9c6b4a', fact: 'carbonate', hits: 3, yield: 1, desc: 'Rock soaked by water that was not acid. Rare, and worth a lot of science.' },
 };
 export const TOOLS = {
-  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'Breaks ore out of rocks (NASA’s Hammer 3D model). Hold it and press Use next to a mineral rock.' },
+  pickaxe: { name: 'Pickaxe', icon: '⛏', desc: 'A geologist’s rock pick: hammer face on one side, a hard steel pick on the other. Hold it and press Action next to a mineral rock.' },
   builder: { name: 'Builder', icon: '🛠', desc: 'NASA’s Pistol Grip Tool, the power drill astronauts use on spacewalks. Puts kits together into buildings, like a greenhouse.' },
   jug:     { name: 'Water jug', icon: '💧', desc: 'Carries 10 L of water from the base tank to your plants.' },
 };
@@ -21,9 +27,9 @@ export const BAG = 8;           // rock samples you can carry before you must un
 export const JUG_L = 10;        // litres in a full water jug
 // Growing times are shortened for the game; the real times are shown next to them.
 export const CROPS = {
-  lettuce: { name: 'Red romaine lettuce', icon: '🥬', sols: 3, meals: 8,  water: 6,  real: 'about 4 weeks', colour: '#7a2f3a' },
-  wheat:   { name: 'Dwarf wheat',         icon: '🌾', sols: 5, meals: 15, water: 9,  real: 'about 2 months', colour: '#c9b25a' },
-  potato:  { name: 'Potatoes',            icon: '🥔', sols: 6, meals: 22, water: 12, real: 'about 3 to 4 months', colour: '#4f8f3a' },
+  lettuce: { name: 'Red romaine lettuce', icon: '🥬', sols: 3, meals: 8,  water: 6,  real: '33 days in NASA’s 2015 ISS harvest', colour: '#7a2f3a' },
+  wheat:   { name: 'Dwarf wheat',         icon: '🌾', sols: 5, meals: 15, water: 9,  real: '64–86 days in NASA chamber tests', colour: '#c9b25a' },
+  potato:  { name: 'Potatoes',            icon: '🥔', sols: 6, meals: 22, water: 12, real: '90–105 days in NASA chamber tests', colour: '#4f8f3a' },
 };
 export const GREENHOUSE = { cost: { hematite: 3, iron: 1, parts: 2 }, max: 4, tank: 12, near: 75 };
 // Earth's catalogue: you pay with Mars samples (scientists on Earth want them); goods come down on the next cargo pod.
@@ -41,10 +47,10 @@ export const priceWords = price => Object.entries(price).map(([k, n]) => `${n} $
 export function newColony() {
   return {
     belt: ['pickaxe'], held: 0, locker: ['builder', 'jug'],
-    bag: { hematite: 0, gypsum: 0, iron: 0 }, store: { hematite: 0, gypsum: 0, iron: 0 },
-    seeds: { lettuce: 2, wheat: 0, potato: 0 },    // the base came with two packs of lettuce seeds
-    tank: 20, jug: 0, ice: 0,                      // litres in the base water tank and in your jug; kg of dirty ice waiting to be melted
-    greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
+    bag: { hematite: 0, gypsum: 0, iron: 0, silica: 0, carbonate: 0 }, store: { hematite: 0, gypsum: 0, iron: 0, silica: 0, carbonate: 0 },
+    seeds: { lettuce: 2, wheat: 1, potato: 1 },    // Flight manifest for the base grow beds
+    tank: 20, jug: 0, ice: 0,                              // litres in the base water tank and in your jug
+    farmQuest: {}, greenhouses: [], mined: [], hits: {}, orders: [], request: null, seenOre: [],
     base: [0, 1, 2, 3].map(() => ({ crop: null, grown: 0, tank: 6, ready: false })),   // the 4 grow beds in the base greenhouse (greenhouse.js)
   };
 }
@@ -63,27 +69,50 @@ function glint() {
 
 function makeDeposit(ore, rng) {
   const g = new THREE.Group();
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), lam(ore === 'iron' ? '#3d3530' : ore === 'gypsum' ? '#b07a55' : '#7c4a35'));
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), lam(ore === 'iron' ? '#3d3530' : ore === 'gypsum' ? '#b9a07a' : ore === 'silica' ? '#cfc6b4' : ore === 'carbonate' ? '#8a5d42' : '#6f4a3a'));
   rock.scale.set(1.2 + rng() * 0.5, 0.55 + rng() * 0.25, 1 + rng() * 0.4); rock.position.y = 0.35; rock.rotation.y = rng() * 6; g.add(rock);
   if (ore === 'hematite') {
-    // "blueberries": small grey hematite balls sitting on and around the rock (drawn bigger than the real 1-5 mm ones)
-    const berry = new THREE.MeshStandardMaterial({ color: ORES.hematite.color, metalness: 0.55, roughness: 0.4 });
-    for (let i = 0; i < 26; i++) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.05 + rng() * 0.05, 8, 6), berry);
-      const a = rng() * Math.PI * 2, r = 0.3 + rng() * 1.3;
-      b.position.set(Math.cos(a) * r, i < 12 ? 0.62 + rng() * 0.1 : 0.04, Math.sin(a) * r); g.add(b);
+    // a water-altered hill rock: rusty, with grey, slightly shiny hematite grains on its weathered top
+    const grain = new THREE.MeshStandardMaterial({ color: ORES.hematite.color, metalness: 0.55, roughness: 0.4 });
+    for (let i = 0; i < 14; i++) {
+      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.04 + rng() * 0.05, 0), grain);
+      const a = rng() * Math.PI * 2, r = 0.2 + rng() * 0.8;
+      b.position.set(Math.cos(a) * r, 0.6 + rng() * 0.12, Math.sin(a) * r * .8); b.scale.y = .5; g.add(b);
     }
   } else if (ore === 'gypsum') {
-    // bright white veins filling cracks in the rock, like the ones Opportunity found
-    const vein = new THREE.MeshStandardMaterial({ color: '#fbf8ef', emissive: '#ffffff', emissiveIntensity: 0.12, roughness: 0.6 });
+    // sulfate salt: a low crusted mound in a patch of bright yellow-white soil, like Spirit's wheels dug up
+    rock.geometry = new THREE.IcosahedronGeometry(1, 2); rock.material = new THREE.MeshLambertMaterial({ color: '#c4ac85' });
+    rock.scale.set(1.1 + rng() * 0.3, 0.3 + rng() * 0.08, 0.9 + rng() * 0.25); rock.position.y = 0.1;
+    const patch = new THREE.CircleGeometry(1, 14), pp = patch.attributes.position;
+    for (let i = 1; i < pp.count; i++) { const k = 1.1 + rng() * 0.7; pp.setXY(i, pp.getX(i) * k, pp.getY(i) * k); }
+    const soil = new THREE.Mesh(patch, new THREE.MeshLambertMaterial({ color: '#e6d8b4', polygonOffset: true, polygonOffsetFactor: -2 }));
+    soil.rotation.x = -Math.PI / 2; soil.position.y = 0.17; g.add(soil);
+    const crust = lam('#9d7c5f');
+    for (let i = 0; i < 6; i++) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.16 + rng() * 0.14, 0.18 + rng() * 0.14, 0.04, 5), crust);
+      const a = rng() * Math.PI * 2, r = 0.6 + rng() * 0.9; c.position.set(Math.cos(a) * r, 0.2, Math.sin(a) * r); c.rotation.set(rng() * .6, rng() * 3, rng() * .6); g.add(c);
+    }
+  } else if (ore === 'silica') {
+    // pale knobbly nodules of silica-rich rock, in a clump
+    const pale = lam('#e3dccd');
+    for (let i = 0; i < 7; i++) {
+      const n = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22 + rng() * 0.2, 1), pale);
+      const a = i * 2.4, r = i ? 0.45 + rng() * 0.25 : 0; n.position.set(Math.cos(a) * r, 0.55 + rng() * 0.15, Math.sin(a) * r); n.scale.y = .75; g.add(n);
+    }
+  } else if (ore === 'carbonate') {
+    // Comanche-style rock: brownish and grainy, with thin pale fins where carbonate filled the cracks
+    const fin = lam('#d8c3a0');
     for (let i = 0; i < 5; i++) {
-      const v = new THREE.Mesh(new THREE.BoxGeometry(1.9 + rng(), 0.06, 0.08 + rng() * 0.06), vein);
-      v.position.set((rng() - 0.5) * 0.6, 0.25 + rng() * 0.4, (rng() - 0.5) * 0.9); v.rotation.set(rng() * 0.6, rng() * 3, rng() * 0.5); g.add(v);
+      const f = new THREE.Mesh(new THREE.BoxGeometry(0.9 + rng() * 0.6, 0.22 + rng() * 0.12, 0.035), fin);
+      f.position.set((rng() - 0.5) * 0.7, 0.68 + rng() * 0.08, (rng() - 0.5) * 0.7); f.rotation.set(0, rng() * 3, (rng() - .5) * .3); g.add(f);
     }
   } else {
-    // a dark iron-nickel meteorite with a shiny worn top, half buried in the sand
-    rock.material = new THREE.MeshStandardMaterial({ color: '#4a423c', metalness: 0.7, roughness: 0.38 });
-    rock.scale.set(0.9, 0.7, 0.8); rock.position.y = 0.3;
+    // a dark iron-nickel meteorite: smooth, with thumbprint dents and a shiny worn top, half buried in the sand
+    const geo = new THREE.IcosahedronGeometry(1, 2), p = geo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const dent = Math.max(0, Math.sin(v.x * 7.1 + 1) * Math.sin(v.y * 6.3) * Math.sin(v.z * 5.7 + 2)) * .16; v.multiplyScalar(1 - dent); p.setXYZ(i, v.x, v.y, v.z); }
+    geo.computeVertexNormals();
+    rock.geometry = geo; rock.material = new THREE.MeshStandardMaterial({ color: '#4a423c', metalness: 0.75, roughness: 0.34 });
+    rock.scale.set(0.95, 0.68, 0.8); rock.position.y = 0.3;
   }
   const spark = glint(); spark.position.y = 1.1; g.add(spark);
   g.userData.spark = spark;
@@ -132,10 +161,11 @@ function fillPlants(group, crop, grown) {
 
 // The tools, built to be held. In the hand they hang from the glove along the forearm; in first person they
 // sit at the bottom right of your view.
-// Real NASA tools (NASA 3D Resources): the Hammer is the pickaxe, the Pistol Grip Tool - the battery
-// power drill astronauts use on spacewalks - is the builder. Drawn about 1.5x real size so you can see them.
+// The pickaxe is a geologist's rock pick modelled for the game in Blender (animation/scripts/make_rock_pick.py):
+// forged steel head, hammer face and pick, ridged rubber grip and a tether loop. The builder is NASA's Pistol Grip
+// Tool (NASA 3D Resources) - the battery power drill astronauts use on spacewalks. Drawn about 1.5x real size.
 const NASA_TOOL = {
-  pickaxe: { file: 'hammer.glb', length: 0.55, upright: true, grip: 0.12 },
+  pickaxe: { file: 'tools/rock-pick.glb', length: 0.62, upright: true, grip: 0.06, keepColours: true },
   builder: { file: 'pistol-grip-tool.glb', length: 0.42, upright: false, grip: 0 },
 };
 async function nasaTool(kind) {
@@ -148,6 +178,7 @@ async function nasaTool(kind) {
     // NASA's files are plain white, which disappears against a white spacesuit - so colour them like real tools
     const mats = [].concat(o.material).map(mt => {
       const c = mt.clone(), name = (mt.name || '').toLowerCase();
+      if (spec.keepColours) return c;                                                    // modelled with real materials already
       c.metalness = Math.min(c.metalness ?? 0, 0.35); c.roughness = Math.max(c.roughness ?? 1, 0.45);
       if (name.includes('grip')) c.color.set('#e2622f');                                   // rubber grip
       else if (name.includes('head')) { c.color.set('#b9bec6'); c.metalness = 0.6; c.roughness = 0.35; }   // steel head
@@ -221,29 +252,52 @@ export function makeTool(kind, forView = false) {
 export class Colony {
   constructor(world, state = newColony()) {
     this.world = world; this.s = state;
-    // mineral rocks: the same places for every player (Gusev Crater's floor is basalt, so they are scattered)
+    // mineral rocks: the same places for every player. Each kind sits where Spirit found it (resource-zones.js),
+    // with a small starter cache near camp.
     let seed = 777; const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    this.tidy();
     this.deposits = [];
-    const kinds = [...Array(12).fill('hematite'), ...Array(9).fill('gypsum'), ...Array(5).fill('iron')];
-    kinds.forEach((ore, id) => {
-      let x, z, tries = 0;
-      do { const a = rng() * Math.PI * 2, d = 32 + rng() * (ore === 'iron' ? 190 : 150); x = Math.cos(a) * d; z = Math.sin(a) * d; tries++; }
-      while (tries < 40 && (heightAt(x, z) > 38 || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3)));
-      const group = makeDeposit(ore, rng); group.position.set(x, heightAt(x, z) - 0.15, z);
-      this.deposits.push({ id, ore, x, z, group });
+    const blocked = (x, z) => (x > 38 && x < 61 && z > -24 && z < -5) || (x > -38 && x < 24 && z > 15 && z < 54) || world.colliders.some(c => Math.hypot(c.x - x, c.z - z) < c.r + 3);
+    placeDeposits(heightAt, blocked).forEach(({ id, ore, x, z, zone }) => {
+      const group = makeDeposit(ore, rng); mergeStatic(group, { exclude: [group.children[0], group.userData.spark] }); group.position.set(x, heightAt(x, z) - 0.15, z);
+      const slope=new THREE.Vector3(heightAt(x-.5,z)-heightAt(x+.5,z),1,heightAt(x,z-.5)-heightAt(x,z+.5)).normalize();
+      group.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),slope);
+      const stone=group.children[0],v=new THREE.Vector3();stone.updateMatrix();let support=Infinity;
+      for(let i=0;i<stone.geometry.attributes.position.count;i++){
+        if(stone.geometry.attributes.position.getY(i)>-.25)continue;
+        v.fromBufferAttribute(stone.geometry.attributes.position,i).applyMatrix4(stone.matrix).applyQuaternion(group.quaternion);
+        support=Math.min(support,heightAt(x+v.x,z+v.z)-v.y);
+      }
+      group.position.y=support-.08;
+      group.updateMatrixWorld(true);
+      this.deposits.push({ id, ore, x, z, zone, group, collider:{x,z,r:1.9, object:stone, oreContact:createRockContact(stone), driveOver:true, top:new THREE.Box3().setFromObject(group.children[0],true).max.y} });
+      world.driveProps?.add({ x, z, r: 1.9, object: group.children[0], alive: () => !!group.parent });   // the rover can drive onto and over unmined deposits
     });
+    for(const d of this.deposits){d.startPosition=d.group.position.clone();d.startQuaternion=d.group.quaternion.clone();d.startTop=d.collider.top;}
     this.restore();
     world.extraTargets = p => this.targets(p);
   }
 
+  // Older saves lack the newer minerals, and their mined-rock ids point at rocks that moved to their zones (Nov 2026).
+  tidy() {
+    for (const k of ORE_KEYS) { this.s.bag[k] ??= 0; this.s.store[k] ??= 0; }
+    this.s.mined = (this.s.mined || []).filter(id => id >= ID_BASE);
+    for (const id of Object.keys(this.s.hits || {})) if (Number(id) < ID_BASE) delete this.s.hits[id];
+  }
+
   // Rebuild the 3D scene from the saved state (also used after loading a save).
   restore() {
+    this.tidy();
     for (const d of this.deposits) {
       const gone = this.s.mined.includes(d.id);
+      const index=this.world.colliders.indexOf(d.collider);
+      if(gone && index>=0)this.world.colliders.splice(index,1);
+      if(!gone && index<0)this.world.colliders.push(d.collider);
       if (gone) this.world.scene.remove(d.group); else if (!d.group.parent) this.world.scene.add(d.group);
     }
     this.houses?.forEach(h => { this.world.scene.remove(h.group); this.world.colliders.splice(this.world.colliders.indexOf(h.collider), 1); });
     this.houses = this.s.greenhouses.map(gh => this.placeHouse(gh));
+    this.s.base??=newColony().base; this.s.farmQuest??={};
     this.baseBeds = this.s.base.map((gh, i) => ({ gh, base: true, bed: i }));   // plots in the base greenhouse: no 3D here, greenhouse.js draws them
     this.equip();
   }
@@ -263,17 +317,21 @@ export class Colony {
     tank.scale.y = Math.max(0.05, h.gh.tank / GREENHOUSE.tank); tank.position.y = 0.45 * tank.scale.y;
   }
 
-  // ---------- what's nearby, for the Use button ----------
+  // ---------- what's nearby, for the Action button ----------
   targets(p) {
     const list = [];
-    for (const d of this.deposits) if (!this.s.mined.includes(d.id)) list.push({ type: 'ore', deposit: d, d: Math.hypot(p.x - d.x, p.z - d.z) - 0.9 });
+    for (const d of this.deposits) {
+      const distance=Math.hypot(p.x-d.x,p.z-d.z);
+      if(distance<4 && d.group.parent && this.world.aimsAt(d.group))
+        list.push({type:'ore',deposit:d,d:distance-.9});
+    }
     for (const h of this.houses) list.push({ type: 'greenhouse', house: h, d: Math.hypot(p.x - h.gh.x, p.z - h.gh.z) - 2.4 });
     return list;
   }
 
   // ---------- tools ----------
   get tool() { return this.s.belt[this.s.held] || null; }
-  select(i) { if (i < this.s.belt.length) { this.s.held = i; this.equip(); return true; } return false; }
+  select(i) { if (i >= -1 && i < this.s.belt.length) { this.s.held = this.s.held === i ? -1 : i; this.equip(); return true; } return false; }
   equip() {
     if (this.s.held >= this.s.belt.length) this.s.held = Math.max(0, this.s.belt.length - 1);
     const t = this.tool;
@@ -289,17 +347,29 @@ export class Colony {
   }
   has(tool) { return this.s.belt.includes(tool); }
 
+  renewOres(sol) {
+    const ids=renewDeposits(this.s,sol,id=>{
+      const d=this.deposits.find(d=>d.id===id);if(!d)return false;
+      const p=this.world.player.position;
+      return Math.hypot(p.x-d.x,p.z-d.z)>8 && !this.world.colliders.some(c=>c!==d.collider&&Math.hypot(c.x-d.x,c.z-d.z)<c.r+2);
+    });
+    for(const id of ids){const d=this.deposits.find(d=>d.id===id);d.group.position.copy(d.startPosition);d.group.quaternion.copy(d.startQuaternion);d.collider.top=d.startTop;this.world.scene.add(d.group);if(!this.world.colliders.includes(d.collider))this.world.colliders.push(d.collider);}
+    return ids.length;
+  }
+
   // ---------- mining ----------
   bagCount() { return count(this.s.bag); }
   // One pickaxe strike. Returns { broke, ore, got, full }.
   strike(dep) {
+    if(this.s.mined.includes(dep.id))return {broke:false,full:false,left:0};
     const o = ORES[dep.ore];
     const hits = (this.s.hits[dep.id] || 0) + 1; this.s.hits[dep.id] = hits;
-    dep.group.position.y -= 0.05; dep.group.rotation.y += 0.04;            // chips fly, the rock settles
+    dep.collider.top -= 0.05; dep.group.position.y -= 0.05; dep.group.rotation.y += 0.04;            // chips fly, the rock settles
     if (hits < o.hits) return { broke: false, left: o.hits - hits };
     const room = BAG - this.bagCount(), got = Math.min(room, o.yield);
     if (got <= 0) { this.s.hits[dep.id] = o.hits - 1; return { broke: false, full: true }; }
     this.s.bag[dep.ore] += got; this.s.mined.push(dep.id); this.world.scene.remove(dep.group);
+    const index=this.world.colliders.indexOf(dep.collider);if(index>=0)this.world.colliders.splice(index,1);
     return { broke: true, ore: dep.ore, got, firstTime: !this.s.seenOre.includes(dep.ore) && this.s.seenOre.push(dep.ore) };
   }
   unload() {   // sample bag -> base storage
@@ -320,8 +390,8 @@ export class Colony {
   }
   // A scientist on Earth asks for particular samples, for a bonus. A new request comes every few sols.
   newRequest(sol, rng = Math.random) {
-    const ore = ORE_KEYS[Math.floor(rng() * ORE_KEYS.length)], n = ore === 'iron' ? 1 : 2 + Math.floor(rng() * 2);
-    const who = { hematite: 'A geologist studying ancient water', gypsum: 'A team looking for signs of past life', iron: 'A meteorite expert' }[ore];
+    const ore = ORE_KEYS[Math.floor(rng() * ORE_KEYS.length)], n = ore === 'iron' || ore === 'carbonate' ? 1 : 2 + Math.floor(rng() * 2);
+    const who = { hematite: 'A geologist studying ancient water', gypsum: 'A team studying water on Mars', iron: 'A meteorite expert', silica: 'A team testing glass made on Mars', carbonate: 'A team looking for signs of past life' }[ore];
     this.s.request = { ore, n, who, until: sol + 8, reward: { science: 15 * n, seeds: { [['lettuce', 'wheat', 'potato'][Math.floor(rng() * 3)]]: 1 } } };
   }
 
@@ -358,7 +428,11 @@ export class Colony {
   fillJug() { const want = Math.min(JUG_L - this.s.jug, this.s.tank); this.s.jug += want; this.s.tank -= want; return want; }
   harvest(h, outpost) {
     if (!h.gh.ready) return 0;
-    const meals = CROPS[h.gh.crop].meals; outpost.food += meals;
+    const meals = Math.round(CROPS[h.gh.crop].meals * (1 + 0.4 * outpost.upgrades.greenhouse));
+    this.s.produce = (this.s.produce || 0) + meals;
+    // Two planting units per mature harvest: one to replant, one to expand (game rule).
+    this.s.seeds[h.gh.crop]=(this.s.seeds[h.gh.crop]||0)+2;
+    outpost.harvestMeals += meals;
     Object.assign(h.gh, { crop: null, grown: 0, ready: false }); this.drawHouse(h); return meals;
   }
   // Once per sol: plants drink from their tank and grow. With a dry tank, or no power for the lights, they wait.
@@ -367,6 +441,7 @@ export class Colony {
     for (const h of [...this.houses, ...this.baseBeds]) {
       const gh = h.gh; if (!gh.crop || gh.ready) continue;
       const c = CROPS[gh.crop], drink = c.water / c.sols;
+      if(outpost.today.total*outpost.split.life<1){notes.push({type:'unpowered',gh});continue;}
       if (gh.tank < drink - 1e-6) { notes.push({ type: 'thirsty', gh }); continue; }
       gh.tank -= drink;
       gh.grown = Math.min(1, gh.grown + (outpost.today.cold ? 0.5 : 1) / c.sols);   // freezing nights slow them down

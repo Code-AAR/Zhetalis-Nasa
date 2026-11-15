@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "checked": "2026-11-08",
+  "note": "Kid-friendly Moon facts for the shared Settings > Information wiki. Every fact has an official NASA source. Topic ids are stable: use them with open-settings {tab:'information', topic:'<id>'}.",
+  "facts": {
+    "moon-gravity": {
+      "title": "Moon gravity",
+      "short": "1.62 m/s² - about one sixth of Earth's.",
+      "text": "Gravity on the Moon pulls with 1.62 metres per second squared, about one sixth of Earth's 9.8. A jump lasts much longer and you land softly, but heavy things still keep their mass: a moving rover is just as hard to stop.",
+      "game": "Your astronaut and rover fall at 1.62 m/s² in this mission.",
+      "source": { "name": "NASA NSSDC Moon Fact Sheet", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" }
+    },
+    "moon-day": {
+      "title": "A lunar day",
+      "short": "Sunrise to sunrise takes about 29.53 Earth days.",
+      "text": "The Moon turns once for every trip around Earth, so a full day-and-night cycle (the synodic period) lasts about 29.53 Earth days. Near the south pole the Sun never climbs high: it creeps around the horizon, so shadows are long and tall ridges stay lit for most of the time.",
+      "game": "The mission clock squeezes one 29.53-day lunar day into a few minutes of play, and the Sun circles the horizon like it really does at the pole.",
+      "source": { "name": "NASA NSSDC Moon Fact Sheet", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" }
+    },
+    "moon-vacuum": {
+      "title": "No air, no wind",
+      "short": "The Moon has only a thin exosphere - no wind, no sound, no weather.",
+      "text": "The Moon's 'atmosphere' is an exosphere with about a million billion times fewer molecules than Earth's air. There is no wind, so footprints and craters stay sharp for a very long time, and sound cannot travel through the vacuum - astronauts only hear their own suit and radio.",
+      "game": "No wind or floating dust in this mission. Sounds are your suit fans, your breathing, radio beeps and footsteps felt through the suit.",
+      "source": { "name": "NASA Science - The Moon's atmosphere", "url": "https://science.nasa.gov/moon/lunar-atmosphere/" },
+      "also": { "name": "NASA Science - Moon", "url": "https://science.nasa.gov/moon/" }
+    },
+    "moon-dust": {
+      "title": "Regolith and landing dust",
+      "short": "Moon dust is sharp, clingy and flies in straight arcs when a lander fires its engines.",
+      "text": "Almost the whole Moon is covered in regolith: charcoal-grey powder and rock broken up by billions of years of impacts. With no air to slow it down, dust kicked up by a rocket engine flies out fast in clean ballistic arcs and falls straight back - it does not hang in the sky like a cloud. Apollo crews found the dust got into everything and made them sneeze ('lunar hay fever').",
+      "game": "The lander's engine plume throws dust in arcs that land within seconds. Suit dust builds up as you walk.",
+      "source": { "name": "NASA Science - Moon dust", "url": "https://science.nasa.gov/moon/moon-dust/" },
+      "also": { "name": "NASA Science - The Moon's atmosphere (lander exhaust)", "url": "https://science.nasa.gov/moon/lunar-atmosphere/" }
+    },
+    "moon-temperature": {
+      "title": "Hot and cold",
+      "short": "From about 95 K (-178 °C) to 390 K (117 °C) at the equator.",
+      "text": "Without air to spread heat around, sunny ground at the Moon's equator reaches about 390 kelvin (117 °C) and drops to about 95 kelvin (-178 °C) at night. Spacesuits need heaters and coolers, and crater floors that never see the Sun are colder still.",
+      "game": "Working in the shadowed crater runs your suit heater, which uses power.",
+      "source": { "name": "NASA NSSDC Moon Fact Sheet", "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html" }
+    },
+    "moon-ice": {
+      "title": "Ice in the shadows",
+      "short": "Water ice hides in craters near the poles that never get sunlight.",
+      "text": "Some crater floors near the lunar poles are 'permanently shadowed regions' that have not seen sunlight for billions of years. In 2009 NASA's LCROSS mission crashed a rocket stage into one and the cloud it threw up contained grains of water ice. Ice could give future crews drinking water, oxygen to breathe and rocket fuel.",
+      "game": "You drill ice in a shadowed crater, melt it into water, and can split water into oxygen - which costs a lot of power.",
+      "source": { "name": "NASA Science - Moon water and ices", "url": "https://science.nasa.gov/moon/moon-water-and-ices/" }
+    },
+    "moon-artemis-1": {
+      "title": "Artemis I",
+      "short": "Uncrewed Orion test flight around the Moon, 16 Nov - 11 Dec 2022.",
+      "text": "Artemis I launched on 16 November 2022 and splashed down on 11 December 2022 after 25 days, 10 hours and 53 minutes. Nobody was aboard: Orion flew within 80 miles of the lunar surface, entered a distant retrograde orbit and travelled 268,563 miles from Earth. It did not land.",
+      "game": "Flyby mission, Artemis I option: uncrewed Orion with no crew seats lit.",
+      "source": { "name": "NASA - Artemis I", "url": "https://www.nasa.gov/mission/artemis-i/" },
+      "also": { "name": "NASA - Artemis I mission timeline", "url": "https://www.nasa.gov/reference/artemis-i-mission-timeline/" }
+    },
+    "moon-artemis-2": {
+      "title": "Artemis II",
+      "short": "First crew around the Moon since Apollo, 1 - 10 April 2026. A flyby, not a landing.",
+      "text": "Artemis II launched on 1 April 2026 with Reid Wiseman, Victor Glover and Christina Koch of NASA and Jeremy Hansen of the Canadian Space Agency. They flew around the far side of the Moon and splashed down on 10 April 2026, after 9 days, 1 hour and 32 minutes. They reached 252,756 miles from Earth, the farthest humans have ever travelled. Artemis II did not land on the Moon.",
+      "game": "Flyby mission, Artemis II option: four crew aboard Orion on a crewed lunar flyby.",
+      "source": { "name": "NASA - Artemis II", "url": "https://www.nasa.gov/mission/artemis-ii/" },
+      "also": { "name": "NASA - Artemis", "url": "https://www.nasa.gov/humans-in-space/artemis/" }
+    },
+    "moon-artemis-next": {
+      "title": "What comes next",
+      "short": "Artemis III (2027) tests landers in Earth orbit; the first Artemis landing is planned for Artemis IV in 2028.",
+      "text": "NASA plans Artemis III in 2027 as a crewed test in low Earth orbit, practising rendezvous and docking with commercial human landing systems from SpaceX and Blue Origin. NASA's first crewed Moon landing of the Artemis program is planned for Artemis IV in 2028. Plans can change, so check NASA for the latest.",
+      "game": "The surface mission is a made-up future training scenario. Its white lander is only inspired by human landing system ideas - it is not a real NASA or company design.",
+      "source": { "name": "NASA - Artemis III", "url": "https://www.nasa.gov/mission/artemis-iii/" },
+      "also": { "name": "NASA - Artemis", "url": "https://www.nasa.gov/humans-in-space/artemis/" }
+    },
+    "moon-south-pole-light": {
+      "title": "Sunlight at the south pole",
+      "short": "On high ridges near the south pole the Sun can shine for most of the lunar day.",
+      "text": "The Moon's axis is tilted only about 1.5 degrees, so at the poles the Sun skims the horizon. Tall ridges can stay sunlit for long stretches while nearby crater floors stay dark - great for solar power next door to ice. Our training site's horizon was computed from NASA's LOLA elevation map: the Sun clears it about 58% of the lunar day in southern winter and all day in southern summer.",
+      "game": "Solar panels stand upright and turn to follow the low Sun. When a far-off mountain hides the Sun, you live off batteries.",
+      "source": { "name": "NASA SVS CGI Moon Kit (LRO LOLA elevation)", "url": "https://svs.gsfc.nasa.gov/4720/" }
+    },
+    "moon-radiation": {
+      "title": "Radiation",
+      "short": "No magnetic field and no thick air: solar storms reach the surface.",
+      "text": "Earth's magnetic field and air protect us from most space radiation. The Moon has neither, so during a solar particle storm astronauts must shelter behind thick material - regolith piled on a habitat works well.",
+      "game": "A solar particle alert (based on real NASA DONKI events) sends you to shelter.",
+      "source": { "name": "NASA DONKI space weather database", "url": "https://kauai.ccmc.gsfc.nasa.gov/DONKI/" },
+      "also": { "name": "NASA Science - Moon", "url": "https://science.nasa.gov/moon/" }
+    },
+    "moon-earth-sky": {
+      "title": "Earth in the sky",
+      "short": "From the near side Earth hangs almost still in the sky; at the south pole it sits near the horizon.",
+      "text": "The Moon always shows the same face to Earth, so from the near side Earth barely moves across the sky - it just goes through phases. From the south pole Earth peeks just above the horizon, which matters for radio contact.",
+      "game": "Earth hangs low over the horizon: keep your antenna pointed at it.",
+      "source": { "name": "NASA Science - Moon", "url": "https://science.nasa.gov/moon/" }
+    }
+  }
+}

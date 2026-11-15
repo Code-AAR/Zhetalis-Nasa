@@ -1,0 +1,36 @@
+{
+ "clips": [
+  {
+   "name": "ascent_mars",
+   "start": 0.0,
+   "end": 26.611
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 4.0,
+   "text": "Tanks full of oxygen and methane made on Mars"
+  },
+  {
+   "t0": 4.0,
+   "t1": 9.46,
+   "text": "Ignition! The landing stage stays as the launch pad"
+  },
+  {
+   "t0": 9.46,
+   "t1": 16.67,
+   "text": "Orbit needs 4.1 km/s: over twice the Moon's 1.9 km/s"
+  },
+  {
+   "t0": 16.67,
+   "t1": 22.79,
+   "text": "So it carries far more fuel than Apollo's ascent stage"
+  },
+  {
+   "t0": 22.79,
+   "t1": 26.67,
+   "text": "Next: dock with the ship in orbit, then fly home"
+  }
+ ]
+}

@@ -1,0 +1,167 @@
+{
+  "Ceramic": {
+    "color": "#E8E8DE",
+    "metallic": 0.15,
+    "smoothness": 0.35
+  },
+  "Silver": {
+    "color": "#A5B8C4",
+    "metallic": 0.7,
+    "smoothness": 0.45
+  },
+  "Graphite": {
+    "color": "#202A38",
+    "metallic": 0.35,
+    "smoothness": 0.3
+  },
+  "Gold": {
+    "color": "#D5A657",
+    "metallic": 0.75,
+    "smoothness": 0.5
+  },
+  "Visor": {
+    "color": "#E3B86B",
+    "metallic": 0.85,
+    "smoothness": 0.8
+  },
+  "SolarBlue": {
+    "color": "#1A3C74",
+    "metallic": 0.45,
+    "smoothness": 0.6
+  },
+  "SolarLine": {
+    "color": "#5E96C5",
+    "metallic": 0.55,
+    "smoothness": 0.6
+  },
+  "Red": {
+    "color": "#BE4C38",
+    "metallic": 0.1,
+    "smoothness": 0.3
+  },
+  "Orange": {
+    "color": "#CB6636",
+    "metallic": 0.15,
+    "smoothness": 0.3
+  },
+  "Cyan": {
+    "color": "#68DCE5",
+    "metallic": 0.1,
+    "smoothness": 0.6
+  },
+  "Engine": {
+    "color": "#69BDE9",
+    "metallic": 0.15,
+    "smoothness": 0.5
+  },
+  "MoonGrey": {
+    "color": "#9B9F9F",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "Crater": {
+    "color": "#737A80",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "MercuryRock": {
+    "color": "#8E8981",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "VenusCloud": {
+    "color": "#CEAC70",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "Ocean": {
+    "color": "#246299",
+    "metallic": 0.05,
+    "smoothness": 0.45
+  },
+  "Land": {
+    "color": "#668D6C",
+    "metallic": 0,
+    "smoothness": 0.15
+  },
+  "Desert": {
+    "color": "#A8A77B",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "Ice": {
+    "color": "#E0F3ED",
+    "metallic": 0,
+    "smoothness": 0.3
+  },
+  "Cloud": {
+    "color": "#BAD9DC",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "MarsDust": {
+    "color": "#B15D44",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "MarsDark": {
+    "color": "#874A3F",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "JupiterCream": {
+    "color": "#D5BA92",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "JupiterBand": {
+    "color": "#AE8569",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "JupiterLight": {
+    "color": "#EEE0BD",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "JupiterStorm": {
+    "color": "#B1654C",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "SaturnGold": {
+    "color": "#C3B387",
+    "metallic": 0,
+    "smoothness": 0.2
+  },
+  "RingLight": {
+    "color": "#C5BDA1",
+    "metallic": 0.05,
+    "smoothness": 0.2
+  },
+  "RingDark": {
+    "color": "#827C70",
+    "metallic": 0.05,
+    "smoothness": 0.2
+  },
+  "UranusIce": {
+    "color": "#83C0C6",
+    "metallic": 0,
+    "smoothness": 0.3
+  },
+  "NeptuneBlue": {
+    "color": "#426DAB",
+    "metallic": 0,
+    "smoothness": 0.3
+  },
+  "SunGold": {
+    "color": "#F3B950",
+    "metallic": 0,
+    "smoothness": 0.1
+  },
+  "SunLight": {
+    "color": "#FFD67A",
+    "metallic": 0,
+    "smoothness": 0.1
+  }
+}

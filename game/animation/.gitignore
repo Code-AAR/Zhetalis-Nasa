@@ -1,0 +1,4 @@
+stills/
+scripts/__pycache__/
+*.blend1
+build/

@@ -1,0 +1,187 @@
+{
+  "source": "https://eyes.nasa.gov/apps/solar-system/#/sc_artemis_2",
+  "retrieved": "2026-11-12T17:28:41.610Z",
+  "files": [
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/artemis_ii.gltf",
+      "bytes": 88499,
+      "sha256": "243f20ab284793e9d5cf8d0715f192d4bf16590f7932f65bcfd47f4c86770eb8"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/artemis_ii.bin",
+      "bytes": 553576,
+      "sha256": "67c2787046fe7f3207197cd7d8dc4805689678014f452e051a5b4e6e1a4e91a6"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/logo_and_flag.ktx2",
+      "bytes": 129764,
+      "sha256": "96bedfbe8317b2fef08a1dee09de04b2d37fafeb8d3de4b9b0a362a19b349263"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/foil_normal.ktx2",
+      "bytes": 308955,
+      "sha256": "b9ee8024b5ba78910d8fd01f892fc4bfff4b987e08d9ce482cc837a7fb93f1c5"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/orion_shell_normal.ktx2",
+      "bytes": 1722100,
+      "sha256": "243a663cb4e9e8dbdcef529333286c45569349c3d76cc88a517ddca0ba94fcba"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/orion_shell_albedo2.ktx2",
+      "bytes": 277225,
+      "sha256": "57fa243316740103308cd71cac2a5b5e0627e90352fe767af43d264286c42459"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/orion_shell_pbr2.ktx2",
+      "bytes": 267426,
+      "sha256": "e9057e61e474a76f1bcf2713c2741fba31712e8751421b0d5296645cdd431db6"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/piping_normal.ktx2",
+      "bytes": 5598,
+      "sha256": "3aeaf24b5c05c14ca8609f0410f89b7a45e5abf9dc845959fb36e029016bf886"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/piping_albedo.ktx2",
+      "bytes": 7023,
+      "sha256": "ed1bc519365095ce8638cfd7526a5146f5b425769d8fc2d2ddaf7fb51a72690c"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/worm.ktx2",
+      "bytes": 139801,
+      "sha256": "4780a2196258cacde913b0667238a92912a84a9b6627b70c8d1b8d4330d9a251"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/esa.ktx2",
+      "bytes": 91792,
+      "sha256": "5ebcd164573b4e9abde14ff27655d49d576414d1e7a32874a1c0f44d5065a840"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/scratched_metal_rough.ktx2",
+      "bytes": 120412,
+      "sha256": "03e06a80aab3887724d85384e5ae9494718aed9f1018b61d58ce006870539069"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/grid_cloth.ktx2",
+      "bytes": 15325,
+      "sha256": "c24369d72b22de2042d67550e490cf1d057b26a1f45ec916e7c4796ea018a335"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/blackrect_normal.ktx2",
+      "bytes": 43660,
+      "sha256": "3deee07c2ea9e49e3fc56ee09e81a311b79c0f63b0f657f840f3cd90481c0cc5"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/blackrect.ktx2",
+      "bytes": 21797,
+      "sha256": "d32611c9f2756c4244faa79f362fcd40ca5df95fbe8ff2d5d100250407552345"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/blackcircle.ktx2",
+      "bytes": 19033,
+      "sha256": "29971dcbffb052376c3f70c72a17319f12ec1f3a3c703e6da58a092a73ef2de8"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/blacktri.ktx2",
+      "bytes": 14399,
+      "sha256": "6eb9949d03d88d02734306219df382e2cb32286ec4e60ff9e334e0674d091f4e"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/cells1_normal.ktx2",
+      "bytes": 484483,
+      "sha256": "582c37b38727dc134a0c249d6402c1ff0f8b376a600aa416349d2e84e3512d6a"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/cells1_albedo.ktx2",
+      "bytes": 222571,
+      "sha256": "4e01a8f7ef7a0228b820c7c37b25453feab4c38f28f0cdb4d1dc2804fe1aa9f0"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/arraycell_1-cells1_rough.ktx2",
+      "bytes": 219341,
+      "sha256": "e5547721b3739bcf906046ef0a13a764249709838ae71ba6a19d7a5122b45c08"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_3_normal.ktx2",
+      "bytes": 4859546,
+      "sha256": "5f7d939a8ce0fe0755c5de712a9c23761f5b06dbfb03bc8a96cee211e3ff3d3e"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_3_albedo.ktx2",
+      "bytes": 837039,
+      "sha256": "ecf090c03a3f70dad9799440ed2af331267908d62fe4fc26f67a3ff7bde63fa7"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_3_metallic-array_3_rough.ktx2",
+      "bytes": 340699,
+      "sha256": "5ed175b30cbe603be77518538c6fecd6f4add1063b77a78dc30b61cbe0ead37d"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_1_normal.ktx2",
+      "bytes": 4927765,
+      "sha256": "ae96b013f8a3f54b1a7ee3ff1b8d11042ee493e640d49b7a716832f795a6ce93"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_1_albedo.ktx2",
+      "bytes": 750980,
+      "sha256": "6532d9d89101039e8ee3289f964e6ca42abeede038a875f8cffd609f5c7913a2"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_1_metallic.png-array_1_rough.png.ktx2",
+      "bytes": 521520,
+      "sha256": "d32fc5320ec7f8a7b8d6eedd06142b8ed044a0f101fbe1752c3da0295c120402"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_2_normal.ktx2",
+      "bytes": 4837691,
+      "sha256": "b00ccbf8656ccb6657f83bc9361b4e8b5cd6fd175f66685227d08319c9522912"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_2_albedo.ktx2",
+      "bytes": 866202,
+      "sha256": "cc113699e614ac8587e27d20bcaca2ca81dc312989ff400047ca0c7e3b0a1161"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/array_2_metallic-array_2_rough.ktx2",
+      "bytes": 281983,
+      "sha256": "d29d26aa4a6b6223da5c2825d64d24d91b33a670af510137f9f0960f3dfd9b6c"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/servicemod_normal.ktx2",
+      "bytes": 972362,
+      "sha256": "10c23eaf82015f2a34c41692702938b9438c6b051ad8c011c08a1420314eae2f"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/servicemod_albedo.ktx2",
+      "bytes": 272901,
+      "sha256": "243e9cc795a9c14ceed5d3c1996b51e916884253b1222a85529e752b99928bc4"
+    },
+    {
+      "url": "https://eyes.nasa.gov/assets/static/models/sc_artemis/servicemod_pbr.ktx2",
+      "bytes": 154302,
+      "sha256": "406a3528f6d914806160d0c7f2e10f105da3d3b2a5df55a18db8a2fd8b0676e0"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/basis_transcoder.js",
+      "bytes": 62337,
+      "sha256": "48a0ef319a28bf0224ee88ded34f74eaf97c175bba9eb18b47fb9720510ad6c4"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/basis_transcoder.wasm",
+      "bytes": 499935,
+      "sha256": "79ae97d781e10a566659c689b7bb1de91726453f55f9f5e3bcc07a4e3904070f"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/README.md",
+      "bytes": 1448,
+      "sha256": "930b11bbbb742b2525491b0964f0462d63d8b21383c0623ec4c98c43d53723c6"
+    }
+  ],
+  "output": {
+    "file": "orion-eyes.glb",
+    "bytes": 24336596,
+    "sha256": "e2a568ea8f5b5e6dbc2756080a683f5a5e9769a06dc0185cee87f68cc886cb5b",
+    "note": "Lossless container repack. Original compressed mesh and KTX2 texture bytes retained."
+  }
+}

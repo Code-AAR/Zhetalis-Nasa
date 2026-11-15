@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {chargeRover} from '../game/src/rover-charging.js';
+const o={baseConnected:true,chargerStep:3,chargeReserve:0},r={pos:{x:3,z:3},speed:0,battery:.5},bay={x:0,z:0};
+let s=chargeRover(o,r,bay,1);assert.ok(s.docked);assert.equal(s.amount,0);assert.match(s.status,/waiting/);assert.ok(o.roverCharged);
+o.chargeReserve=.2;s=chargeRover(o,r,bay,1);assert.equal(s.amount,.04);assert.equal(r.battery,.54);assert.equal(o.chargeReserve,.16);
+r.pos.x=8;s=chargeRover(o,r,bay,1);assert.equal(s.docked,false);assert.equal(r.battery,.54);
+r.pos.x=0;r.speed=1;assert.equal(chargeRover(o,r,bay,1).docked,false);
+r.speed=0;o.chargerStep=2;assert.equal(chargeRover(o,r,bay,1).amount,0);
+o.chargerStep=3;r.battery=1;assert.equal(chargeRover(o,r,bay,1).status,'Battery full');
+console.log('Bay edges, empty night reserve, power conservation, disconnected/moving rover and full battery passed.');

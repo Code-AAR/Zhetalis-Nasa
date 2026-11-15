@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {Outpost} from '../game/src/sim.js';
+const facts=JSON.parse(readFileSync(new URL('../game/data/mars-facts.json',import.meta.url))).facts;
+const o=new Outpost('normal',facts);o.food=100;o.o2=100;
+assert.equal(o.energy(),12);const protection=o.forecast().protection;
+for(let i=0;i<3;i++)o.tick(()=>.99);
+assert.equal(o.emergencyKWh,0);assert.equal(o.energy(),0);assert.equal(o.science,0);
+assert.equal(o.forecast().protection,protection);
+const ready=new Outpost('normal',facts);ready.baseConnected=true;ready.panels=3;ready.powerStep=6;ready.tick(()=>.99);assert.equal(ready.emergencyKWh,36);
+console.log('Emergency reserve is finite, stops draining on permanent power, and shielding stays passive.');

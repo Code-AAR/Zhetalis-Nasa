@@ -1,0 +1,312 @@
+import { loadAssetWithRetry } from './asset-loading.js';
+import { drapeGroundPositions, groundDecalSegments } from './ground-decal.js';
+import * as THREE from 'three';
+import {regolithFinish} from './regolith-finish.js';
+import { layServiceCables, cableCrossings } from './cable-crossings.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createOpenLayout } from './exploration-layout.js';
+import { installHabitatAccess } from './access.js';
+import { mergeStatic } from './static-merge.js';
+import { loadModel } from './nasamodels.js';
+import { GREENHOUSE } from './colony.js';
+import { GH, heightAt } from './world.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+export async function installSettlement(world){
+  const gltf=await loadAssetWithRetry(new GLTFLoader(), 'assets/mars-base/scene.gltf', { critical: true }),model=gltf.scene;
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+  model.scale.setScalar(102/Math.max(size.x,size.z));
+  const box=new THREE.Box3().setFromObject(model),centre=box.getCenter(new THREE.Vector3());model.position.set(-centre.x,-box.min.y,-centre.z);
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.name==='Object_16')o.visible=false;}});world.scene.add(model);
+  // The imported base also contains solar tables. Make their visible footprints
+  // serviceable and reserve them just like the deployable array.
+  model.updateMatrixWorld(true);world.fixedSolar=[];
+  const cells=model.getObjectByName('Object_14');
+  if(cells?.isMesh){
+    // Replace baked brown artwork with the same cells and dust state as the
+    // deployable arrays. World-space UVs keep cells uniformly sized per table.
+    cells.geometry=cells.geometry.clone();
+    const solarPosition=cells.geometry.attributes.position,uvs=[],point=new THREE.Vector3();
+    for(let i=0;i<solarPosition.count;i++){
+      point.fromBufferAttribute(solarPosition,i).applyMatrix4(cells.matrixWorld);
+      uvs.push(point.x/3.2,point.z/2);
+    }
+    cells.geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+    cells.material=world.solar.group.userData.panelMat;
+
+    const geo=cells.geometry,pos=geo.attributes.position,idx=geo.index,count=(idx?.count??pos.count)/3;
+    const parent=Array.from({length:count},(_,i)=>i),owners=new Map(),v=new THREE.Vector3();
+    const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+    for(let t=0;t<count;t++)for(let j=0;j<3;j++){
+      v.fromBufferAttribute(pos,idx?idx.getX(t*3+j):t*3+j);
+      const key=[v.x,v.y,v.z].map(n=>n.toFixed(4)).join(',');
+      if(owners.has(key))parent[root(t)]=root(owners.get(key));else owners.set(key,t);
+    }
+    const boxes=new Map();for(let t=0;t<count;t++){
+      const id=root(t);if(!boxes.has(id))boxes.set(id,new THREE.Box3());
+      for(let j=0;j<3;j++)boxes.get(id).expandByPoint(v.fromBufferAttribute(pos,idx?idx.getX(t*3+j):t*3+j).applyMatrix4(cells.matrixWorld));
+    }
+    const footMat=new THREE.MeshStandardMaterial({color:'#77766e',roughness:.95});
+    for(const box of boxes.values()){
+      const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+      if(size.x*size.z<.2)continue;
+      world.fixedSolar.push({x:center.x,z:center.z,halfX:size.x/2,halfZ:size.z/2,y:heightAt(center.x,center.z)});
+      world.clearRocksAround(center.x,center.z,Math.hypot(size.x,size.z)/2+.6);
+      for(const x of [box.min.x+.15,box.max.x-.15])for(const z of [box.min.z+.15,box.max.z-.15]){
+        const ground=heightAt(x,z),top=Math.max(ground+.18,box.min.y);
+        const foot=new THREE.Mesh(new THREE.BoxGeometry(.4,top-ground+.04,.4),footMat);
+        foot.position.set(x,(top+ground)/2-.02,z);foot.castShadow=foot.receiveShadow=true;foot.visible=false;world.scene.add(foot);
+      }
+    }
+  }
+  if(cells)cells.visible=false;world.fixedSolar=[];
+  const staticCrew=model.getObjectByName('Object_16');staticCrew?.removeFromParent();
+  model.updateMatrixWorld(true);model.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
+  plantFeet(model,world.scene);   // the module legs stopped half a metre above the ground: give them footings
+  const layout=await createOpenLayout(world,model);
+  const access=installHabitatAccess(world,model,layout);
+  const anchor=layout.moduleColliders[2];GH.x=anchor.x;GH.z=anchor.z-23;
+  const greenhouse=makeBaseGreenhouse(world);
+
+  const start=new THREE.Vector3(anchor.x,4,anchor.z-anchor.r+.6),end=new THREE.Vector3(GH.x,2.1,GH.z+GH.r-.5);
+  const asset=await loadModel('greenhouse-walkway.glb', { required: true });
+  if(!asset)throw new Error('Greenhouse walkway unavailable');
+  const glassTunnel=asset.scene.clone(true);
+  const lower=new THREE.Vector3(GH.x,.1,GH.z+5);
+  const upper=new THREE.Vector3(anchor.x,2.4,anchor.z-2.7);
+  const axis=upper.clone().sub(lower);
+  glassTunnel.position.copy(lower);
+  glassTunnel.rotation.x=-Math.atan2(axis.y,axis.z);
+  glassTunnel.scale.z=axis.length()/15;
+  world.scene.add(glassTunnel);
+  // Cut only the two facing shells, leaving the side and far walls intact.
+
+  function doorway(root,zMin,zMax,yMin,yMax){
+    const planes=[[1,0,0,-(anchor.x+1.5)],[-1,0,0,anchor.x-1.5],[0,0,1,-zMax],[0,0,-1,zMin],[0,1,0,-yMax],[0,-1,0,yMin]]
+      .map(([x,y,z,d])=>new THREE.Plane(new THREE.Vector3(x,y,z),d));
+    root.updateWorldMatrix(true,true);
+    const opening=new THREE.Box3(new THREE.Vector3(anchor.x-1.5,yMin,zMin),new THREE.Vector3(anchor.x+1.5,yMax,zMax));
+    root.traverse(o=>{
+      if(!o.isMesh||!opening.intersectsBox(new THREE.Box3().setFromObject(o)))return;
+      const cut=material=>{const m=material.clone();m.clippingPlanes=planes;m.clipIntersection=true;m.clipShadows=true;return m;};
+      o.material=Array.isArray(o.material)?o.material.map(cut):cut(o.material);
+    });
+  }
+  doorway(model,anchor.z-anchor.r-1,anchor.z-1,2.35,5.35);
+  doorway(greenhouse,GH.z+4,GH.z+8,.09,3.14);
+  layout.colliders.push({x:GH.x,z:GH.z,r:GH.r+.3});
+  for(let z=end.z+2;z<start.z;z+=2)layout.colliders.push({x:GH.x,z,r:2.3});
+  const colonyTargets=world.extraTargets;
+  world.extraTargets=p=>[...(colonyTargets?.(p)||[]),...layout.targets(p)];
+  // Keep the existing lander and its ladder. Replace the central dome and
+  // outdoor decorative plants with the supplied connected pressure modules.
+  const lander=world.outpost.group.getObjectByName('lander');
+  const ladderPieces=world.outpost.group.children.filter(o=>o!==lander&&o.position.distanceTo(lander.position)<.01);
+  for(const object of world.outpost.group.children){const ladder=lander&&object.position.distanceTo(lander.position)<.01;if(object!==lander&&!ladder&&object!==world.outpost.beacon)object.visible=false;}
+  world.regolith.visible=false;
+  const keepLander=world.outpost.colliders.find(c=>c.x===-6&&c.z===-17);
+  // Clear the enlarged base's service apron and keep its support vehicles usable.
+  for(const object of [lander,...ladderPieces]){object.position.x+=46;object.position.z-=33;object.position.y=heightAt(40,-50);}
+  lander.updateWorldMatrix(true,false);
+  world.shipDoor=lander.localToWorld(new THREE.Vector3(0,0,2.2+.9/lander.scale.x));world.shipDoor.y=heightAt(world.shipDoor.x,world.shipDoor.z);
+  if(keepLander){keepLander.x=40;keepLander.z=-50;}
+  world.sev.pos.set(-42,heightAt(-42,32),32);world.sev.place(0);world.sevCollider.x=-42;world.sevCollider.z=32;
+  world.solar.group.position.set(42,heightAt(42,-20),-20);
+  for(const panel of world.solar.panels){
+    const x=42+panel.position.x,z=-20+panel.position.z;
+    panel.position.y=heightAt(x,z)-world.solar.group.position.y;
+    world.clearRocksAround(x,z,2.8);
+    for(const foot of panel.userData.feet||[]){
+      const ground=heightAt(x+foot.position.x,z+foot.position.z)-heightAt(x,z);
+      // Ballast extends down to local soil instead of hovering over a slope.
+      const bottom=Math.min(-.02,ground-.04),top=Math.max(.14,ground+.12);
+      foot.scale.y=(top-bottom)/.16;foot.position.y=(top+bottom)/2;
+    }
+  }
+  world.colliders.splice(0,world.colliders.length,...layout.colliders,...(keepLander?[keepLander]:[]));
+  world.clearRocksAround(GH.x,GH.z,GH.r+3);
+  world.player.position.set(28,heightAt(28,-35),-35);world.yaw=Math.atan2(layout.door.x-28,layout.door.z+35);world.move.set(0,0,0);world.vel.set(0,0,0);
+  layout.door.set(access.entrances[0].x,access.entrances[0].y,access.entrances[0].z);
+  world.door.copy(layout.door);layout.locations.base=[world.door.x,world.door.z];world.outpost.beacon.position.set(layout.door.x,.15,layout.door.z);world.outpost.beacon.visible=true;
+  const shielding=new THREE.Group(),berms=new THREE.Group();world.scene.add(shielding,berms);
+  const waterMat=new THREE.MeshStandardMaterial({color:'#c5c8bb',roughness:.85}),soilMat=new THREE.MeshStandardMaterial({color:'#80614c',roughness:1});
+  for(const c of layout.moduleColliders){
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(4.9,3.8,.5),waterMat);wall.position.set(c.x,1.9,c.z-3.2);shielding.add(wall);
+
+  }
+  shielding.visible=false;berms.visible=false;
+  // Supported half-metre-thick bag courses behind the shelter: keep entry and tunnels clear.
+  const shieldModule=layout.moduleColliders[3],soilCourses=[];
+  for(let layer=0;layer<3;layer++){
+    const course=new THREE.Group();
+    for(let row=0;row<6;row++)for(let col=0;col<5;col++){
+      const bag=new THREE.Mesh(new THREE.BoxGeometry(.94,.47,.5),soilMat);
+      bag.position.set(shieldModule.x+(col-2)*.96,heightAt(shieldModule.x,shieldModule.z-4)+.25+row*.48,shieldModule.z-4-layer*.5);
+      bag.castShadow=bag.receiveShadow=true;course.add(bag);
+    }
+    course.visible=false;berms.add(course);soilCourses.push(course);
+    world.colliders.push({x:shieldModule.x,z:shieldModule.z-4-layer*.5,r:2.5,halfX:2.5,halfZ:.25,object:course});
+  }
+
+  const finishes=[];let soilLevel=0;
+  model.traverse(o=>{if(!o.isMesh||!/^Object_(17|18|19|20|21|22|23|24|25|26|27|28)$/.test(o.name))return;
+    const tint=m=>{const copy=m.clone();finishes.push(regolithFinish(copy));return copy;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);
+  });
+  const hatchMaterials=new Set();access.group.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material))if(o.userData.regolithFinish||m.userData.regolithFinish)hatchMaterials.add(m);});
+  for(const m of hatchMaterials)finishes.push(regolithFinish(m));
+  const domeMaterials=new Set();greenhouse.traverse(o=>{if(o.isMesh&&o.material?.color)domeMaterials.add(o.material);});
+  for(const material of domeMaterials)finishes.push(regolithFinish(material));
+  // After the finishes are attached (they edit the shared materials): bake the static airlock parts - supports,
+  // rails, collars, gaskets, ramps, rings - into a few meshes. The hatches stay whole (collision and handles use them).
+  mergeStatic(access.group,{exclude:access.group.children.filter(o=>o.name==='Pressure airlock hatch')});
+  const applySoil=n=>{soilLevel=Math.max(0,Math.min(3,Number(n)||0));berms.visible=soilLevel>0;soilCourses.forEach((course,i)=>course.visible=i<soilLevel);finishes.forEach(f=>f(soilLevel));mission.greenhouseRoom?.setRegolith(soilLevel);};
+  const pack=new THREE.Mesh(new THREE.BoxGeometry(1.5,.9,1),waterMat);
+  pack.position.set(53.4,heightAt(53.4,-17)+.45,-17);world.scene.add(pack);
+  world.colliders.push({x:pack.position.x,z:pack.position.z,r:.8,object:pack});
+  for(const panel of world.solar.panels){
+    const position=panel.getWorldPosition(new THREE.Vector3());
+    world.colliders.push({x:position.x,z:position.z,r:1.9,solar:true,halfX:1.7,halfZ:1.05,object:panel});
+  }
+  const endpoint=layout.moduleColliders[0];
+  const cablePoints=[new THREE.Vector3(53.4,.6,-20),new THREE.Vector3(53.4,.1,-18.8),pack.position.clone(),new THREE.Vector3(51,.1,-17), new THREE.Vector3(endpoint.x,.1,endpoint.z-5),new THREE.Vector3(endpoint.x,.8,endpoint.z-4)];
+  const powerSite={x:pack.position.x,z:pack.position.z+1.6};
+  const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cablePoints),48,.07,8,false),new THREE.MeshStandardMaterial({color:'#42494b',roughness:.8}));world.scene.add(cable);
+  const serviceCables=layServiceCables(model,world.scene,heightAt);
+  model.getObjectByName('Object_13').visible=false;
+  const crossings=cableCrossings([serviceCables,cable],heightAt);
+  const previousSurface=world.sev.surfaceAt;
+  world.sev.surfaceAt=(x,z)=>crossings.height(x,z,previousSurface(x,z));
+  const panelRay=new THREE.Raycaster(),panelOrigin=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0);
+  world.panelHeight=(x,z,ceiling=1000)=>{
+    world.solar.group.updateMatrixWorld(true);
+    panelOrigin.set(x,ceiling,z);panelRay.set(panelOrigin,down);panelRay.far=Infinity;
+    const surfaces=[model.getObjectByName('Object_14'),...world.solar.panels.filter(p=>p.visible).map(p=>p.children[0])].filter(o=>o&&o.visible);
+    return panelRay.intersectObjects(surfaces,true)[0]?.point.y??-Infinity;
+  };
+  const charging=new THREE.Group();charging.position.set(-34,heightAt(-34,26),26);world.scene.add(charging);
+  const cyan=new THREE.MeshStandardMaterial({color:'#5bc8cd',roughness:.5,emissive:'#073a40',emissiveIntensity:.4});
+  for(const x of[-2.4,2.4]){const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.035,7),cyan);stripe.position.set(x,.025,0);charging.add(stripe);}
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.5,1.35,.45),waterMat);post.position.set(3.2,.675,0);charging.add(post);
+  const chargerLamp=new THREE.Mesh(new THREE.SphereGeometry(.13,16,12),cyan);chargerLamp.position.set(3.2,1.45,0);charging.add(chargerLamp);
+  const chargerCable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([pack.position.clone(),new THREE.Vector3(34,.08,24),new THREE.Vector3(-30,.08,26),new THREE.Vector3(-30.8,.6,26)]),64,.055,8,false),new THREE.MeshStandardMaterial({color:'#30393e'}));
+  world.scene.add(chargerCable);charging.visible=chargerCable.visible=false;
+  world.colliders.push({x:-30.8,z:26,r:.5,object:charging});
+  world.clearRocksAround(-34,26,6);
+  const shelter=layout.moduleColliders[3],shelterSite={x:shelter.x,z:shelter.z-shelter.r-1.8},soilSite={x:shelter.x-9,z:shelterSite.z-3};
+  const soilPile=new THREE.Mesh(new THREE.SphereGeometry(1,48,24),soilMat);soilPile.scale.set(2,.7,1.5);soilPile.position.set(soilSite.x,heightAt(soilSite.x,soilSite.z),soilSite.z);world.scene.add(soilPile);
+  const equipmentBlock=equipmentContact(model);
+  const objectiveBeacon=new THREE.Mesh(new THREE.RingGeometry(.8,1,64),new THREE.MeshBasicMaterial({color:'#c78aff',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));objectiveBeacon.rotation.x=-Math.PI/2;world.scene.add(objectiveBeacon);
+  const inlet=new THREE.Mesh(new THREE.BoxGeometry(.42,.7,.22),cyan);inlet.position.set(access.entrances[0].x+2.7,.65,access.entrances[0].doorZ+1);world.scene.add(inlet);
+  const mission={objectiveBeacon,charging,chargerCable,chargerSite:{x:-30.8,z:26},chargingBay:{x:-34,z:26},shelterSite,soilSite,crossings,serviceCables,glassTunnel,blockEquipment:pos=>{const top=world.panelHeight(pos.x,pos.z);if(Number.isFinite(top)&&pos.y>=top-.18)return;equipmentBlock(pos);},pack,cable,powerSite,...access,model,layout,greenhouse,bindGreenhouse:room=>{mission.greenhouseRoom=room;room.setRegolith(soilLevel);},updateGreenhouse:(beds,powered=true)=>{
+    // The racks seen through the dome are a few pixels from beyond 40 m: skip their ~100 draws out there.
+    if(mission.visibleFurnishings){const c=world.camera.position;mission.visibleFurnishings.visible=Math.hypot(c.x-greenhouse.position.x,c.z-greenhouse.position.z)<40;}
+    const room=mission.greenhouseRoom;if(!room)return;
+    room.draw(beds,GREENHOUSE.tank,powered);
+    // The copy seen through the dome only needs rebuilding when the view changes visibly (crop, growth in 10% steps,
+    // harvest-ready, power), not on every hundredth of growth or litre of tank water.
+    const key=(beds||[]).map(b=>`${b?.crop}|${(+b?.grown||0).toFixed(1)}|${b?.ready}`).join(';')+'|'+powered;if(key===mission.greenhouseKey)return;mission.greenhouseKey=key;
+    if(mission.visibleFurnishings)greenhouse.remove(mission.visibleFurnishings);
+    // Share the actual interior geometry and materials; draw() owns their lifecycle. The copy drops the grow lights
+    // (four point lights in the outdoor scene made every lit pixel outside, terrain included, pay for them; the LED
+    // bars are emissive and still glow) and bakes its ~120 parts into a handful of draw calls.
+    const copy=room.furnishings.clone(true),lights=[];copy.traverse(o=>{if(o.isLight)lights.push(o);});lights.forEach(l=>l.removeFromParent());
+    mergeStatic(copy);mission.visibleFurnishings=copy;greenhouse.add(copy);
+  },surveys:new Set(),setWall:level=>shielding.visible=level>0,setRegolith:applySoil};
+  world.settlement=mission;return mission;
+}
+
+function makeBaseGreenhouse(world){
+ const white=new THREE.MeshStandardMaterial({color:'#ddd4bd',roughness:.75}),dark=new THREE.MeshStandardMaterial({color:'#2c3336'});
+ const mat=(color,extra={})=>new THREE.MeshLambertMaterial({color,...extra});
+ const at=(m,x,y,z)=>{m.position.set(x,y,z);return m;};
+  // the base greenhouse: a glass dome 14 m across on the end of the tunnel, with 4 hydroponic grow beds inside
+  // under pink LED bars. Walk in through its airlock (or through the tunnel from inside the outpost) - greenhouse.js
+  const ghG = new THREE.Group(); ghG.position.set(GH.x, heightAt(GH.x,GH.z), GH.z); world.scene.add(ghG);
+  ghG.add(new THREE.Mesh(new THREE.SphereGeometry(GH.r, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#73b6bd', transparent: true, opacity: 0.18, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false })));
+  const frame = mat('#eceae4', { flatShading: false });
+  for (let i = 0; i < 12; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(GH.r, 0.06, 8, 48, Math.PI), frame); rib.rotation.y = i / 12 * Math.PI; ghG.add(rib); }
+  for (const a of [0.35, 0.7, 1.05]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(GH.r * Math.cos(a), 0.06, 8, 64), frame); ring.rotation.x = Math.PI / 2; ring.position.y = GH.r * Math.sin(a); ghG.add(ring); }
+  ghG.add(at(new THREE.Mesh(new THREE.CylinderGeometry(GH.r + 0.05, GH.r + 0.1, 0.6, 64, 1, true), white), 0, 0.3, 0));   // base wall
+  // its airlock, on the west side where nothing is parked
+  const ghLock = new THREE.Group(); ghLock.position.set(-(GH.r - 0.2), 0, 0); ghLock.rotation.y = -Math.PI / 2; ghG.add(ghLock);
+  ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.9, 1.8), white), 0, 1.45, 0.6));
+  ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.4, 0.1), dark), 0, 1.25, 1.52));
+  ghLock.add(at(new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.14, 0.15), new THREE.MeshBasicMaterial({ color: '#7dffb2' })), 0, 2.6, 1.55));
+
+ mergeStatic(ghG);   // dome ribs, rings and airlock: one draw per material (the furnishings copy is added later)
+ ghG.name="base-greenhouse";return ghG;
+}
+
+// The source model batches the solar tables, dish, and mast into a few meshes.
+// Sample their triangles once in a local grid so gaps between them stay walkable.
+function equipmentContact(model){
+  const pitch=.65, cells=new Map(), vertices=[new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()];
+  const sample=new THREE.Vector3();
+  const key=(x,z)=>x+','+z;
+  for(const name of ['Object_13','Object_14','Object_29','Object_31']){
+    const mesh=model.getObjectByName(name);
+    if(!mesh?.isMesh||!mesh.visible)continue;
+    const geometry=mesh.geometry,position=geometry.attributes.position,index=geometry.index;
+    for(let i=0;i<(index?.count??position.count);i+=3){
+      vertices.forEach((v,j)=>v.fromBufferAttribute(position,index?index.getX(i+j):i+j).applyMatrix4(mesh.matrixWorld));
+      const [a,b,c]=vertices;
+      if(Math.max(a.y,b.y,c.y)<.35 || Math.min(a.y,b.y,c.y)>5)continue;
+      const steps=Math.max(1,Math.ceil(Math.max(a.distanceTo(b),b.distanceTo(c),c.distanceTo(a))/pitch*2));
+      for(let j=0;j<=steps;j++)for(let k=0;k<=steps-j;k++){
+        sample.copy(a).multiplyScalar(1-(j+k)/steps).addScaledVector(b,j/steps).addScaledVector(c,k/steps);
+        if(sample.y<.15)continue;
+        const cell=key(Math.round(sample.x/pitch),Math.round(sample.z/pitch));
+        const span=cells.get(cell);
+        if(span){span.low=Math.min(span.low,sample.y);span.high=Math.max(span.high,sample.y);}
+        else cells.set(cell,{low:sample.y,high:sample.y});
+      }
+    }
+  }
+  return pos=>{
+    const cx=Math.round(pos.x/pitch),cz=Math.round(pos.z/pitch);
+    for(let x=cx-1;x<=cx+1;x++)for(let z=cz-1;z<=cz+1;z++){
+      const span=cells.get(key(x,z));
+      if(!span || pos.y>span.high+.04 || pos.y+1.85<span.low)continue;
+      const dx=pos.x-x*pitch,dz=pos.z-z*pitch,d=Math.hypot(dx,dz),r=pitch*.5+.35;
+      if(d<r){if(d<1e-6){pos.x+=r;}else{pos.x+=dx*(r/d-1);pos.z+=dz*(r/d-1);}}
+    }
+  };
+}
+
+// The base model's modules stand on legs whose feet end ~0.5 m above the ground (the model was set down by its
+// lowest part, a flat pad). Find every foot (the lowest vertices of each visible mesh that is clear of the ground)
+// and put a concrete footing under it reaching into the soil, plus a dusty disc so the legs read as planted.
+function plantFeet(model,scene){
+  const v=new THREE.Vector3(),boxes=[],discs=[];
+  model.traverse(o=>{
+    if(!o.isMesh||!o.visible)return;
+    const pos=o.geometry.attributes.position;let ymin=Infinity;const P=new Float32Array(pos.count*3);
+    for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z;if(v.y<ymin)ymin=v.y;}
+    const clusters=[];
+    for(let i=0;i<pos.count;i++){const x=P[i*3],y=P[i*3+1],z=P[i*3+2];if(y>ymin+.1)continue;
+      let c=clusters.find(c=>Math.abs(c.cx-x)<.9&&Math.abs(c.cz-z)<.9);if(!c){c={cx:x,cz:z,x0:x,x1:x,z0:z,z1:z};clusters.push(c);}
+      c.x0=Math.min(c.x0,x);c.x1=Math.max(c.x1,x);c.z0=Math.min(c.z0,z);c.z1=Math.max(c.z1,z);}
+    if(clusters.length>40)return;                               // a big flat underside, not legs
+    for(const c of clusters){const x=(c.x0+c.x1)/2,z=(c.z0+c.z1)/2,g=heightAt(x,z),gap=ymin-g;if(gap<.08||gap>.9)continue;
+      const w=Math.max(.42,c.x1-c.x0+.18),d=Math.max(.42,c.z1-c.z0+.18),h=gap+.3;
+      const j=boxes.length%5,b=new THREE.BoxGeometry(w+j*.008,h,d+j*.008);b.translate(x,g-.3+h/2,z);boxes.push(b);
+      const k=boxes.length%7,pad=new THREE.BoxGeometry(w+.28+k*.012,.1+k*.006,d+.28+k*.012);pad.translate(x,g+.02+k*.003,z);boxes.push(pad);   // neighbouring pads overlap: never at exactly the same height (flicker)
+      discs.push([x,g,z,Math.max(w,d)]);}
+  });
+  if(!boxes.length)return;
+  const concrete=new THREE.MeshStandardMaterial({color:'#8d8378',roughness:.95});
+  const feet=new THREE.Mesh(mergeGeometries(boxes,false),concrete);feet.name='module-footings';feet.castShadow=feet.receiveShadow=true;scene.add(feet);
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,4,32,32,32);
+  r.addColorStop(0,'rgba(60,35,22,.55)');r.addColorStop(1,'rgba(60,35,22,0)');g.fillStyle=r;g.fillRect(0,0,64,64);
+  const dm=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4});
+  // A centre-height quad floats above downhill edges. Drape a small grid instead.
+  const geos=discs.map(([x,,z,s])=>{
+    const span=s*2.6,n=groundDecalSegments(span),q=new THREE.PlaneGeometry(span,span,n,n);
+    q.rotateX(-Math.PI/2);q.translate(x,0,z);
+    drapeGroundPositions(q.attributes.position.array,heightAt);
+    q.attributes.position.needsUpdate=true;q.computeVertexNormals();
+    return q;
+  });
+  const dust=new THREE.Mesh(mergeGeometries(geos,false),dm);dust.name='module-footing-dust';dust.renderOrder=1;scene.add(dust);
+  for(const geo of geos)geo.dispose();
+}

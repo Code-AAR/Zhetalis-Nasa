@@ -1,0 +1,109 @@
+{
+ "clips": [
+  {
+   "name": "ares_vi_briefing",
+   "start": 0.0,
+   "end": 58.611
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 4.33,
+   "text": "Crew, take your seats. This is the last briefing before Ares VI.",
+   "who": "DIRECTOR HALE",
+   "phase": "ARES VI · FINAL STAGE"
+  },
+  {
+   "t0": 4.33,
+   "t1": 8.0,
+   "text": "After this, we build humanity’s first outpost on Mars.",
+   "who": "DIRECTOR HALE",
+   "phase": "ARES VI · FINAL STAGE"
+  },
+  {
+   "t0": 8.0,
+   "t1": 11.46,
+   "text": "Four of you, one cargo-rich site in Jezero Crater.",
+   "who": "DIRECTOR HALE",
+   "phase": "MISSION OVERVIEW"
+  },
+  {
+   "t0": 11.46,
+   "t1": 16.0,
+   "text": "Ares V already parked supplies 400 metres from your landing zone.",
+   "who": "DIRECTOR HALE",
+   "phase": "MISSION OVERVIEW"
+  },
+  {
+   "t0": 16.0,
+   "t1": 20.29,
+   "text": "Phase one. Touchdown, then habitat deployment. You have four hours,",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 1 · LANDING & HABITAT"
+  },
+  {
+   "t0": 20.29,
+   "t1": 24.0,
+   "text": "and the habitat must hold pressure before the first night.",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 1 · LANDING & HABITAT"
+  },
+  {
+   "t0": 24.0,
+   "t1": 28.54,
+   "text": "Phase two. Fission unit plus solar array. Dust storms can last weeks,",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 2 · POWER"
+  },
+  {
+   "t0": 28.54,
+   "t1": 32.0,
+   "text": "so the reactor goes up first. No power, no outpost.",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 2 · POWER"
+  },
+  {
+   "t0": 32.0,
+   "t1": 37.0,
+   "text": "Phase three. The ISRU plant pulls water from icy soil and oxygen from the CO₂ air.",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 3 · ISRU"
+  },
+  {
+   "t0": 37.0,
+   "t1": 40.0,
+   "text": "It also makes the propellant for your ride home.",
+   "who": "DIRECTOR HALE",
+   "phase": "PHASE 3 · ISRU"
+  },
+  {
+   "t0": 40.0,
+   "t1": 45.5,
+   "text": "Commander, you lead the EVA. Engineer owns power, Geologist owns the ISRU site,",
+   "who": "DIRECTOR HALE",
+   "phase": "CREW ROLES"
+  },
+  {
+   "t0": 45.5,
+   "t1": 49.33,
+   "text": "Medic owns the habitat and every one of you. Questions?",
+   "who": "DIRECTOR HALE",
+   "phase": "CREW ROLES"
+  },
+  {
+   "t0": 49.33,
+   "t1": 53.83,
+   "text": "Launch window opens in seventy-two hours. Get some sleep.",
+   "who": "DIRECTOR HALE",
+   "phase": "T-MINUS 72 HOURS"
+  },
+  {
+   "t0": 53.83,
+   "t1": 58.67,
+   "text": "Then go build the first home we’ve ever had on another world.",
+   "who": "DIRECTOR HALE",
+   "phase": "T-MINUS 72 HOURS"
+  }
+ ]
+}

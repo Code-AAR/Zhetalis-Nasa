@@ -1,6 +1,8 @@
+import {crouchHeld,updateCrouch,footSpeed} from './crouch.js';
 // Inside the outpost: a round room you walk around in first person.
 // Each station does one job, so kids can see where each part of the trade-off "lives".
 import * as THREE from 'three';
+import { pressureHatch } from './pressure-hatch.js';
 import { loadModel, replaceLogos } from './nasamodels.js';
 
 const R = 6;   // room radius in metres
@@ -29,19 +31,24 @@ function screenTexture(lines, color = '#7dffb2') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
-function marsWindowTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
-  const g = c.getContext('2d');
-  const sky = g.createLinearGradient(0, 0, 0, 110); sky.addColorStop(0, '#b8774f'); sky.addColorStop(1, '#efc9a4');
-  g.fillStyle = sky; g.fillRect(0, 0, 256, 160);
-  g.fillStyle = '#a85d39'; g.beginPath(); g.moveTo(0, 110);
-  for (let x = 0; x <= 256; x += 16) g.lineTo(x, 95 + Math.sin(x * 0.05) * 12 + Math.sin(x * 0.13) * 6);
-  g.lineTo(256, 160); g.lineTo(0, 160); g.fill();
-  g.fillStyle = '#7a3f26'; g.fillRect(0, 130, 256, 30);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-
+export const observationPhotos=[
+  {slug:'mount-sharp-on-the-horizon',title:'Mount Sharp on the Horizon',credit:'Curiosity · NASA/JPL-Caltech'},
+  {slug:'perched-above-gusev-crater',title:'Perched Above Gusev Crater',credit:'Spirit · NASA/JPL-Caltech/Cornell'},
+  {slug:'sunset-at-mars-gusev-crater-spirit',title:'Sunset at Gusev Crater',credit:'Spirit · NASA/JPL/Texas A&M/Cornell'}
+];
 export class Interior {
+  showPhoto(index){
+    this.photoIndex=(index+observationPhotos.length)%observationPhotos.length;
+    const photo=observationPhotos[this.photoIndex];
+    const texture=this.photoTextures[this.photoIndex]??=new THREE.TextureLoader().load('assets/'+photo.slug+'.jpg',t=>{
+      const aspect=t.image.width/t.image.height, frame=3.6/1.85;
+      t.repeat.set(Math.min(1,frame/aspect),Math.min(1,aspect/frame));
+      t.offset.set((1-t.repeat.x)/2,(1-t.repeat.y)/2);
+    });
+    texture.colorSpace=THREE.SRGBColorSpace;
+    this.photoPanel.material.map=texture;this.photoPanel.material.needsUpdate=true;
+    return photo;
+  }
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#1b1410');
@@ -64,9 +71,7 @@ export class Interior {
     const add = (type, label, x, z, group) => { group.position.set(x, 0, z); group.lookAt(0, 0, 0); this.scene.add(group); this.stations.push({ type, label, x, z }); return group; };
 
     // airlock (exit) - same side as the outside door
-    const lock = new THREE.Group();
-    lock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.2, 3, 0.2), lam('#2a2e34')), 0, 1.5, 0));
-    lock.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.25), glow('#7dffb2')), 0, 3.1, 0.02));
+    const lock = pressureHatch();
     add('exit', 'go outside (airlock)', 0, R - 0.25, lock);
 
     // control console - the power split. A curved mission-control style desk: sloped keyboard shelf,
@@ -165,9 +170,12 @@ export class Interior {
 
     // window onto Mars
     const win = new THREE.Group();
-    win.add(at(new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.6), new THREE.MeshBasicMaterial({ map: marsWindowTexture() })), 0, 2.1, 0));
+    this.photoPanel=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.85),new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false}));
+    win.add(at(this.photoPanel,0,2,.11));
+    this.photoTextures=[];
+    this.showPhoto(0);
     win.add(at(new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.12, 0.2), lam('#2a2e34')), 0, 1.25, 0));
-    add('window', 'look out of the window', (R - 0.05) * 0.72, -(R - 0.05) * 0.72, win);
+    add('window', 'browse NASA rover photos', (R - 0.05) * 0.72, -(R - 0.05) * 0.72, win);
 
     // hazard monitor - space weather and dust-storm forecasts; it blinks red when it has spotted something new
     const mon = new THREE.Group();
@@ -247,10 +255,11 @@ export class Interior {
   }
 
   update(dt, keys, active) {
+    const crouchDrop=updateCrouch(this,dt,active&&crouchHeld(keys));
     this.vel ??= { x: 0, z: 0 }; this.step ??= 0;
     let wx = 0, wz = 0;
     if (active) {
-      const speed = keys.ShiftLeft || keys.ShiftRight ? 4 : 2.6;
+      const speed = footSpeed(keys,2.6,4);
       const f = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
       const s = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
       const dx = Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = Math.cos(this.yaw) * f + Math.sin(this.yaw) * s;
@@ -270,7 +279,7 @@ export class Interior {
       const tx = this.pos.x - this.table.x, tz = this.pos.z - this.table.z, tr = Math.hypot(tx, tz);   // walk around the table
       if (tr < 1.3 && tr > 0.001) { this.pos.x = this.table.x + tx / tr * 1.3; this.pos.z = this.table.z + tz / tr * 1.3; }
     }
-    const eye = new THREE.Vector3(this.pos.x, 1.65 + (this.bob || 0), this.pos.z);
+    const eye = new THREE.Vector3(this.pos.x, 1.65 - crouchDrop + (this.bob || 0), this.pos.z);
     this.camera.position.copy(eye);
     this.camera.lookAt(eye.x + Math.sin(this.yaw) * Math.cos(this.pitch), eye.y + Math.sin(this.pitch), eye.z + Math.cos(this.yaw) * Math.cos(this.pitch));
   }

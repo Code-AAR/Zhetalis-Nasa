@@ -1,0 +1,68 @@
+{
+ "clips": [
+  {
+   "name": "briefing_mission",
+   "start": 0.0,
+   "end": 39.944
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 3.33,
+   "text": "Your mission: fly to Mars and build an outpost"
+  },
+  {
+   "t0": 3.33,
+   "t1": 6.67,
+   "text": "Earth and Mars both circle the Sun; Mars is slower",
+   "phase": "Orbits to scale"
+  },
+  {
+   "t0": 6.67,
+   "t1": 10.54,
+   "text": "First the ship circles Earth in a parking orbit",
+   "phase": "Parking orbit"
+  },
+  {
+   "t0": 10.54,
+   "t1": 13.33,
+   "text": "Trans-Mars injection: one big burn to escape Earth",
+   "phase": "TMI burn"
+  },
+  {
+   "t0": 13.33,
+   "t1": 18.33,
+   "text": "It leaves when Mars is about 44 degrees ahead",
+   "phase": "Hohmann transfer"
+  },
+  {
+   "t0": 18.33,
+   "t1": 25.54,
+   "text": "Engine off: half an orbit around the Sun...",
+   "phase": "Hohmann transfer"
+  },
+  {
+   "t0": 25.54,
+   "t1": 30.0,
+   "text": "...meeting Mars about 259 days (8.5 months) later",
+   "phase": "Hohmann transfer"
+  },
+  {
+   "t0": 30.0,
+   "t1": 33.33,
+   "text": "A braking burn lets Mars capture the ship in orbit",
+   "phase": "Orbit insertion"
+  },
+  {
+   "t0": 33.33,
+   "t1": 36.38,
+   "text": "Launch windows to Mars come every 26 months"
+  },
+  {
+   "t0": 36.38,
+   "t1": 40.0,
+   "text": "Build a working outpost before the next ships arrive"
+  }
+ ]
+}

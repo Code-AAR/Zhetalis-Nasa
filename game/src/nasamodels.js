@@ -1,9 +1,12 @@
+import { loadAssetWithRetry } from './asset-loading.js';
 // Official NASA 3D models (NASA 3D Resources, free and without copyright):
 // https://github.com/nasa/NASA-3D-Resources
 //   assets/sls.glb              - SLS Block 1, from NASA's 3D-printing model, split into stages by scripts/build-sls-model.py
 //   assets/mobile-launcher.glb  - the Mobile Launcher tower SLS launches from (Kennedy Space Center)
 //   assets/mro.glb              - Mars Reconnaissance Orbiter, a real relay orbiter for Mars rovers
 //   assets/ingenuity.glb        - Ingenuity, the Mars helicopter
+//   assets/perseverance-animated.glb - Mars 2020 Perseverance rover with 23 animation clips (arm, turret, mast
+//                                 camera, covers); the salvage rover on laptops/tablets. Phones keep perseverance.glb
 //   assets/pistol-grip-tool.glb - Pistol Grip Tool, the ISS spacewalk power tool (on the outpost workbench)
 //   assets/wrench.glb           - Wrench (on the outpost workbench)
 //   assets/nasa-astronaut.glb   - NASA's "Astronaut" model: the player (logo painted over, cut into joints in suit.js)
@@ -16,9 +19,19 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const draco = new DRACOLoader();
+// Leave CPU capacity for rendering; worker count does not change model quality.
+draco.setWorkerLimit(2);
 draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
 export const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
+// Separate decoder workers as well as admission slots: an optional Draco task
+// must not monopolize the decoder used for walkable gameplay geometry.
+const criticalDraco = new DRACOLoader();
+criticalDraco.setWorkerLimit(2);
+criticalDraco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const criticalLoader = new GLTFLoader();
+criticalLoader.setDRACOLoader(criticalDraco);
+const gameplayModels = new Set(['greenhouse-walkway.glb']);
 
 // Space Apps rules: no NASA logo in the game. Some NASA models have it printed on their texture, so we paint
 // our Zhetalis badge over it. spots: [{ x, y, r }] as fractions of the texture (0..1); `plain` spots are just
@@ -41,9 +54,21 @@ export async function replaceLogos(tex, spots) {
   return t;
 }
 
-const cache = {};
+// Cache parsed models, not raw buffers as well. Callers clone shared scenes.
+const cache = new Map();
 // Resolves to the loaded glTF, or null if it couldn't load (the game then keeps its simple shapes).
-export function loadModel(file) {
-  cache[file] ??= loader.loadAsync('assets/' + file).catch(err => { console.warn('NASA model failed to load:', file, err); return null; });
-  return cache[file];
+export function loadModel(file, { required = false } = {}) {
+  if (!cache.has(file)) {
+    // Known gameplay assets reserve capacity even when prefetched as optional.
+    const critical = required || gameplayModels.has(file);
+    const pending = loadAssetWithRetry(critical ? criticalLoader : loader, 'assets/' + file, { critical }).catch(error => {
+      cache.delete(file); // A failed download must not poison later attempts.
+      throw error;
+    });
+    cache.set(file, pending);
+  }
+  const pending = cache.get(file);
+  return required ? pending : pending.catch(error => {
+    console.warn('NASA model failed to load:', file, error); return null;
+  });
 }

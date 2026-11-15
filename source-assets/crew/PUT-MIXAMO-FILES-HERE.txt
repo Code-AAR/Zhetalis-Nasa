@@ -1,0 +1,15 @@
+Put the Mixamo downloads in this folder with exactly these names:
+
+CHARACTERS (download each with: Format FBX Binary (.fbx), Pose T-pose, "With Skin")
+  amara.fbx    - a woman, casual clothes (the commander)
+  meilin.fbx   - a woman, casual clothes (the geologist)
+  mateo.fbx    - a man, casual clothes (the engineer)
+
+ANIMATIONS (download each with: Format FBX Binary (.fbx), Skin "Without Skin", 30 fps, Keyframe Reduction none)
+  idle.fbx     - search "Standing Idle" (or any calm idle)
+  sit.fbx      - search "Sitting Idle"
+  eat.fbx      - search "Sitting Talking" (or "Eating" if it is there)
+  work.fbx     - search "Typing" or "Button Pushing"
+  drink.fbx    - search "Drinking"
+  run.fbx      - search "Running" and TICK "In Place"
+  sleep.fbx    - search "Sleeping Idle" (lying down)

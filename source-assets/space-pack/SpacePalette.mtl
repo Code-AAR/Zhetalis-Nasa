@@ -1,0 +1,237 @@
+# Texture-free palette shared by the entire pack
+newmtl Ceramic
+Kd 0.90980 0.90980 0.87059
+Ka 0.1 0.1 0.1
+Ks 0.150 0.150 0.150
+Ns 35.00
+illum 2
+
+newmtl Silver
+Kd 0.64706 0.72157 0.76863
+Ka 0.1 0.1 0.1
+Ks 0.700 0.700 0.700
+Ns 45.00
+illum 2
+
+newmtl Graphite
+Kd 0.12549 0.16471 0.21961
+Ka 0.1 0.1 0.1
+Ks 0.350 0.350 0.350
+Ns 30.00
+illum 2
+
+newmtl Gold
+Kd 0.83529 0.65098 0.34118
+Ka 0.1 0.1 0.1
+Ks 0.750 0.750 0.750
+Ns 50.00
+illum 2
+
+newmtl Visor
+Kd 0.89020 0.72157 0.41961
+Ka 0.1 0.1 0.1
+Ks 0.850 0.850 0.850
+Ns 80.00
+illum 2
+
+newmtl SolarBlue
+Kd 0.10196 0.23529 0.45490
+Ka 0.1 0.1 0.1
+Ks 0.450 0.450 0.450
+Ns 60.00
+illum 2
+
+newmtl SolarLine
+Kd 0.36863 0.58824 0.77255
+Ka 0.1 0.1 0.1
+Ks 0.550 0.550 0.550
+Ns 60.00
+illum 2
+
+newmtl Red
+Kd 0.74510 0.29804 0.21961
+Ka 0.1 0.1 0.1
+Ks 0.100 0.100 0.100
+Ns 30.00
+illum 2
+
+newmtl Orange
+Kd 0.79608 0.40000 0.21176
+Ka 0.1 0.1 0.1
+Ks 0.150 0.150 0.150
+Ns 30.00
+illum 2
+
+newmtl Cyan
+Kd 0.40784 0.86275 0.89804
+Ka 0.1 0.1 0.1
+Ks 0.100 0.100 0.100
+Ns 60.00
+illum 2
+
+newmtl Engine
+Kd 0.41176 0.74118 0.91373
+Ka 0.1 0.1 0.1
+Ks 0.150 0.150 0.150
+Ns 50.00
+illum 2
+
+newmtl MoonGrey
+Kd 0.60784 0.62353 0.62353
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl Crater
+Kd 0.45098 0.47843 0.50196
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl MercuryRock
+Kd 0.55686 0.53725 0.50588
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl VenusCloud
+Kd 0.80784 0.67451 0.43922
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl Ocean
+Kd 0.14118 0.38431 0.60000
+Ka 0.1 0.1 0.1
+Ks 0.050 0.050 0.050
+Ns 45.00
+illum 2
+
+newmtl Land
+Kd 0.40000 0.55294 0.42353
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 15.00
+illum 2
+
+newmtl Desert
+Kd 0.65882 0.65490 0.48235
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl Ice
+Kd 0.87843 0.95294 0.92941
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 30.00
+illum 2
+
+newmtl Cloud
+Kd 0.72941 0.85098 0.86275
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl MarsDust
+Kd 0.69412 0.36471 0.26667
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl MarsDark
+Kd 0.52941 0.29020 0.24706
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl JupiterCream
+Kd 0.83529 0.72941 0.57255
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl JupiterBand
+Kd 0.68235 0.52157 0.41176
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl JupiterLight
+Kd 0.93333 0.87843 0.74118
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl JupiterStorm
+Kd 0.69412 0.39608 0.29804
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl SaturnGold
+Kd 0.76471 0.70196 0.52941
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 20.00
+illum 2
+
+newmtl RingLight
+Kd 0.77255 0.74118 0.63137
+Ka 0.1 0.1 0.1
+Ks 0.050 0.050 0.050
+Ns 20.00
+illum 2
+
+newmtl RingDark
+Kd 0.50980 0.48627 0.43922
+Ka 0.1 0.1 0.1
+Ks 0.050 0.050 0.050
+Ns 20.00
+illum 2
+
+newmtl UranusIce
+Kd 0.51373 0.75294 0.77647
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 30.00
+illum 2
+
+newmtl NeptuneBlue
+Kd 0.25882 0.42745 0.67059
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 30.00
+illum 2
+
+newmtl SunGold
+Kd 0.95294 0.72549 0.31373
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl SunLight
+Kd 1.00000 0.83922 0.47843
+Ka 0.1 0.1 0.1
+Ks 0.000 0.000 0.000
+Ns 10.00
+illum 2
+
+newmtl BeaconGreen
+Kd 0.4902 1.0 0.6980
+Ks 0 0 0
+Ns 40
+illum 2

@@ -1,0 +1,76 @@
+{
+ "clips": [
+  {
+   "name": "outpost_26_months",
+   "start": 0.0,
+   "end": 42.611
+  }
+ ],
+ "captions": [
+  {
+   "t0": 1.33,
+   "t1": 2.83,
+   "text": "Sol 1: just the two landing pods"
+  },
+  {
+   "t0": 2.83,
+   "t1": 4.33,
+   "text": "Month 1: the rover rolls off the cargo pod"
+  },
+  {
+   "t0": 4.33,
+   "t1": 5.83,
+   "text": "Month 2: solar trackers go up"
+  },
+  {
+   "t0": 5.83,
+   "t1": 7.96,
+   "text": "Month 3: reactors for power day, night and in storms"
+  },
+  {
+   "t0": 7.96,
+   "t1": 10.62,
+   "text": "Month 5: the first big habitat"
+  },
+  {
+   "t0": 10.62,
+   "t1": 12.71,
+   "text": "Month 7: making oxygen and fuel from air and ice"
+  },
+  {
+   "t0": 12.71,
+   "t1": 17.83,
+   "text": "Month 8: a greenhouse, linked by a sealed walkway"
+  },
+  {
+   "t0": 17.83,
+   "t1": 21.54,
+   "text": "Month 12: a second habitat, linked in month 13"
+  },
+  {
+   "t0": 21.54,
+   "t1": 23.83,
+   "text": "Month 14: soil walls block some radiation"
+  },
+  {
+   "t0": 23.83,
+   "t1": 26.83,
+   "text": "Month 16: a big dish to talk to Earth"
+  },
+  {
+   "t0": 26.83,
+   "t1": 31.33,
+   "text": "Month 18: more solar power"
+  },
+  {
+   "t0": 31.33,
+   "t1": 37.33,
+   "text": "Month 21: the ascent vehicle's tanks keep filling"
+  },
+  {
+   "t0": 37.33,
+   "t1": 42.67,
+   "text": "Month 26: the next launch window opens on Earth"
+  }
+ ]
+}

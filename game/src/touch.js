@@ -14,11 +14,12 @@ export function initTouch({ keys, look, press }) {
   root.innerHTML = `
     <div class="t-stick" id="t-stick"><i></i></div>
     <div class="t-buttons">
-      <button id="t-use" class="t-big">✋<span>Use</span></button>
+      <button id="t-use" class="t-big" aria-label="Action">✋<span>Action</span></button>
       <button id="t-jump">⤒<span>Jump</span></button>
       <button id="t-view">👁<span>View</span></button>
       <button id="t-power">⚡<span>Power</span></button>
       <button id="t-log">📒<span>Log</span></button>
+      <button id="t-eat" class="hidden">🍽<span>Eat</span></button>
     </div>`;
   document.querySelector('#hud').appendChild(root);
   const stick = root.querySelector('#t-stick'), knob = stick.querySelector('i');
@@ -50,7 +51,8 @@ export function initTouch({ keys, look, press }) {
     if (stickId === null && e.clientX < innerWidth * 0.45) {
       stickId = e.pointerId; sx = e.clientX; sy = e.clientY;
       stick.classList.add('active');
-      stick.style.left = sx + 'px'; stick.style.top = sy + 'px';
+      const radius=stick.offsetWidth/2,buttonsLeft=root.querySelector('.t-buttons').getBoundingClientRect().left;
+      stick.style.left = Math.max(radius+8,Math.min(sx,buttonsLeft-radius-8))+'px';stick.style.top=Math.max(radius+8,Math.min(sy,innerHeight-radius-8))+'px';
     } else if (lookId === null) { lookId = e.pointerId; lx = e.clientX; ly = e.clientY; }
     else return;
     try { view.setPointerCapture(e.pointerId); } catch { /* fine without it */ }
@@ -67,14 +69,18 @@ export function initTouch({ keys, look, press }) {
     }
   });
   const up = e => { if (e.pointerId === stickId) releaseStick(); if (e.pointerId === lookId) lookId = null; };
-  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);view.addEventListener('lostpointercapture',up);
+  const resetTouches=()=>{const ids=[stickId,lookId];releaseStick();lookId=null;const k=keys();if(k)k.Space=false;root.querySelectorAll('.down').forEach(b=>b.classList.remove('down'));for(const id of ids)if(id!==null&&view.hasPointerCapture(id))view.releasePointerCapture(id);};
+  addEventListener('blur',resetTouches);addEventListener('resize',resetTouches);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouches();});
 
   // ---- buttons: Jump is held like the space bar, the rest are one tap = one key press ----
   const btn = (id, down, upFn) => {
     const b = root.querySelector(id);
-    b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('down'); down(); });
+    b.addEventListener('pointerdown', e => { e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch{} b.classList.add('down'); down(); });
     const lift = () => { b.classList.remove('down'); upFn?.(); };
     b.addEventListener('pointerup', lift); b.addEventListener('pointercancel', lift); b.addEventListener('pointerleave', lift);
+    b.addEventListener('lostpointercapture',lift);
+    b.addEventListener('click',e=>{if(e.detail===0){down();upFn?.();}});
     b.addEventListener('contextmenu', e => e.preventDefault());
   };
   btn('#t-use', () => press('KeyE'));
@@ -82,18 +88,24 @@ export function initTouch({ keys, look, press }) {
   btn('#t-view', () => press('KeyV'));
   btn('#t-power', () => press('KeyP'));
   btn('#t-log', () => press('KeyL'));
+  btn('#t-eat', () => { const k = keys(); if (k) k.KeyF = true; }, () => { const k = keys(); if (k) k.KeyF = false; });   // hold to eat, like holding F
 
   let shown = false;
   return {
-    // main.js calls this every frame: hide the controls while a pop-up is open, light up Use when something is near
-    sync({ active, canUse, inside }) {
+    // main.js calls this every frame: hide the controls while a pop-up is open, light up the action button when
+    // something is near and name what it will do (Sleep, Open, Mine...), so the button reads like the hint
+    sync({ active, canUse, inside, canEat, useLabel }) {
+      if (on && !document.body.classList.contains('touch')) document.body.classList.add('touch');   // the thumb layout (tool belt above the stick) must match the controls on screen
       const show = on && active;
       if (show !== shown) {
         shown = show; root.classList.toggle('hidden', !show);
         if (!show) { releaseStick(); lookId = null; const k = keys(); if (k) k.Space = false; }   // don't keep walking behind a pop-up
       }
-      root.querySelector('#t-use').classList.toggle('ready', !!canUse);
+      const use = root.querySelector('#t-use'), label = (canUse && useLabel) || 'Action';
+      use.classList.toggle('ready', !!canUse);
+      if (use.lastChild.textContent !== label) { use.lastChild.textContent = label; use.setAttribute('aria-label', label); use.classList.toggle('long', label.length > 6); }
       root.querySelector('#t-view').classList.toggle('hidden', !!inside);
+      root.querySelector('#t-eat').classList.toggle('hidden', !canEat);
     },
   };
 }

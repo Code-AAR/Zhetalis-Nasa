@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {extractWater,purifyWater} from '../game/src/water-processing.js';
+import {firstMealObjective} from '../game/src/mars-objectives.js';
+const s={ice:10,tank:2,store:{gypsum:1},farmQuest:{}};
+assert.equal(extractWater(s),9);assert.equal(s.tank,2);assert.equal(s.farmQuest.waterMade,undefined);
+assert.equal(firstMealObjective({sol:0},s).target,'water');
+const restored=JSON.parse(JSON.stringify(s));assert.equal(purifyWater(restored),9);assert.equal(restored.tank,11);assert.equal(restored.farmQuest.waterChecked,true);
+assert.equal(purifyWater(restored),0);assert.equal(restored.tank,11);
+assert.equal(extractWater(restored,'gypsum'),3);assert.equal(restored.tank,11);assert.equal(extractWater(restored,'gypsum'),0);
+assert.equal(purifyWater(restored),3);assert.equal(restored.tank,14);
+console.log('Water extraction, separate treatment, objective routing, save and duplicate actions passed.');

@@ -1,0 +1,11 @@
+{
+ "mode": "unavailable",
+ "retrieved": null,
+ "attempted": "2026-11-08",
+ "source": {
+  "name": "NASA DONKI - Solar Energetic Particle (SEP) events (CCMC, NASA GSFC)",
+  "url": "https://kauai.ccmc.gsfc.nasa.gov/DONKI/"
+ },
+ "note": "DONKI could not be reached when this snapshot was attempted. The game runs practice drills and does not claim real events. Re-run tools/fetch-moon-data.mjs weather to fill this in.",
+ "events": []
+}

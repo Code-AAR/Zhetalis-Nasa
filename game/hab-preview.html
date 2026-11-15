@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hab and greenhouse preview</title>
+<style>
+  html,body{margin:0;height:100%;background:#111;color:#eee;font:14px system-ui;overflow:hidden}
+  #bar{position:fixed;left:8px;top:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:2;max-width:70vw}
+  #bar button{background:#1d2a33;color:#ecf2e7;border:1px solid #3b4d58;border-radius:6px;padding:6px 10px;cursor:pointer}
+  #help{position:fixed;left:8px;bottom:8px;opacity:.75;z-index:2}
+  canvas{display:block}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="bar"></div>
+<div id="help">WASD to walk · drag to look · buttons jump between rooms. Preview only, no game logic.</div>
+<script type="module">
+import * as THREE from 'three';
+import { CrewInterior } from './src/crew-interior.js';
+import { Greenhouse } from './src/greenhouse.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const hab = new CrewInterior();
+const gh = new Greenhouse();
+const demoBeds = [
+  { crop: 'lettuce', grown: .8, tank: 8, ready: false },
+  { crop: 'wheat', grown: .7, tank: 5, ready: false },
+  { crop: 'potato', grown: 1, tank: 3, ready: true },
+  { crop: null, grown: 0, tank: 0, ready: false },
+];
+gh.draw(demoBeds, 10, true);
+// like the game: the hab sits inside the greenhouse scene, offset so Life support meets the tunnel
+hab.scene.position.set(-20.4, 0, 23); gh.scene.add(hab.scene);
+const habCam = hab.camera.clone();
+let room = hab;
+const keys = {};
+addEventListener('keydown', e => keys[e.code] = true);
+addEventListener('keyup', e => keys[e.code] = false);
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', e => drag = [e.clientX, e.clientY]);
+addEventListener('pointerup', () => drag = null);
+addEventListener('pointermove', e => { if (!drag) return; room.yaw -= (e.clientX - drag[0]) * .005; room.pitch = Math.max(-1.3, Math.min(1.3, room.pitch - (e.clientY - drag[1]) * .005)); drag = [e.clientX, e.clientY]; });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); habCam.aspect = hab.camera.aspect = gh.camera.aspect = innerWidth / innerHeight; hab.camera.updateProjectionMatrix(); gh.camera.updateProjectionMatrix(); });
+
+// jump points: [room, x, z, yaw, pitch]
+const spots = {
+  'Airlock & power': ['hab', 0, 1.2, 0, 0],
+  'Stowage': ['hab', 10.2, 0, Math.PI, 0],
+  'Life support': ['hab', 20.4, 0, Math.PI, 0],
+  'Crew quarters': ['hab', 30.6, -.5, 0, 0],
+  'Wardroom': ['hab', 40.8, 1.6, Math.PI, .15],
+  'Wardroom ceiling': ['hab', 40.8, 1.0, Math.PI, .9],
+  'Science & fitness': ['hab', 51, 0, 0, 0],
+  'Tunnel 3-4': ['hab', 35.7, 0, Math.PI / 2, 0],
+  'Hab to greenhouse': ['hab', 20.4, 1.5, Math.PI, 0],
+  'Greenhouse door': ['gh', 0, 5.2, Math.PI, 0],
+  'Greenhouse beds': ['gh', -2.4, 4, Math.PI, -.25],
+  'Greenhouse back': ['gh', 0, -5, 0, 0],
+};
+window.view = (name, x, z, yaw, pitch = 0) => {
+  room = name === 'gh' ? gh : hab;
+  room.pos.set(x, 0, z); room.yaw = yaw; room.pitch = pitch;
+};
+const bar = document.getElementById('bar');
+for (const [label, s] of Object.entries(spots)) { const b = document.createElement('button'); b.textContent = label; b.onclick = () => view(...s); bar.appendChild(b); }
+window.preview = { hab, gh, renderer, get room() { return room; } };
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(.05, clock.getDelta());
+  room.update(dt, keys, true);
+  if (room === hab) { habCam.copy(hab.camera); habCam.position.add(hab.scene.position); habCam.updateMatrixWorld(); renderer.render(gh.scene, habCam); }
+  else renderer.render(gh.scene, gh.camera);
+});
+</script>
+</body>
+</html>

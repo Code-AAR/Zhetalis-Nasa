@@ -1,0 +1,46 @@
+{
+ "clips": [
+  {
+   "name": "entry",
+   "start": 0.0,
+   "end": 11.111
+  },
+  {
+   "name": "descent_landing",
+   "start": 11.111,
+   "end": 34.611
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 6.12,
+   "text": "Entry at 20,000 km/h - the heat shield tops 1,300 °C"
+  },
+  {
+   "t0": 6.12,
+   "t1": 11.12,
+   "text": "Thin air still takes away most of the speed"
+  },
+  {
+   "t0": 11.12,
+   "t1": 18.33,
+   "text": "Too heavy for parachutes: rockets fire while supersonic"
+  },
+  {
+   "t0": 18.33,
+   "t1": 23.88,
+   "text": "Top of the air to the ground: about 7 minutes"
+  },
+  {
+   "t0": 23.88,
+   "t1": 30.0,
+   "text": "Landing legs out"
+  },
+  {
+   "t0": 30.0,
+   "t1": 34.67,
+   "text": "Touchdown! The engine blast throws up dust"
+  }
+ ]
+}

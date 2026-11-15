@@ -1,0 +1,21 @@
+{
+ "clips": [
+  {
+   "name": "cruise_loop",
+   "start": 0.0,
+   "end": 16.0
+  }
+ ],
+ "captions": [
+  {
+   "t0": 0.0,
+   "t1": 8.0,
+   "text": "About 8 months to Mars, coasting most of the way"
+  },
+  {
+   "t0": 8.0,
+   "t1": 16.0,
+   "text": "Blue glow: ion engines pushing gently, day after day"
+  }
+ ]
+}

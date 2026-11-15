@@ -1,0 +1,31 @@
+#zhetela-message{position:fixed;left:18px;bottom:110px;z-index:80;display:flex;align-items:center;gap:10px;width:min(420px,calc(100vw - 36px));padding:10px;background:#192328f2;border:1px solid #8ba6a0;border-radius:14px;color:#f4f1e8;font:14px/1.45 system-ui;box-sizing:border-box}#zhetela-message[hidden]{display:none}#zhetela-message canvas{width:68px;height:68px;border-radius:10px;flex:none}#zhetela-message p{margin:4px 0}#zhetela-message b{font-size:12px;color:#a6dfd3}#zhetela-message button{align-self:flex-start;min-width:44px;min-height:44px;padding:3px}.zhetela-speaker{display:flex;align-items:center;gap:10px;margin:8px 0}.zhetela-speaker span{width:48px;height:48px;border-radius:50%;background:url('assets/zhetela-sprites.png') 100% 0/300% 200%}.mission-progress{font-size:12px;color:#b4dfd0;display:block;margin-top:5px}@media(max-width:600px){#zhetela-message{left:10px;bottom:190px;width:min(350px,calc(100vw - 20px));font-size:12px}#zhetela-message canvas{width:48px;height:48px}}body:has(#modal:not(.hidden)) #zhetela-message{display:none}
+
+.zhetela-speaker span{position:relative;overflow:hidden}.zhetela-speaker i{position:absolute;inset:0;background:url("assets/zhetela-sprites.png") 0 0/300% 200%;animation:zhetela-reply 1.3s steps(1,end) infinite}@keyframes zhetela-reply{0%,100%{opacity:0}50%{opacity:1}}@media(prefers-reduced-motion:reduce){.zhetela-speaker i{animation:none;opacity:0}}
+
+#construction-drop{position:fixed;bottom:130px;right:18px;z-index:75;min-height:44px}.construction-active #mission-objective p,.construction-active #mission-objective .mission-progress{display:none}body:has(#zhetela-message:not([hidden])) #delivery-status,body:has(#zhetela-message:not([hidden])) #delivery-dismiss,body:has(#zhetela-message:not([hidden])) #toast{visibility:hidden}@media(max-width:600px){#construction-drop{bottom:150px;right:10px;font-size:12px}}
+
+/* Keep the next step beneath its title, including narrow phone screens. */
+#mission-objective summary{display:block}#mission-objective summary .mission-next-step{display:block;width:100%}
+
+.builder-recipe{padding:14px 0;border-bottom:1px solid #77634e}.builder-recipe h4{margin:0 0 6px}.builder-actions{display:flex;flex-wrap:wrap;gap:8px}.builder-actions button{min-height:44px;flex:1 1 160px}
+
+#construction-place-battery{position:fixed;right:18px;bottom:190px;z-index:75;min-height:48px;padding:12px 18px;font-weight:600}#construction-place-battery[hidden]{display:none}@media(max-width:600px){#construction-place-battery{right:10px;bottom:245px;max-width:calc(100vw - 20px)}}
+
+#zhetela-message [data-read-voice]{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:5px 9px;font-size:12px;margin-top:4px}#zhetela-message [data-read-voice] svg{flex:none}
+
+#zhetela-message > div { min-width: 0; padding-right: 46px; }
+#zhetela-message .zhetela-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+#zhetela-message [data-guide-action] {
+  margin: 4px 0 0 4px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #zhetela-message { bottom: 110px; max-width: calc(100vw - 130px); }
+}

@@ -49,9 +49,13 @@ export async function loadSpaceWeather() {
   out.sources.push({ name: 'NOAA Space Weather Prediction Center (GOES satellites)', url: 'https://www.swpc.noaa.gov/',
     note: out.mode === 'live' ? 'Live - loaded when you started the game' : 'Archived snapshot from ' + (out.fetched || 'unknown date').slice(0, 10) });
   try {
-    out.donki = await getJSON('data/donki.json', 4000);
-    out.sources.push({ name: 'NASA DONKI space weather database', url: 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/',
-      note: `Archived real events, ${out.donki.range[0]} to ${out.donki.range[1]}` });
+    const archive = await getJSON('data/donki.json', 4000);
+    if (archive.mode === 'unavailable') {
+      out.sources.push({ name: 'NASA DONKI space weather database', url: 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/', note: 'NASA archive unavailable; Mars uses the separately labelled NOAA feed or snapshot.' });
+    } else if (Array.isArray(archive.range)) {
+      out.donki = archive;
+      out.sources.push({ name: 'NASA DONKI space weather database', url: 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/', note: `Archived real events, ${archive.range[0]} to ${archive.range[1]}` });
+    }
   } catch { /* DONKI snapshot not available yet */ }
   return out;
 }

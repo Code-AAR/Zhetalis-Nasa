@@ -7,6 +7,18 @@ export function createRockContact(rocks) {
   const direction = new THREE.Vector3();
   const down = new THREE.Vector3(0, -1, 0);
   const hits = [];
+  const instanceMatrix = new THREE.Matrix4(), worldMatrix = new THREE.Matrix4();
+  const normalMatrix = new THREE.Matrix3(), normal = new THREE.Vector3();
+  const climbableY = Math.cos(55 * Math.PI / 180);
+  function normalY(hit) {
+    worldMatrix.copy(rocks.matrixWorld);
+    if (rocks.isInstancedMesh && hit.instanceId !== undefined) {
+      rocks.getMatrixAt(hit.instanceId, instanceMatrix);
+      worldMatrix.multiply(instanceMatrix);
+    }
+    normalMatrix.getNormalMatrix(worldMatrix);
+    return normal.copy(hit.face.normal).applyNormalMatrix(normalMatrix).y;
+  }
   rocks.updateMatrixWorld(true);
 
   function cast() {
@@ -16,13 +28,20 @@ export function createRockContact(rocks) {
   }
 
   return {
+    surface(x, z, ground) {
+      origin.set(x, 1000, z); ray.set(origin, down); ray.far = Infinity;
+      const hit = cast();
+      return hit && hit.point.y > ground
+        ? {height:hit.point.y, normalY:normalY(hit), obstacleHeight:hit.point.y-ground}
+        : {height:ground, normalY:1};
+    },
     height(x, z, ceiling) {
       origin.set(x, ceiling, z);
       ray.set(origin, down);
       ray.far = Infinity;
       return cast()?.point.y ?? -Infinity;
     },
-    block(position, previous) {
+    block(position, previous, grounded = false) {
       direction.set(position.x - previous.x, 0, position.z - previous.z);
       const distance = direction.length();
       if (distance < 0.000001) return;
@@ -33,8 +52,14 @@ export function createRockContact(rocks) {
         origin.set(previous.x, Math.max(previous.y, position.y) + height, previous.z);
         ray.set(origin, direction);
         ray.far = distance + radius;
-        const hit = cast();
-        if (hit) allowed = Math.min(allowed, Math.max(0, hit.distance - radius));
+        cast();
+        // A grounded astronaut follows the upward-facing slope using height().
+        // Keep checking later hits so a climbable face cannot hide a wall behind it.
+        for (const hit of hits) {
+          if (grounded && normalY(hit) >= climbableY) continue;
+          allowed = Math.min(allowed, Math.max(0, hit.distance - radius));
+          break;
+        }
       }
       position.x = previous.x + direction.x * allowed;
       position.z = previous.z + direction.z * allowed;

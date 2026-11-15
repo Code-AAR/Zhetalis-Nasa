@@ -1,0 +1,728 @@
+{
+  "results": [
+    {
+      "test": "Playable surface",
+      "modules": 6,
+      "door": [
+        -9.992215952746243,
+        0,
+        2.5110513807219026
+      ],
+      "terrainReady": true,
+      "colonies": true
+    },
+    {
+      "test": "Connected habitat interior",
+      "inside": true,
+      "stations": [
+        "exit",
+        "console",
+        "workbench",
+        "greenhouse",
+        "shelter",
+        "window",
+        "monitor",
+        "locker"
+      ],
+      "airlock": "console"
+    },
+    {
+      "test": "Walk through all connectors",
+      "pass": true,
+      "reachable": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "test": "Power station",
+      "pass": true
+    },
+    {
+      "test": "Return through exterior airlock",
+      "inside": false,
+      "distance": 1.4999999999999996
+    },
+    {
+      "test": "Survey meteorite",
+      "pass": true,
+      "science": 8
+    },
+    {
+      "test": "Survey relay",
+      "pass": true,
+      "science": 16
+    },
+    {
+      "test": "Survey ice",
+      "pass": true,
+      "science": 24
+    },
+    {
+      "test": "Surface map",
+      "pass": true
+    },
+    {
+      "test": "Rover entry",
+      "pass": true
+    },
+    {
+      "test": "Independent save",
+      "pass": true,
+      "savedSurveys": [
+        "meteorite",
+        "relay",
+        "ice"
+      ]
+    },
+    {
+      "test": "Resume new world",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "habitatRevision3": {
+    "date": "2026-11-06",
+    "passed": [
+      "Triple-size modules; ~8.9 m diameter",
+      "Static crew removed; stairs retained",
+      "All five interior connectors",
+      "Plant and water objectives",
+      "Growth stops without life-support power",
+      "Harvest adds 8 food and 12 quest science",
+      "Greenhouse quest save/resume",
+      "Habitat, ship, rover and panel interaction targets",
+      "Greenhouse hatch return",
+      "Grow lights turn off without power",
+      "Phone viewport inspected"
+    ],
+    "runtimeErrors": [],
+    "movementMetresOver2Seconds": {
+      "30fps": 4.980930372777916,
+      "60fps": 4.961065093758254,
+      "120fps": 4.950682888296074
+    },
+    "limits": [
+      "No physical-device FPS benchmark",
+      "Full mission balance not retested"
+    ]
+  },
+  "referenceMenu": {
+    "source": "C:/NASA/Zhetalis-Nasa/game",
+    "passed": [
+      "Original menu code and styles reused",
+      "Globe selection and difficulty controls",
+      "Desktop, phone and landscape screenshots",
+      "Launch loads enlarged settlement",
+      "Greenhouse and map retained"
+    ],
+    "runtimeErrors": []
+  },
+  "orbitAndSpinRevision6": {
+    "spinDelta": [
+      0.08938500000000012,
+      0.08938500000000012
+    ],
+    "results": [
+      {
+        "width": 1440,
+        "min": 663.9577049443694,
+        "max": 1128.1200484613105,
+        "canvasLeft": 636.15625,
+        "canvasRight": 1367.984375,
+        "earthPixels": 254.27267663357193,
+        "expectedPixels": 254.33239436619724
+      },
+      {
+        "width": 390,
+        "min": 11.785910193049169,
+        "max": 246.6366250182184,
+        "canvasLeft": -26,
+        "canvasRight": 368,
+        "earthPixels": 128.65352112676058,
+        "expectedPixels": 128.65352112676058
+      },
+      {
+        "width": 844,
+        "min": 395.06450751848143,
+        "max": 668.7845622326194,
+        "canvasLeft": 358.9375,
+        "canvasRight": 810.234375,
+        "earthPixels": 149.9465261078667,
+        "expectedPixels": 149.8478873239437
+      }
+    ],
+    "runtimeErrors": []
+  },
+  "walkableAccessRevision7": {
+    "movement": {
+      "results": [
+        {
+          "climb": {
+            "index": 0,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              -29.97664785823873,
+              2.4,
+              4.0257351388864615
+            ],
+            "target": "door",
+            "targetIndex": 0
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        },
+        {
+          "climb": {
+            "index": 1,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              -19.893071333299915,
+              2.4,
+              4.0257357761242725
+            ],
+            "target": "door",
+            "targetIndex": 1
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        },
+        {
+          "climb": {
+            "index": 2,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              -9.83795509349397,
+              2.4,
+              4.025735805994793
+            ],
+            "target": "door",
+            "targetIndex": 2
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        },
+        {
+          "climb": {
+            "index": 3,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              0.056122250687454536,
+              2.4,
+              4.025735696469547
+            ],
+            "target": "door",
+            "targetIndex": 3
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        },
+        {
+          "climb": {
+            "index": 4,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              10.091576408386768,
+              2.4,
+              4.0257357761242725
+            ],
+            "target": "door",
+            "targetIndex": 4
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        },
+        {
+          "climb": {
+            "index": 5,
+            "maxY": 2.4,
+            "steps": 123,
+            "pos": [
+              20.134604217094875,
+              2.4,
+              4.025737687837698
+            ],
+            "target": "door",
+            "targetIndex": 5
+          },
+          "descend": {
+            "steps": 124,
+            "error": 0,
+            "y": 0
+          }
+        }
+      ],
+      "collision": true,
+      "errors": []
+    },
+    "resume": {
+      "saveEntry": 5,
+      "resumed": true,
+      "greenhouseRoute": true,
+      "raisedExit": true,
+      "errors": []
+    }
+  },
+  "liveInteriorAndBriefingRevision8": {
+    "checks": [
+      "Six journey chapters",
+      "Detailed journey chapter 0",
+      "Detailed journey chapter 1",
+      "Detailed journey chapter 2",
+      "Detailed journey chapter 3",
+      "Detailed journey chapter 4",
+      "Detailed journey chapter 5",
+      "Phone briefing avoids horizontal overflow",
+      "Five illustrated landing chapters",
+      "Detailed landing chapter 0",
+      "Detailed landing chapter 1",
+      "Detailed landing chapter 2",
+      "Detailed landing chapter 3",
+      "Detailed landing chapter 4",
+      "Greenhouse renders live outside world",
+      "Greenhouse exterior camera has positional parallax",
+      "Greenhouse uses actual nighttime world",
+      "Grow beds remain interactive",
+      "New greenhouse tunnel hatch returns to habitat",
+      "Upper gaps sealed and all five passageways walkable",
+      "Capsule has a live external camera and real window apertures",
+      "All three cabin windows have open sightlines through the shell",
+      "Cabin outside view follows player movement",
+      "Save identifies greenhouse",
+      "Live greenhouse view resumes correctly",
+      "No JavaScript runtime errors"
+    ],
+    "corridor": {
+      "bulkheads": 33,
+      "moves": [
+        11.027731759932427,
+        11.027731759932418,
+        11.027731759932433,
+        11.027731759932632,
+        11.027731759932593
+      ]
+    },
+    "errors": []
+  },
+  "phoneRevision9": {
+    "checks": [
+      "Title fits 320x568",
+      "Title fits 360x640",
+      "Title fits 390x844",
+      "Title fits 430x932",
+      "Title fits 640x360",
+      "Title fits 844x390",
+      "Touch buttons fit and meet 44px at 320x568",
+      "Canvas and camera resize 320x568",
+      "Touch buttons fit and meet 44px at 360x640",
+      "Canvas and camera resize 360x640",
+      "Touch buttons fit and meet 44px at 390x844",
+      "Canvas and camera resize 390x844",
+      "Touch buttons fit and meet 44px at 430x932",
+      "Canvas and camera resize 430x932",
+      "Touch buttons fit and meet 44px at 640x360",
+      "Canvas and camera resize 640x360",
+      "Touch buttons fit and meet 44px at 844x390",
+      "Canvas and camera resize 844x390",
+      "Move and look work simultaneously with two fingers",
+      "Touch release clears movement",
+      "Rotating the phone releases the joystick",
+      "Touch joystick climbs the airlock stairs",
+      "Touch Use enters the habitat",
+      "Power modal opens and suspends movement controls",
+      "Toast stays clear of modal text",
+      "Tall power panel scrolls by touch",
+      "Sticky close button dismisses a scrolled panel",
+      "HUD menu suspends touch movement",
+      "Toast stays clear of the HUD menu",
+      "Map and quest fit the phone panel",
+      "No JavaScript runtime errors"
+    ],
+    "layouts": [
+      {
+        "width": 320,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 360,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 390,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 430,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 640,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 844,
+        "overflow": 0,
+        "phone": true,
+        "touch": true
+      },
+      {
+        "width": 320,
+        "height": 568,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 250,
+            "y": 430,
+            "w": 58,
+            "h": 124
+          },
+          {
+            "s": "#t-jump",
+            "x": 184,
+            "y": 496,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-view",
+            "x": 118,
+            "y": 496,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-power",
+            "x": 118,
+            "y": 430,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-log",
+            "x": 184,
+            "y": 430,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#menu-btn",
+            "x": 228,
+            "y": 41,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 0.5633802816901409,
+        "dpr": 1.25,
+        "canvas": [
+          320,
+          568
+        ]
+      },
+      {
+        "width": 360,
+        "height": 640,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 290,
+            "y": 502,
+            "w": 58,
+            "h": 124
+          },
+          {
+            "s": "#t-jump",
+            "x": 224,
+            "y": 568,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-view",
+            "x": 158,
+            "y": 568,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-power",
+            "x": 158,
+            "y": 502,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-log",
+            "x": 224,
+            "y": 502,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#menu-btn",
+            "x": 268,
+            "y": 41,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 0.5625,
+        "dpr": 1.25,
+        "canvas": [
+          360,
+          640
+        ]
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 320,
+            "y": 706,
+            "w": 58,
+            "h": 124
+          },
+          {
+            "s": "#t-jump",
+            "x": 254,
+            "y": 772,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-view",
+            "x": 188,
+            "y": 772,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-power",
+            "x": 188,
+            "y": 706,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-log",
+            "x": 254,
+            "y": 706,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#menu-btn",
+            "x": 298,
+            "y": 41,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 0.46208530805687204,
+        "dpr": 1.25,
+        "canvas": [
+          390,
+          844
+        ]
+      },
+      {
+        "width": 430,
+        "height": 932,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 360,
+            "y": 794,
+            "w": 58,
+            "h": 124
+          },
+          {
+            "s": "#t-jump",
+            "x": 294,
+            "y": 860,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-view",
+            "x": 228,
+            "y": 860,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-power",
+            "x": 228,
+            "y": 794,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#t-log",
+            "x": 294,
+            "y": 794,
+            "w": 58,
+            "h": 58
+          },
+          {
+            "s": "#menu-btn",
+            "x": 338,
+            "y": 41,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 0.4613733905579399,
+        "dpr": 1.25,
+        "canvas": [
+          430,
+          932
+        ]
+      },
+      {
+        "width": 640,
+        "height": 360,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 576,
+            "y": 234,
+            "w": 52,
+            "h": 112
+          },
+          {
+            "s": "#t-jump",
+            "x": 516,
+            "y": 294,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-view",
+            "x": 456,
+            "y": 294,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-power",
+            "x": 456,
+            "y": 234,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-log",
+            "x": 516,
+            "y": 234,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#menu-btn",
+            "x": 548,
+            "y": 41,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 1.7777777777777777,
+        "dpr": 1.25,
+        "canvas": [
+          640,
+          360
+        ]
+      },
+      {
+        "width": 844,
+        "height": 390,
+        "buttons": [
+          {
+            "s": "#t-use",
+            "x": 780,
+            "y": 264,
+            "w": 52,
+            "h": 112
+          },
+          {
+            "s": "#t-jump",
+            "x": 720,
+            "y": 324,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-view",
+            "x": 660,
+            "y": 324,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-power",
+            "x": 660,
+            "y": 264,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#t-log",
+            "x": 720,
+            "y": 264,
+            "w": 52,
+            "h": 52
+          },
+          {
+            "s": "#menu-btn",
+            "x": 752,
+            "y": 77,
+            "w": 71,
+            "h": 44
+          }
+        ],
+        "aspect": 2.164102564102564,
+        "dpr": 1.25,
+        "canvas": [
+          844,
+          390
+        ]
+      }
+    ],
+    "errors": []
+  }
+}

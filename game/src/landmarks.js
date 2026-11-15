@@ -1,0 +1,199 @@
+import { SITES, VIEWPOINTS } from './site-data.js';
+import { craterProfile } from './measured-terrain.js';
+// Real Gusev crater landmarks, ENLARGED so you can see and walk to them. In reality they are tiny at this map scale:
+// the game squeezes 240 km into 960 m, so Columbia Hills (about 3 to 4 km from Spirit's landing site) would be under
+// 15 m away and Bonneville crater (210 m wide) would be under a metre across. They keep their real direction from the
+// landing site (east is +x, north is -z), but sit further out and are drawn bigger. Heights are illustrative,
+// not measured. The measured MOLA ground underneath is unchanged.
+export const LANDMARKS = [
+  { id: 'husband', name: 'Husband Hill', kind: 'hill', x: 180, z: 168, r: 70, h: 30,
+    tip: 'Husband Hill, in the Columbia Hills. Spirit climbed it in 2005. In real life it is about 3 km south-east of the landing site. Here it is enlarged.' },
+  { id: 'mccool', name: 'McCool Hill', kind: 'hill', x: 120, z: 248, r: 56, h: 20,
+    tip: 'McCool Hill, another of the Columbia Hills, named after astronaut William McCool. Enlarged for the game.' },
+  // realD / realDepth: NASA figures in metres. The game crater keeps the real depth-to-width ratio at its enlarged size.
+  // wear: 0 fresh to 1 very worn (low rim, sand-filled floor, faint rays).
+  { id: 'bonneville', name: 'Bonneville crater', kind: 'crater', x: 144, z: 21, r: 22, depth: 5.5, rim: 1.6, realD: 210, realDepth: 14, wear: .5,
+    tip: 'Bonneville crater. Spirit reached it in 2004. In real life it is 210 m wide, 14 m deep and a few hundred metres from the lander. Enlarged here.' },
+  { id: 'missoula', name: 'Missoula crater', kind: 'crater', x: 268, z: -30, r: 14, depth: 4.5, rim: 1.2, realD: 90, realDepth: 18, wear: .7,
+    tip: 'Missoula crater. Spirit reached it on sol 105. In real life it is about 90 m wide and 18 m deep. Enlarged here.' },
+  { id: 'lahontan', name: 'Lahontan crater', kind: 'crater', x: 380, z: 150, r: 9, depth: 3, rim: .8, realD: 55, realDepth: 9, wear: .6,
+    tip: 'Lahontan crater. In real life it is about 55 m across and 9 m deep. Enlarged here.' },
+  { id: 'tennessee', name: 'Tennessee Valley', kind: 'valley', x: 225, z: 122, r: 60, L: 62, W: 20, D: 8, ang: -.82,
+    tip: 'Tennessee Valley, on the north side of Husband Hill. Spirit looked down into it from the summit in 2005 but never drove in. Here you can walk down into it.' },
+  { id: 'troy', name: 'Troy', kind: 'crater', x: 215, z: 262, r: 5, depth: .9, rim: .25,
+    tip: 'Troy, beside a shallow crater about 8 m wide. In 2009 Spirit broke through its crust and got stuck in soft sand.' },
+  // The inner channel along the floor of Ma'adim Vallis, traced along the lowest line of the NASA height data. The valley
+  // itself is real MOLA ground; the channel is carved a little deeper so you can see it from the rim.
+  { id: 'maadim', name: "Ma'adim Vallis", kind: 'channel', x: 116, z: 352, r: 72, D: 3.2, W: 9,
+    path: [[40, 265], [56, 285], [70, 305], [84, 322], [94, 342], [100, 360], [120, 375], [145, 388], [162, 402], [176, 420], [192, 440]],
+    tip: "Ma'adim Vallis, a valley about 700 km long that runs into Gusev from the south. Water may once have flowed down it and filled the crater with a lake." },
+  { id: 'homeplate', name: 'Home Plate', kind: 'mesa', x: 282, z: 208, r: 26, h: 4,
+    tip: 'Home Plate, a flat plateau of layered rock about 90 m wide in real life. Its rim shows the layers. In the game it sits close to the hills.' },
+];
+
+// Home Plate's outline: roughly round, slightly oval, with bays and spurs where the rim has worn back.
+export function plateRadius(m, a) {
+  return m.r * (1 + .07 * Math.sin(2 * a + .6) + .05 * Math.sin(3 * a + 1.9) + .03 * Math.sin(7 * a + .4) + .018 * Math.sin(13 * a + 2.2) + .01 * Math.sin(23 * a + .7));
+}
+// Height across the rim, as a share of the plateau height: 1 on top, a steep drop to 0.42, then the apron down to 0.
+const CHANNEL = () => LANDMARKS.find(l => l.kind === 'channel');
+export function channelFloor(x, z) { const m = CHANNEL(); if (!m || Math.abs(x - m.x) > m.r * 1.6 || Math.abs(z - m.z) > m.r * 1.6) return 0; const u = channelDist(m, x, z) / m.W; return u < .5 ? 1 : u < 1.1 ? 1 - ease(.5, 1.1, u) : 0; }
+export function channelDist(m, x, z) {
+  let d = 1e9;
+  for (let i = 1; i < m.path.length; i++) {
+    const [ax, az] = m.path[i - 1], [bx, bz] = m.path[i], vx = bx - ax, vz = bz - az;
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)));
+    d = Math.min(d, Math.hypot(x - ax - t * vx, z - az - t * vz));
+  }
+  return d;
+}
+const ease = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const plateProfile = u => u < .88 ? 1 : u < 1 ? 1 - .58 * ease(.88, 1, u) : .42 * (1 - ease(1, 1.6, u));
+// 1 on Home Plate's top, 0 off it (world.js uses this to colour the top pale instead of striped like the hills).
+export function plateWeight(x, z) {
+  const m = LANDMARKS.find(l => l.kind === 'mesa'); if (!m) return 0;
+  const dx = x - m.x, dz = z - m.z, u = Math.hypot(dx, dz) / plateRadius(m, Math.atan2(dz, dx));
+  return 1 - ease(.82, .92, u);
+}
+
+// True within `r` metres of one of Spirit's stops, so the loose rocks scattered over the map keep out of the stop scenes.
+export const nearStop = (x, z, r = 12) => SITES.some(s => (x - s.x) ** 2 + (z - s.z) ** 2 < r * r) || VIEWPOINTS.some(v => (x - v.x) ** 2 + (z - v.z) ** 2 < r * r);
+
+// Extra height added to the measured ground. Zero everywhere except right around each landmark.
+// world.js tells us the measured ground, so flat-topped features (Home Plate) can level the land under them.
+let baseHeight = null;
+export const bindBase = f => { baseHeight = f; };
+// Named craters with real data: shape filled in by landmarkLift (bowl/rim/ejecta 0..1, used for colour and rocks).
+export const namedCraterField = { bowl: 0, rim: 0, ejecta: 0 };
+const stopFade = (x, z) => { let f = 1; for (const s of SITES) { const d = Math.hypot(x - s.x, z - s.z); if (d < 26) f = Math.min(f, ease(12, 26, d)); } return f; };
+export function landmarkLift(x, z) {
+  let y = 0;
+  namedCraterField.bowl = namedCraterField.rim = namedCraterField.ejecta = 0;
+  for (const m of LANDMARKS) {
+    const dx = x - m.x, dz = z - m.z, d2 = dx * dx + dz * dz, R = m.r * (m.realD ? 3.3 : 2.2);
+    if (d2 > R * R) continue;
+    if (m.kind === 'hill') {
+      const s = m.r / 1.6, w = Math.exp(-d2 / (2 * s * s)), hw = m.h * w;
+      // Real hills are not smooth domes: long spurs and gullies down the flanks, plus ledges of harder rock where layers outcrop.
+      const spur = Math.sin(x * .07 + Math.sin(z * .045) * 2.2) * Math.sin(z * .064 + Math.sin(x * .038) * 2);
+      const gully = Math.sin(x * .17 + z * .11 + Math.sin(z * .09) * 1.8) * Math.sin(z * .15 - x * .08);
+      y += hw + m.h * w * (.06 * (1 - 2 * Math.abs(spur)) + .015 * gully) + .12 * Math.sin(hw * 1.2) * Math.min(1, hw / 6);
+    }
+    else if (m.kind === 'valley') {
+      // a winding trench cut into the hill's flank: deepest at the middle, tapering out at both ends, with steep walls
+      const ca = Math.cos(m.ang), sa = Math.sin(m.ang), u = dx * ca + dz * sa, v0 = -dx * sa + dz * ca;
+      const v = v0 - 4 * Math.sin(u * .09), a = u / m.L, b = v / m.W;
+      if (Math.abs(a) < 1 && Math.abs(b) < 1.5) {
+        const along = (1 - a * a) * (1 - a * a), across = b * b < 1 ? Math.pow(1 - b * b, 1.5) : 0;
+        y -= m.D * along * across;
+        y += .25 * Math.exp(-Math.pow((Math.abs(b) - 1.15) / .2, 2)) * along;     // low lip of spilled rock along the rim
+      }
+    }
+    else if (m.kind === 'channel') {
+      // distance to the winding channel line; a flat sandy floor with sloping banks and a low terrace on each side
+      const u = channelDist(m, x, z) / m.W;
+      if (u < 2.2) y -= m.D * (u < .45 ? 1 : u < 1 ? 1 - .7 * ease(.45, 1, u) : .3 * (1 - ease(1, 2.2, u)));
+      // dark sand gathers on the floor in ripples across the old flow (transverse ridges, seen in many Mars channels)
+      if (u < .8) y += .32 * (1 - ease(.45, .8, u)) * Math.sin((x * .6 + z * .8) * .72 + Math.sin(x * .05) * 1.5);
+    }
+    else if (m.kind === 'mesa') {
+      // a flat-topped plateau with a ragged outline: level top, a steep layered rim (stop-models.js dresses it in rock),
+      // then a gentle apron of sand and fallen blocks back down to the land
+      const u = Math.sqrt(d2) / plateRadius(m, Math.atan2(dz, dx)), w = plateProfile(u);
+      if (w <= 0) continue;
+      const top = baseHeight ? baseHeight(m.x, m.z) + m.h : m.h;
+      y += (top - (baseHeight ? baseHeight(x, z) : 0)) * w;
+    }
+    else if (m.realD) {
+      // real depth-to-width ratio, rim about 3.6% of the width (fresh simple craters), worn down by `wear`
+      const d = Math.sqrt(d2), c = craterProfile(d, m.r, { depth: 2 * m.r * m.realDepth / m.realD, rim: .036 * 2 * m.r, degradation: m.wear, angle: Math.atan2(dz, dx), seed: m.x * .1 });
+      const keep = d > m.r * 1.2 ? stopFade(x, z) : 1;   // ejecta thins out near a stop so the stop scene stays clean
+      y += c.lift * keep;
+      namedCraterField.bowl = Math.max(namedCraterField.bowl, c.bowl); namedCraterField.rim = Math.max(namedCraterField.rim, c.rim * keep);
+      namedCraterField.ejecta = Math.max(namedCraterField.ejecta, c.ejecta * keep);
+    }
+    else { const d = Math.sqrt(d2), u = d / m.r; y +=(u < 1 ? -m.depth * (1 - u * u) * (1 - u * u) : 0) + m.rim * Math.exp(-Math.pow((d - m.r * 1.04) / (m.r * .2), 2)); }
+  }
+  return y;
+}
+
+// Tells you what you are standing near, once per landmark.
+export class LandmarkTips {
+  constructor(world, onNear) {
+    this.world = world; this.onNear = onNear; this.seen = new Set();
+    const upd = world.update.bind(world);
+    world.update = (dt, active) => { upd(dt, active); this.tick(); };
+  }
+  tick() {
+    const p = this.world.player?.position; if (!p) return;
+    for (const m of LANDMARKS) {
+      if (this.seen.has(m.id)) continue;
+      if (Math.hypot(p.x - m.x, p.z - m.z) < m.r * 1.1) { this.seen.add(m.id); this.onNear(m); }
+    }
+  }
+}
+
+// Low wind-blown dust drifts (about a third of a metre tall, 20 m apart) lying across the plain outside the flat base
+// apron. They break up the flat ground; they fade out before the base and again far from it.
+export function driftLift(x, z) {
+  const r = Math.hypot(x, z);
+  if (r < 100 || r > 330) return 0;
+  const fade = Math.min(1, (r - 100) / 50) * Math.min(1, (330 - r) / 60);
+  const ax = x * .94 + z * .34, bz = -x * .34 + z * .94;                       // ridges run across the wind
+  const wob = Math.sin(bz * .045 + 1.7) * 3 + Math.sin(bz * .13 + ax * .02) * 1.2;
+  const crest = .5 + .5 * Math.sin((ax + wob) * Math.PI / 11);
+  const patch = Math.max(0, Math.sin(x * .017 + 2.1) * Math.sin(z * .021 - .6) + .15);
+  return .42 * crest * crest * Math.min(1, patch * 1.6) * fade;
+}
+
+// ---- Small craters ----------------------------------------------------------------------------------------------
+// Spirit's plain is pocked with craters from a couple of metres to a few tens of metres wide: many small ones, few big.
+// One crater at most per 36 m cell, at a fixed random spot, so the same ground comes out every time. They are old and
+// shallow (depth about a fifth of the radius), so the rover and the astronaut can cross them.
+const CRATER_CELL = 36, craterCache = new Map();
+export const KEEP_CLEAR = [[110, 65, 16], [-125, -75, 16], [70, -60, 26], [-65, 35, 10]];     // relay, survey drill, pad, meteorite
+const hash2 = (a, b, k) => { const s = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453; return s - Math.floor(s); };
+function craterIn(ix, iz) {
+  const key = ix * 4096 + iz;
+  if (craterCache.has(key)) return craterCache.get(key);
+  let c = null;
+  if (hash2(ix, iz, 1) > .5) {
+    const x = (ix + .2 + .6 * hash2(ix, iz, 2)) * CRATER_CELL, z = (iz + .2 + .6 * hash2(ix, iz, 3)) * CRATER_CELL;
+    const R = 2.5 + 9.5 * Math.pow(hash2(ix, iz, 4), 2.4), r = Math.hypot(x, z);
+    let ok = (r > 100 && r < 440) || Math.max(Math.abs(x), Math.abs(z)) > 478;   // none where NASA's grid has its own craters, except past its edge
+    for (const [kx, kz, kr] of KEEP_CLEAR) if (Math.hypot(x - kx, z - kz) < kr + R * 1.6) ok = false;
+    for (const m of LANDMARKS) if (m.kind === 'channel' ? channelDist(m, x, z) < m.W * 2.4 + R : Math.hypot(x - m.x, z - m.z) < m.r * (m.kind === 'hill' ? 1.5 : 1.7) + R) ok = false;
+    for (const s of SITES) if (Math.hypot(x - s.x, z - s.z) < 14 + R * 1.6) ok = false;      // keep the stops on open ground
+    if (ok) c = { x, z, R, depth: .2 * R, rim: .08 * R, fresh: hash2(ix, iz, 5) };
+  }
+  craterCache.set(key, c);
+  return c;
+}
+// lift: metres added to the ground. rim: 0 to 1, how much we are on the raised rim and ejecta (rocks gather there).
+// bowl: 0 to 1, how deep in the hollow we are (used to darken and dust the colour).
+export const craterField = { lift: 0, rim: 0, bowl: 0 };
+export function craterLift(x, z, out = craterField) {
+  out.lift = 0; out.rim = 0; out.bowl = 0;
+  const r = Math.hypot(x, z);
+  if (r < 85 || (r > 460 && Math.max(Math.abs(x), Math.abs(z)) < 450)) return 0;
+  const cx = Math.floor(x / CRATER_CELL), cz = Math.floor(z / CRATER_CELL);
+  for (let i = cx - 1; i <= cx + 1; i++) for (let j = cz - 1; j <= cz + 1; j++) {
+    const c = craterIn(i, j); if (!c) continue;
+    const dx = x - c.x, dz = z - c.z, d2 = dx * dx + dz * dz, reach = c.R * 2;
+    if (d2 > reach * reach) continue;
+    const d = Math.sqrt(d2), u = d / c.R;
+    if (u < 1) { const q = 1 - u * u; out.lift -= c.depth * q * q; out.bowl = Math.max(out.bowl, q); }
+    const ring = Math.exp(-Math.pow((d - c.R * 1.08) / (c.R * .3), 2));
+    out.lift += c.rim * ring + c.rim * .35 * Math.exp(-Math.pow((d - c.R * 1.6) / (c.R * .45), 2));
+    out.rim = Math.max(out.rim, Math.exp(-Math.pow((d - c.R * 1.25) / (c.R * .55), 2)));
+  }
+  return out.lift;
+}
+// How much rock lies around: more on crater rims and at the foot of the hills, in loose clumps elsewhere.
+export function rockWeight(x, z, clump) {
+  craterLift(x, z);
+  let foot = 0;
+  for (const m of LANDMARKS) if (m.kind === 'hill') { const d = Math.hypot(x - m.x, z - m.z) / m.r; foot = Math.max(foot, Math.exp(-Math.pow((d - 1.05) / .45, 2))); }
+  landmarkLift(x, z);   // fills namedCraterField: boulders gather on the big craters' rims and ejecta rays
+  return (.16 + .95 * Math.max(craterField.rim, namedCraterField.rim * .8) + .6 * namedCraterField.ejecta + .7 * foot) * (.3 + 1.5 * clump);
+}
